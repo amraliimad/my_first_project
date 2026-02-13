@@ -1,0 +1,11 @@
+<div style="direction: rtl; text-align: right; padding: 40px;">
+    <h2>تسجيل الدخول ⚽</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">دخول</button>
+    </form>
+    
+    <hr>
+    <p>ليس لديك حساب؟ <a href="{% url 'signup' %}" style="color: blue; font-weight: bold;">اضغط هنا لإنشاء حساب جديد</a></p>
+</div>

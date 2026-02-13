@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>حجز الملاعب - {{ pitch.name }}</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; text-align: center; }
+        
+        /* شريط الأيام */
+        .days-wrapper { 
+    display: flex; 
+    gap: 12px; 
+    justify-content: flex-start; /* بيبدأ من اليمين للشمال صح */
+    margin: 20px auto; 
+    overflow-x: auto; /* ده اللي بيشغل الحركة يمين وشمال */
+    padding: 15px 5px; 
+    max-width: 100%; 
+    white-space: nowrap; /* بيمنع الأيام إنها تنزل تحت بعضها */
+    -webkit-overflow-scrolling: touch; /* بيخلي الحركة ناعمة على الموبايل */
+}
+
+/* حركة شيك: تخفي شريط التمرير (Scrollbar) عشان الشكل يبقى أنضف */
+.days-wrapper::-webkit-scrollbar {
+    height: 6px;
+}
+.days-wrapper::-webkit-scrollbar-thumb {
+    background: #27ae60;
+    border-radius: 10px;
+}
+        .day-card { 
+            padding: 15px; border: 2px solid #ddd; border-radius: 12px; 
+            text-decoration: none; color: #333; background: white; min-width: 80px;
+            transition: 0.3s;
+        }
+        .day-card.active { border-color: #27ae60; background: #e8f5e9; transform: scale(1.05); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .day-card:hover:not(.active) { background: #f9f9f9; border-color: #bbb; }
+        .day-name { font-weight: bold; display: block; margin-bottom: 5px; }
+
+        /* الجدول */
+        .schedule-container { 
+            max-width: 900px; margin: 0 auto; background: white; 
+            padding: 20px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); 
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 15px; border-bottom: 1px solid #eee; text-align: center; }
+        th { background: #2c3e50; color: white; border-radius: 5px; }
+
+        .status-free { color: #27ae60; font-weight: bold; }
+        .status-booked { color: #e74c3c; font-weight: bold; text-decoration: line-through; }
+
+        .btn-book { 
+            background: #3498db; color: white; padding: 8px 18px; 
+            text-decoration: none; border-radius: 6px; font-size: 14px;
+        }
+        .btn-disabled { background: #bdc3c7; color: white; padding: 8px 18px; border-radius: 6px; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+    <h1>{{ pitch.name }} ⚽</h1>
+    <p>اختر تاريخ الماتش ووقت الحجز:</p>
+
+    <div class="days-wrapper">
+        {% for day in days_list %}
+        <a href="?date={{ day.full_date }}" 
+           class="day-card {% if selected_date|stringformat:'s' == day.full_date %}active{% endif %}">
+            <span class="day-name">{{ day.day_name }}</span>
+            <span class="day-date">{{ day.display }}</span>
+        </a>
+        {% endfor %}
+    </div>
+
+    <div class="schedule-container">
+        <h3>مواعيد يوم: {{ selected_date }}</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>الوقت</th>
+                    <th>الحالة</th>
+                    <th>الإجراء</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in hours_schedule %}
+                <tr>
+                    <td>{{ item.hour_display }}</td>
+                    <td>
+                        {% if item.is_booked %}
+                            <span class="status-booked">محجوز</span>
+                        {% else %}
+                            <span class="status-free">متاح</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.is_booked %}
+                            <span class="btn-disabled">غير متاح</span>
+                        {% else %}
+                            <a href="{% url 'booking_confirm' pitch.id item.hour_value %}?date={{ selected_date }}" class="btn-book">حجز الآن</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <br>
+{% for hour in hours_schedule %}
+    {% if hour.is_booked %}
+        <div class="hour-box booked" style="background: #ccc; cursor: not-allowed;">
+            {{ hour.hour_display }} (محجوز)
+        </div>
+    {% else %}
+        <a href="{% url 'booking_confirm' pitch.id hour.hour_value %}?date={{ selected_date }}" class="hour-box available">
+            {{ hour.hour_display }}
+        </a>
+    {% endif %}
+{% endfor %}
+</a>
+
+</body>
+</html>

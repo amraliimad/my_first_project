@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>تم الحجز بنجاح</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background-color: #f4f7f6; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+        }
+        .success-card {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+        }
+        .icon {
+            font-size: 80px;
+            color: #27ae60;
+            margin-bottom: 20px;
+        }
+        h2 { color: #2c3e50; margin-bottom: 10px; }
+        p { color: #7f8c8d; line-height: 1.6; margin-bottom: 30px; }
+        .btn-home {
+            background: #27ae60;
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .btn-home:hover { background: #219150; }
+    </style>
+</head>
+<body>
+
+    <div class="success-card">
+        <div class="icon">✅</div>
+        <h2>تم استلام طلبك!</h2>
+        <p>شكراً لك. تم تسجيل عملية الدفع وجاري مراجعة الحجز من قبل إدارة الملعب. ستتلقى تأكيداً قريباً.</p>
+        <a href="{% url 'home' %}" class="btn-home">العودة للرئيسية</a>
+    </div>
+
+</body>
+</html>

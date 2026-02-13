@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>تأكيد الحجز والدفع</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 40px; text-align: center; }
+        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); display: inline-block; width: 450px; text-align: right; }
+        .info-box { background: #e8f5e9; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-right: 5px solid #27ae60; }
+        input[type="text"], input[type="tel"] { width: 95%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; }
+        
+        /* تصميم خيارات الدفع */
+        .payment-methods { margin: 20px 0; }
+        .method { 
+            display: flex; align-items: center; padding: 12px; border: 1px solid #ddd; 
+            border-radius: 10px; margin-bottom: 10px; cursor: pointer; transition: 0.3s;
+        }
+        .method:hover { background: #f9f9f9; }
+        .method input { margin-left: 15px; }
+        .method label { cursor: pointer; display: flex; align-items: center; width: 100%; justify-content: space-between; }
+        
+        .btn-pay { 
+            background: #27ae60; color: white; width: 100%; padding: 15px; 
+            border: none; border-radius: 10px; cursor: pointer; font-size: 18px; font-weight: bold;
+        }
+
+        /* صندوق فودافون المخفي */
+        #vodafone-box {
+            display: none; /* مخفي افتراضياً */
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ffeeba;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2 style="text-align: center;">إتمام الحجز ⚽</h2>
+    
+    <div class="info-box">
+        <div>ملعب: <strong>{{ pitch.name }}</strong></div>
+        <div>التاريخ: <strong>{{ date }}</strong></div>
+        <div>الساعة: <strong>{{ hour }}</strong></div>
+    </div>
+
+    <form method="POST">
+        {% csrf_token %} <label>الاسم بالكامل:</label>
+        <input type="text" name="full_name" value="{{ request.user.username }}" required>
+        
+        <label>رقم الموبايل (واتساب):</label>
+        <input type="tel" name="phone_number" placeholder="01xxxxxxxxx">
+
+        <div class="payment-methods">
+            <h4>اختر طريقة الدفع:</h4>
+            
+            <div class="method" onclick="togglePayment('voda')">
+                <input type="radio" name="pay" id="vodafone" value="voda">
+                <label for="vodafone">فودافون كاش 📱 <span>(تحويل للرقم)</span></label>
+            </div>
+
+            <div id="vodafone-box">
+                <p style="margin: 0 0 10px 0; font-size: 14px;">يرجى تحويل المبلغ لرقم: <strong>010XXXXXXXX</strong></p>
+                <input type="text" name="transaction_id" placeholder="اكتب رقم العملية هنا لتأكيد الحجز">
+            </div>
+
+            <div class="method" onclick="togglePayment('other')">
+                <input type="radio" name="pay" id="insta" value="insta">
+                <label for="insta">انستا باي ⚡ <span>(InstaPay)</span></label>
+            </div>
+
+            <div class="method" onclick="togglePayment('other')">
+                <input type="radio" name="pay" id="fawry" value="fawry">
+                <label for="fawry">فوري 🏧 <span>(كود دفع)</span></label>
+            </div>
+
+            <div class="method" onclick="togglePayment('other')">
+                <input type="radio" name="pay" id="cash" value="cash" checked>
+                <label for="cash">دفع في الملعب 💵</label>
+            </div>
+        </div>
+
+        <button type="submit" class="btn-pay">تأكيد ودفع {{ pitch.price_per_hour }} ج.م</button>
+    </form>
+</div>
+
+<script>
+    function togglePayment(type) {
+        const box = document.getElementById('vodafone-box');
+        if (type === 'voda') {
+            box.style.display = 'block'; // اظهر الصندوق
+        } else {
+            box.style.display = 'none';  // اخفي الصندوق
+        }
+    }
+</script>
+
+</body>
+</html>
