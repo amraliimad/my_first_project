@@ -2,121 +2,285 @@
 <html dir="rtl" lang="ar">
 <head>
     <meta charset="UTF-8">
-    <title>حجز الملاعب - {{ pitch.name }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>حجز {{ pitch.name }} - ملاعبك</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; text-align: center; }
-        
-        /* شريط الأيام */
-        .days-wrapper { 
-    display: flex; 
-    gap: 12px; 
-    justify-content: flex-start; /* بيبدأ من اليمين للشمال صح */
-    margin: 20px auto; 
-    overflow-x: auto; /* ده اللي بيشغل الحركة يمين وشمال */
-    padding: 15px 5px; 
-    max-width: 100%; 
-    white-space: nowrap; /* بيمنع الأيام إنها تنزل تحت بعضها */
-    -webkit-overflow-scrolling: touch; /* بيخلي الحركة ناعمة على الموبايل */
-}
+        :root {
+            --primary: #27ae60;
+            --dark: #2c3e50;
+            --light: #f4f7f6;
+            --white: #ffffff;
+            --grey: #bdc3c7;
+            --booked: #e74c3c;
+        }
 
-/* حركة شيك: تخفي شريط التمرير (Scrollbar) عشان الشكل يبقى أنضف */
-.days-wrapper::-webkit-scrollbar {
-    height: 6px;
-}
-.days-wrapper::-webkit-scrollbar-thumb {
-    background: #27ae60;
-    border-radius: 10px;
-}
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: var(--light); 
+            margin: 0; 
+            padding: 0; 
+            color: #333;
+        }
+
+        /* --- الهيدر وصورة الملعب --- */
+        .pitch-header {
+            position: relative;
+            background: var(--white);
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .cover-image {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            background-color: #ddd; /* لون احتياطي لو مفيش صورة */
+        }
+
+        .pitch-info {
+            max-width: 1000px;
+            margin: -60px auto 0;
+            position: relative;
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.1);
+            width: 90%;
+        }
+
+        .pitch-title h1 { margin: 0 0 10px 0; color: var(--dark); font-size: 28px; }
+        .price-tag { 
+            background: var(--primary); 
+            color: white; 
+            padding: 5px 15px; 
+            border-radius: 20px; 
+            font-size: 14px; 
+            font-weight: bold; 
+            vertical-align: middle;
+        }
+
+        .features {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+        
+        .feature-badge {
+            background: #e8f5e9;
+            color: var(--primary);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .description { color: #666; line-height: 1.6; margin-bottom: 15px; font-size: 15px; }
+        
+        .map-link {
+            display: inline-block;
+            color: #3498db;
+            text-decoration: none;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        /* --- شريط الأيام --- */
+        .container { max-width: 1000px; margin: 30px auto; padding: 0 20px; }
+        
+        .section-title { margin-bottom: 15px; color: var(--dark); border-right: 5px solid var(--primary); padding-right: 15px; }
+
+        .days-wrapper { 
+            display: flex; 
+            gap: 12px; 
+            overflow-x: auto; 
+            padding: 10px 5px; 
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none; /* Firefox */
+        }
+        .days-wrapper::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+
         .day-card { 
-            padding: 15px; border: 2px solid #ddd; border-radius: 12px; 
-            text-decoration: none; color: #333; background: white; min-width: 80px;
+            flex: 0 0 auto;
+            width: 80px;
+            text-align: center;
+            padding: 15px 10px; 
+            border: 2px solid #eee; 
+            border-radius: 12px; 
+            text-decoration: none; 
+            color: #7f8c8d; 
+            background: white; 
             transition: 0.3s;
         }
-        .day-card.active { border-color: #27ae60; background: #e8f5e9; transform: scale(1.05); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .day-card:hover:not(.active) { background: #f9f9f9; border-color: #bbb; }
-        .day-name { font-weight: bold; display: block; margin-bottom: 5px; }
 
-        /* الجدول */
-        .schedule-container { 
-            max-width: 900px; margin: 0 auto; background: white; 
-            padding: 20px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); 
+        .day-card.active { 
+            border-color: var(--primary); 
+            background: #e8f5e9; 
+            color: var(--primary); 
+            transform: scale(1.05); 
+            font-weight: bold;
         }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 15px; border-bottom: 1px solid #eee; text-align: center; }
-        th { background: #2c3e50; color: white; border-radius: 5px; }
+        
+        .day-name { display: block; font-size: 13px; margin-bottom: 5px; }
+        .day-date { font-size: 18px; }
 
-        .status-free { color: #27ae60; font-weight: bold; }
-        .status-booked { color: #e74c3c; font-weight: bold; text-decoration: line-through; }
-
-        .btn-book { 
-            background: #3498db; color: white; padding: 8px 18px; 
-            text-decoration: none; border-radius: 6px; font-size: 14px;
+        /* --- شبكة المواعيد (Grid) --- */
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
         }
-        .btn-disabled { background: #bdc3c7; color: white; padding: 8px 18px; border-radius: 6px; cursor: not-allowed; }
+
+        .time-slot {
+            background: white;
+            border: 2px solid #eee;
+            border-radius: 10px;
+            padding: 15px 0;
+            text-align: center;
+            text-decoration: none;
+            color: var(--dark);
+            transition: 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* الحالة: متاح */
+        .time-slot.available:hover {
+            border-color: var(--primary);
+            background: #e8f5e9;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.2);
+        }
+
+        /* الحالة: محجوز */
+        .time-slot.booked {
+            background: #f0f0f0;
+            color: #aaa;
+            border-color: transparent;
+            cursor: not-allowed;
+        }
+        
+        .time-slot.booked::after {
+            content: 'محجوز';
+            display: block;
+            font-size: 10px;
+            color: var(--booked);
+            margin-top: 5px;
+            font-weight: bold;
+        }
+
+        /* الحالة: ماضي (انتهى وقته) */
+        .time-slot.past {
+            background: #f9f9f9;
+            color: #ccc;
+            border-color: transparent;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .slot-time { font-size: 18px; font-weight: bold; display: block; }
+        
+        /* زر العودة */
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 14px;
+            z-index: 10;
+        }
     </style>
 </head>
 <body>
 
-    <h1>{{ pitch.name }} ⚽</h1>
-    <p>اختر تاريخ الماتش ووقت الحجز:</p>
+    <div class="pitch-header">
+        <a href="{% url 'home' %}" class="back-btn">🏠 الرئيسية</a>
+        
+        {% if pitch.image %}
+            <img src="{{ pitch.image.url }}" alt="{{ pitch.name }}" class="cover-image">
+        {% else %}
+            <div class="cover-image" style="background: linear-gradient(45deg, #2c3e50, #3498db); display: flex; align-items: center; justify-content: center; color: white; font-size: 50px;">⚽</div>
+        {% endif %}
 
-    <div class="days-wrapper">
-        {% for day in days_list %}
-        <a href="?date={{ day.full_date }}" 
-           class="day-card {% if selected_date|stringformat:'s' == day.full_date %}active{% endif %}">
-            <span class="day-name">{{ day.day_name }}</span>
-            <span class="day-date">{{ day.display }}</span>
-        </a>
-        {% endfor %}
-    </div>
+        <div class="pitch-info">
+            <div class="pitch-title">
+                <h1>{{ pitch.name }} <span class="price-tag">{{ pitch.price_per_hour }} ج.م / ساعة</span></h1>
+            </div>
 
-    <div class="schedule-container">
-        <h3>مواعيد يوم: {{ selected_date }}</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>الوقت</th>
-                    <th>الحالة</th>
-                    <th>الإجراء</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in hours_schedule %}
-                <tr>
-                    <td>{{ item.hour_display }}</td>
-                    <td>
-                        {% if item.is_booked %}
-                            <span class="status-booked">محجوز</span>
-                        {% else %}
-                            <span class="status-free">متاح</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if item.is_booked %}
-                            <span class="btn-disabled">غير متاح</span>
-                        {% else %}
-                            <a href="{% url 'booking_confirm' pitch.id item.hour_value %}?date={{ selected_date }}" class="btn-book">حجز الآن</a>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+            <p class="description">
+                {{ pitch.description|default:"لا يوجد وصف إضافي لهذا الملعب حالياً." }}
+            </p>
 
-    <br>
-{% for hour in hours_schedule %}
-    {% if hour.is_booked %}
-        <div class="hour-box booked" style="background: #ccc; cursor: not-allowed;">
-            {{ hour.hour_display }} (محجوز)
+            <div class="features">
+                <div class="feature-badge">📏 {{ pitch.get_size_display }}</div>
+                <div class="feature-badge">🌱 {{ pitch.get_floor_type_display }}</div>
+                
+                {% if pitch.has_showers %}
+                <div class="feature-badge">🚿 دش وحمامات</div>
+                {% endif %}
+                
+                {% if pitch.has_parking %}
+                <div class="feature-badge">🚗 جراج سيارات</div>
+                {% endif %}
+                
+                {% if pitch.has_ball %}
+                <div class="feature-badge">⚽ الكرة متوفرة</div>
+                {% endif %}
+            </div>
+
+            {% if pitch.google_map_link %}
+                <a href="{{ pitch.google_map_link }}" target="_blank" class="map-link">📍 عرض الموقع على الخريطة</a>
+            {% endif %}
         </div>
-    {% else %}
-        <a href="{% url 'booking_confirm' pitch.id hour.hour_value %}?date={{ selected_date }}" class="hour-box available">
-            {{ hour.hour_display }}
-        </a>
-    {% endif %}
-{% endfor %}
-</a>
+    </div>
+
+    <div class="container">
+        <h3 class="section-title">📅 اختر اليوم</h3>
+        <div class="days-wrapper">
+            {% for day in days_list %}
+            <a href="?date={{ day.full_date }}" 
+               class="day-card {% if selected_date == day.full_date %}active{% endif %}">
+                <span class="day-name">{{ day.day_name }}</span>
+                <span class="day-date">{{ day.display }}</span>
+            </a>
+            {% endfor %}
+        </div>
+
+        <h3 class="section-title" style="margin-top: 30px;">⏰ المواعيد المتاحة ليوم {{ selected_date }}</h3>
+        
+        <div class="schedule-grid">
+            {% for hour in hours_schedule %}
+                {% if hour.is_booked %}
+                    <div class="time-slot booked">
+                        <span class="slot-time">{{ hour.hour_display }}</span>
+                    </div>
+                {% elif hour.is_past %}
+                    <div class="time-slot past" title="انتهى الوقت">
+                        <span class="slot-time">{{ hour.hour_display }}</span>
+                    </div>
+                {% else %}
+                    <a href="{% url 'booking_confirm' pitch.id hour.hour_value %}?date={{ selected_date }}" class="time-slot available">
+                        <span class="slot-time">{{ hour.hour_display }}</span>
+                        <span style="font-size: 12px; color: var(--primary);">احجز الآن</span>
+                    </a>
+                {% endif %}
+            {% endfor %}
+        </div>
+        
+        <div style="margin-top: 20px; display: flex; gap: 15px; font-size: 14px; color: #666;">
+            <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 15px; height: 15px; background: #e8f5e9; border: 1px solid var(--primary); border-radius: 3px;"></span> متاح</div>
+            <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 15px; height: 15px; background: #f0f0f0; border-radius: 3px;"></span> محجوز</div>
+        </div>
+
+    </div>
 
 </body>
 </html>

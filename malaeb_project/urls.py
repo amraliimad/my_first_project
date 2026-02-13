@@ -20,7 +20,8 @@ urlpatterns = [
     # مسار إنشاء حساب جديد
     path("signup/", booking_views.signup, name="signup"),
     # --- تطبيق الملاعب (Bookings App) ---
-    path("", include("bookings.urls")),
+    path('', include('bookings.urls')),
+    path('accounts/', include('django.contrib.auth.urls')),
 ]
 
 # --- دعم ملفات الميديا والصور أثناء التطوير ---
