@@ -4,95 +4,183 @@
     <meta charset="UTF-8">
     <title>تأكيد الحجز والدفع</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 40px; text-align: center; }
-        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); display: inline-block; width: 450px; text-align: right; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 40px; text-align: center; color: #333; }
+        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); display: inline-block; width: 100%; max-width: 500px; text-align: right; }
+        
         .info-box { background: #e8f5e9; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-right: 5px solid #27ae60; }
-        input[type="text"], input[type="tel"] { width: 95%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
         
-        /* تصميم خيارات الدفع */
-        .payment-methods { margin: 20px 0; }
-        .method { 
-            display: flex; align-items: center; padding: 12px; border: 1px solid #ddd; 
-            border-radius: 10px; margin-bottom: 10px; cursor: pointer; transition: 0.3s;
+        input[type="text"], input[type="tel"] { width: 100%; padding: 12px; margin: 8px 0 15px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
+        label { font-weight: bold; font-size: 14px; color: #2c3e50; }
+
+        /* تصميم الراديو (الاختيارات) */
+        .section-title { font-size: 16px; margin: 20px 0 10px; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 5px; }
+        
+        .option-card {
+            display: flex; align-items: center; padding: 15px; border: 2px solid #eee;
+            border-radius: 12px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; position: relative;
         }
-        .method:hover { background: #f9f9f9; }
-        .method input { margin-left: 15px; }
-        .method label { cursor: pointer; display: flex; align-items: center; width: 100%; justify-content: space-between; }
+        .option-card:hover { border-color: #27ae60; background: #f9fffb; }
+        /* عند اختيار الراديو */
+        .option-card:has(input:checked) { border-color: #27ae60; background: #e8f5e9; }
         
-        .btn-pay { 
-            background: #27ae60; color: white; width: 100%; padding: 15px; 
-            border: none; border-radius: 10px; cursor: pointer; font-size: 18px; font-weight: bold;
+        .option-card.disabled { opacity: 0.6; cursor: not-allowed; background: #f9f9f9; border-color: #eee; }
+        
+        .option-card input { margin-left: 15px; transform: scale(1.2); }
+        .option-text { display: flex; flex-direction: column; }
+        .option-title { font-weight: bold; font-size: 15px; }
+        .option-desc { font-size: 12px; color: #7f8c8d; }
+
+        /* صندوق فودافون */
+        #vodafone-box {
+            display: none; background: #fff3cd; padding: 15px; border-radius: 10px;
+            margin-top: 10px; border: 1px solid #ffeeba; animation: fadeIn 0.3s;
         }
 
-        /* صندوق فودافون المخفي */
-        #vodafone-box {
-            display: none; /* مخفي افتراضياً */
-            background: #fff3cd;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            border: 1px solid #ffeeba;
+        /* زر الدفع */
+        .btn-pay { 
+            background: #27ae60; color: white; width: 100%; padding: 15px; margin-top: 20px;
+            border: none; border-radius: 12px; cursor: pointer; font-size: 18px; font-weight: bold; transition: 0.3s;
         }
+        .btn-pay:hover { background: #219150; transform: translateY(-2px); }
+
+        .warning-msg {
+            background: #fff8e1; color: #d35400; padding: 12px; border-radius: 8px;
+            font-size: 13px; margin-top: 20px; border: 1px solid #ffe0b2; display: flex; align-items: center; gap: 10px;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2 style="text-align: center;">إتمام الحجز ⚽</h2>
+    <h2 style="text-align: center; margin-top: 0;">تأكيد الحجز 📝</h2>
     
     <div class="info-box">
-        <div>ملعب: <strong>{{ pitch.name }}</strong></div>
-        <div>التاريخ: <strong>{{ date }}</strong></div>
-        <div>الساعة: <strong>{{ hour }}</strong></div>
+        <div class="info-row"><span>الملعب:</span> <strong>{{ pitch.name }}</strong></div>
+        <div class="info-row"><span>الموعد:</span> <strong>{{ date }} | {{ hour }}</strong></div>
+        <div class="info-row" style="color: #27ae60; font-size: 18px; margin-top: 5px;">
+            <span>إجمالي السعر:</span> <strong>{{ price }} ج.م</strong>
+        </div>
     </div>
 
     <form method="POST">
-        {% csrf_token %} <label>الاسم بالكامل:</label>
+        {% csrf_token %}
+        
+        <label>الاسم بالكامل:</label>
         <input type="text" name="full_name" value="{{ request.user.username }}" required>
         
-        <label>رقم الموبايل (واتساب):</label>
-        <input type="tel" name="phone_number" placeholder="01xxxxxxxxx">
+        <label>رقم الموبايل (للتواصل واتساب):</label>
+        <input type="tel" name="phone_number" placeholder="01xxxxxxxxx" required>
 
-        <div class="payment-methods">
-            <h4>اختر طريقة الدفع:</h4>
+        <!-- 1. اختيار نوع الدفع -->
+        <h4 class="section-title">1. اختر نظام الدفع:</h4>
+
+        <!-- دفع كامل -->
+        <label class="option-card">
+            <!-- نقلنا الأكشن هنا (onchange) -->
+            <input type="radio" name="payment_type" value="Full" onchange="selectType('online')" checked>
+            <div class="option-text">
+                <span class="option-title">دفع المبلغ كاملاً ({{ price }} ج.م)</span>
+                <span class="option-desc">تأكيد فوري للحجز</span>
+            </div>
+        </label>
+
+        <!-- دفع عربون -->
+        <label class="option-card">
+            <input type="radio" name="payment_type" value="Deposit" onchange="selectType('online')">
+            <div class="option-text">
+                <span class="option-title">دفع عربون (50 ج.م)</span>
+                <span class="option-desc">ودفع الباقي في الملعب</span>
+            </div>
+        </label>
+
+        <!-- دفع في الملعب (VIP) -->
+        <label class="option-card {% if not is_vip %}disabled{% endif %}">
+            <!-- الـ input ده مش هيشتغل لو disabled، فمش محتاجين شرط JS -->
+            <input type="radio" name="payment_type" value="PayAtPitch" onchange="selectType('pitch')" {% if not is_vip %}disabled{% endif %}>
+            <div class="option-text">
+                <span class="option-title">دفع في الملعب (VIP ⭐)</span>
+                {% if is_vip %}
+                    <span class="option-desc">ميزة خاصة لعملائنا المميزين</span>
+                {% else %}
+                    <span class="option-desc" style="color: #e74c3c;">متاح فقط بعد 10 حجوزات مؤكدة</span>
+                {% endif %}
+            </div>
+        </label>
+
+
+        <!-- 2. اختيار وسيلة الدفع (تظهر فقط لو هيدفع اونلاين) -->
+        <div id="online-methods">
+            <h4 class="section-title">2. اختر وسيلة التحويل:</h4>
             
-            <div class="method" onclick="togglePayment('voda')">
-                <input type="radio" name="pay" id="vodafone" value="voda">
-                <label for="vodafone">فودافون كاش 📱 <span>(تحويل للرقم)</span></label>
-            </div>
+            <!-- فودافون كاش -->
+            <label class="option-card">
+                <input type="radio" name="pay" value="voda" onchange="toggleVodafone(true)">
+                <div class="option-text">
+                    <span class="option-title">فودافون كاش 📱</span>
+                </div>
+            </label>
 
+            <!-- الصندوق المخفي لفودافون -->
             <div id="vodafone-box">
-                <p style="margin: 0 0 10px 0; font-size: 14px;">يرجى تحويل المبلغ لرقم: <strong>010XXXXXXXX</strong></p>
-                <input type="text" name="transaction_id" placeholder="اكتب رقم العملية هنا لتأكيد الحجز">
+                <p style="margin: 0 0 10px 0; font-size: 14px;">يرجى تحويل المبلغ لرقم: <strong style="font-size: 16px;">010XXXXXXXX</strong></p>
+                <input type="text" name="transaction_id" placeholder="اكتب رقم العملية (أو صورة التحويل) هنا...">
             </div>
 
-            <div class="method" onclick="togglePayment('other')">
-                <input type="radio" name="pay" id="insta" value="insta">
-                <label for="insta">انستا باي ⚡ <span>(InstaPay)</span></label>
-            </div>
+            <!-- انستا باي -->
+            <label class="option-card">
+                <input type="radio" name="pay" value="insta" onchange="toggleVodafone(false)">
+                <div class="option-text">
+                    <span class="option-title">انستا باي (InstaPay) ⚡</span>
+                </div>
+            </label>
 
-            <div class="method" onclick="togglePayment('other')">
-                <input type="radio" name="pay" id="fawry" value="fawry">
-                <label for="fawry">فوري 🏧 <span>(كود دفع)</span></label>
-            </div>
-
-            <div class="method" onclick="togglePayment('other')">
-                <input type="radio" name="pay" id="cash" value="cash" checked>
-                <label for="cash">دفع في الملعب 💵</label>
-            </div>
+            <!-- فوري -->
+            <label class="option-card">
+                <input type="radio" name="pay" value="fawry" onchange="toggleVodafone(false)">
+                <div class="option-text">
+                    <span class="option-title">فوري (Code) 🏧</span>
+                </div>
+            </label>
         </div>
 
-        <button type="submit" class="btn-pay">تأكيد ودفع {{ pitch.price_per_hour }} ج.م</button>
+        <div class="warning-msg">
+            ⚠️ <strong>تنبيه هام:</strong> سيتم إلغاء الحجز تلقائياً إذا لم يتم تأكيد الدفع من الإدارة خلال 30 دقيقة.
+        </div>
+
+        <button type="submit" class="btn-pay">إتمام الحجز ✅</button>
     </form>
 </div>
 
 <script>
-    function togglePayment(type) {
+    // التحكم في ظهور وسائل الدفع بناءً على نوع الدفع
+    function selectType(mode) {
+        const onlineMethods = document.getElementById('online-methods');
         const box = document.getElementById('vodafone-box');
-        if (type === 'voda') {
-            box.style.display = 'block'; // اظهر الصندوق
+        
+        if (mode === 'pitch') {
+            // لو اختار دفع في الملعب، نخفي وسائل الدفع الأونلاين
+            onlineMethods.style.display = 'none';
+            
+            // نلغي اختيار أي وسيلة أونلاين عشان ميبقاش في تضارب
+            const radios = document.getElementsByName('pay');
+            radios.forEach(r => r.checked = false);
+            box.style.display = 'none';
         } else {
-            box.style.display = 'none';  // اخفي الصندوق
+            // لو دفع كامل أو عربون، نظهر الوسائل
+            onlineMethods.style.display = 'block';
+        }
+    }
+
+    // التحكم في ظهور صندوق فودافون
+    function toggleVodafone(show) {
+        const box = document.getElementById('vodafone-box');
+        if(show) {
+            box.style.display = 'block';
+        } else {
+            box.style.display = 'none';
         }
     }
 </script>

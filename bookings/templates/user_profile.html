@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>الملف الشخصي - ملاعبك</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 15px; }
+        h2 { color: #2c3e50; border-bottom: 2px solid #27ae60; padding-bottom: 10px; }
+        .info { margin-bottom: 30px; background: #e8f5e9; padding: 15px; border-radius: 10px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: right; }
+        th { background-color: #f8f9fa; color: #2c3e50; }
+        
+        .status-confirmed { color: #27ae60; font-weight: bold; }
+        .status-pending { color: #f39c12; font-weight: bold; }
+        .status-cancelled { color: #e74c3c; font-weight: bold; }
+        
+        .btn-home { text-decoration: none; background: #2c3e50; color: white; padding: 10px 20px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>👤 الملف الشخصي</h2>
+        <a href="{% url 'home' %}" class="btn-home">🏠 الرئيسية</a>
+    </div>
+
+    <div class="info">
+        <p><strong>الاسم:</strong> {{ user.username }}</p>
+        <p><strong>تاريخ الانضمام:</strong> {{ user.date_joined|date:"d/m/Y" }}</p>
+    </div>
+
+    <h3>تاريخ الحجوزات ⚽</h3>
+    
+    {% if bookings %}
+    <table>
+        <thead>
+            <tr>
+                <th>الكود</th>
+                <th>الملعب</th>
+                <th>التاريخ</th>
+                <th>الساعة</th>
+                <th>الحالة</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for booking in bookings %}
+            <tr>
+                <td>{{ booking.booking_code }}</td>
+                <td>{{ booking.pitch.name }}</td>
+                <td>{{ booking.date }}</td>
+                <td>{{ booking.time }}</td>
+                <td>
+                    {% if booking.status == 'Confirmed' %}
+                        <span class="status-confirmed">مؤكد</span>
+                    {% elif booking.status == 'Pending' %}
+                        <span class="status-pending">قيد الانتظار</span>
+                    {% else %}
+                        <span class="status-cancelled">ملغي</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <p style="text-align: center; color: #7f8c8d; margin-top: 20px;">ليس لديك أي حجوزات سابقة.</p>
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="{% url 'home' %}" style="color: #27ae60; font-weight: bold;">احجز ملعب الآن!</a>
+        </div>
+    {% endif %}
+</div>
+
+</body>
+</html>

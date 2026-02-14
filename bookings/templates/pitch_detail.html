@@ -12,6 +12,8 @@
             --white: #ffffff;
             --grey: #bdc3c7;
             --booked: #e74c3c;
+            --star: #f1c40f;
+            --pending: #f39c12; /* لون جديد للحالة المعلقة */
         }
 
         body { 
@@ -22,7 +24,7 @@
             color: #333;
         }
 
-        /* --- الهيدر وصورة الملعب --- */
+        /* --- Header & Image --- */
         .pitch-header {
             position: relative;
             background: var(--white);
@@ -32,170 +34,146 @@
 
         .cover-image {
             width: 100%;
-            height: 300px;
+            height: 350px;
             object-fit: cover;
-            background-color: #ddd; /* لون احتياطي لو مفيش صورة */
+            background-color: #ddd;
         }
 
         .pitch-info {
             max-width: 1000px;
-            margin: -60px auto 0;
+            margin: -80px auto 0;
             position: relative;
             background: white;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 5px 25px rgba(0,0,0,0.1);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             width: 90%;
         }
 
-        .pitch-title h1 { margin: 0 0 10px 0; color: var(--dark); font-size: 28px; }
+        .pitch-title h1 { margin: 0 0 10px 0; color: var(--dark); font-size: 32px; }
         .price-tag { 
             background: var(--primary); 
             color: white; 
             padding: 5px 15px; 
-            border-radius: 20px; 
-            font-size: 14px; 
+            border-radius: 50px; 
+            font-size: 16px; 
             font-weight: bold; 
             vertical-align: middle;
+            margin-right: 10px;
         }
 
-        .features {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin: 15px 0;
-        }
-        
-        .feature-badge {
-            background: #e8f5e9;
-            color: var(--primary);
-            padding: 8px 12px;
+        /* --- Owner & Contact Box --- */
+        .owner-box {
+            background: #f8f9fa;
+            border-right: 5px solid var(--primary);
+            padding: 15px;
             border-radius: 8px;
-            font-size: 13px;
-            font-weight: 600;
+            margin: 20px 0;
             display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
             align-items: center;
-            gap: 5px;
+        }
+        .owner-info { display: flex; align-items: center; gap: 8px; font-weight: bold; color: var(--dark); }
+        .owner-info a { color: var(--primary); text-decoration: none; }
+
+        /* --- Features --- */
+        .features { display: flex; gap: 10px; flex-wrap: wrap; margin: 20px 0; }
+        .feature-badge {
+            background: #e8f5e9; color: var(--primary); padding: 8px 15px;
+            border-radius: 10px; font-size: 14px; font-weight: 600;
         }
 
-        .description { color: #666; line-height: 1.6; margin-bottom: 15px; font-size: 15px; }
-        
-        .map-link {
-            display: inline-block;
-            color: #3498db;
-            text-decoration: none;
-            font-weight: bold;
-            margin-top: 10px;
-        }
+        .description { color: #555; line-height: 1.8; margin-bottom: 20px; font-size: 16px; }
 
-        /* --- شريط الأيام --- */
-        .container { max-width: 1000px; margin: 30px auto; padding: 0 20px; }
-        
-        .section-title { margin-bottom: 15px; color: var(--dark); border-right: 5px solid var(--primary); padding-right: 15px; }
+        /* --- Schedule Section --- */
+        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+        .section-title { 
+            margin-bottom: 20px; color: var(--dark); 
+            border-right: 5px solid var(--primary); padding-right: 15px; font-size: 22px; 
+        }
 
         .days-wrapper { 
-            display: flex; 
-            gap: 12px; 
-            overflow-x: auto; 
-            padding: 10px 5px; 
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none; /* Firefox */
+            display: flex; gap: 10px; overflow-x: auto; padding: 10px 5px; 
+            scrollbar-width: none; -webkit-overflow-scrolling: touch;
         }
-        .days-wrapper::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+        .days-wrapper::-webkit-scrollbar { display: none; }
 
         .day-card { 
-            flex: 0 0 auto;
-            width: 80px;
-            text-align: center;
-            padding: 15px 10px; 
-            border: 2px solid #eee; 
-            border-radius: 12px; 
-            text-decoration: none; 
-            color: #7f8c8d; 
-            background: white; 
-            transition: 0.3s;
+            flex: 0 0 auto; width: 90px; text-align: center; padding: 15px 10px; 
+            border: 2px solid #eee; border-radius: 15px; text-decoration: none; 
+            color: #7f8c8d; background: white; transition: 0.3s;
         }
-
         .day-card.active { 
-            border-color: var(--primary); 
-            background: #e8f5e9; 
-            color: var(--primary); 
-            transform: scale(1.05); 
-            font-weight: bold;
+            border-color: var(--primary); background: #e8f5e9; color: var(--primary); 
+            transform: scale(1.05); font-weight: bold; box-shadow: 0 5px 15px rgba(39, 174, 96, 0.2);
         }
-        
-        .day-name { display: block; font-size: 13px; margin-bottom: 5px; }
-        .day-date { font-size: 18px; }
+        .day-name { display: block; font-size: 14px; margin-bottom: 5px; }
+        .day-date { font-size: 20px; }
 
-        /* --- شبكة المواعيد (Grid) --- */
+        /* --- Time Grid --- */
         .schedule-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); 
+            gap: 15px; margin-top: 25px;
         }
 
         .time-slot {
-            background: white;
-            border: 2px solid #eee;
-            border-radius: 10px;
-            padding: 15px 0;
-            text-align: center;
-            text-decoration: none;
-            color: var(--dark);
-            transition: 0.2s;
-            position: relative;
-            overflow: hidden;
+            background: white; border: 2px solid #eee; border-radius: 12px; padding: 15px 0;
+            text-align: center; text-decoration: none; color: var(--dark); transition: 0.2s;
+            position: relative; overflow: hidden;
         }
 
         /* الحالة: متاح */
         .time-slot.available:hover {
-            border-color: var(--primary);
-            background: #e8f5e9;
-            transform: translateY(-3px);
+            border-color: var(--primary); background: #e8f5e9; transform: translateY(-3px);
             box-shadow: 0 5px 15px rgba(39, 174, 96, 0.2);
         }
 
-        /* الحالة: محجوز */
-        .time-slot.booked {
-            background: #f0f0f0;
-            color: #aaa;
-            border-color: transparent;
-            cursor: not-allowed;
-        }
-        
+        /* الحالة: محجوز مؤكد (أحمر) */
+        .time-slot.booked { background: #f0f0f0; color: #aaa; border-color: transparent; cursor: not-allowed; }
         .time-slot.booked::after {
-            content: 'محجوز';
-            display: block;
-            font-size: 10px;
-            color: var(--booked);
-            margin-top: 5px;
-            font-weight: bold;
+            content: 'محجوز'; display: block; font-size: 12px; color: var(--booked); margin-top: 5px; font-weight: bold;
         }
 
-        /* الحالة: ماضي (انتهى وقته) */
-        .time-slot.past {
-            background: #f9f9f9;
-            color: #ccc;
-            border-color: transparent;
-            cursor: not-allowed;
-            opacity: 0.6;
+        /* الحالة: جاري الحجز (أصفر) - إضافة جديدة */
+        .time-slot.pending { 
+            background: #fff8e1; color: #d35400; border-color: #ffe0b2; cursor: not-allowed; opacity: 0.9;
+        }
+        .time-slot.pending::after {
+            content: 'جاري الحجز'; display: block; font-size: 11px; color: var(--pending); margin-top: 5px; font-weight: bold;
         }
 
+        /* الحالة: وقت مضى */
+        .time-slot.past { background: #f9f9f9; color: #ccc; border-color: transparent; cursor: not-allowed; opacity: 0.6; }
         .slot-time { font-size: 18px; font-weight: bold; display: block; }
+
+        /* --- Reviews Section --- */
+        .rating-box { background: white; padding: 30px; border-radius: 20px; margin-top: 40px; box-shadow: 0 5px 25px rgba(0,0,0,0.05); }
         
-        /* زر العودة */
+        .star-rating { direction: rtl; display: inline-flex; font-size: 35px; cursor: pointer; margin-bottom: 10px; }
+        .star-rating input { display: none; }
+        .star-rating label { color: #ddd; transition: 0.2s; cursor: pointer; }
+        .star-rating input:checked ~ label, .star-rating label:hover, .star-rating label:hover ~ label { color: var(--star); }
+
+        .review-item { border-bottom: 1px solid #eee; padding: 20px 0; }
+        .review-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .review-user { font-weight: bold; color: var(--dark); display: flex; align-items: center; gap: 8px; }
+        .review-stars { color: var(--star); letter-spacing: 2px; }
+        .review-date { font-size: 12px; color: #999; }
+        .review-text { color: #555; line-height: 1.6; margin: 0; background: #f9f9f9; padding: 10px; border-radius: 8px; }
+
+        /* --- Related Pitches --- */
+        .related-card { 
+            background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.05); 
+            transition: 0.3s; text-decoration: none; color: inherit; display: block;
+        }
+        .related-card:hover { transform: translateY(-5px); }
+        .related-img { height: 150px; background: #eee; display: flex; align-items: center; justify-content: center; font-size: 40px; }
+        .related-info { padding: 15px; text-align: center; }
+
         .back-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.5);
-            color: white;
-            padding: 8px 15px;
-            border-radius: 20px;
-            text-decoration: none;
-            font-size: 14px;
-            z-index: 10;
+            position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.6); color: white;
+            padding: 10px 20px; border-radius: 30px; text-decoration: none; font-weight: bold; z-index: 10;
         }
     </style>
 </head>
@@ -207,12 +185,27 @@
         {% if pitch.image %}
             <img src="{{ pitch.image.url }}" alt="{{ pitch.name }}" class="cover-image">
         {% else %}
-            <div class="cover-image" style="background: linear-gradient(45deg, #2c3e50, #3498db); display: flex; align-items: center; justify-content: center; color: white; font-size: 50px;">⚽</div>
+            <div class="cover-image" style="background: linear-gradient(45deg, #2c3e50, #27ae60); display: flex; align-items: center; justify-content: center; color: white; font-size: 80px;">⚽</div>
         {% endif %}
 
         <div class="pitch-info">
             <div class="pitch-title">
                 <h1>{{ pitch.name }} <span class="price-tag">{{ pitch.price_per_hour }} ج.م / ساعة</span></h1>
+            </div>
+
+            <!-- معلومات المالك والاتصال -->
+            <div class="owner-box">
+                <div class="owner-info">
+                    👤 الإدارة: <span>{{ pitch.owner_name|default:"إدارة الملعب" }}</span>
+                </div>
+                {% if pitch.phone_number %}
+                <div class="owner-info">
+                    📞 للحجز: <a href="tel:{{ pitch.phone_number }}">{{ pitch.phone_number }}</a>
+                </div>
+                {% endif %}
+                <div class="owner-info" style="margin-right: auto; color: var(--star);">
+                    ⭐ التقييم العام: {{ average_rating }} / 5
+                </div>
             </div>
 
             <p class="description">
@@ -222,65 +215,149 @@
             <div class="features">
                 <div class="feature-badge">📏 {{ pitch.get_size_display }}</div>
                 <div class="feature-badge">🌱 {{ pitch.get_floor_type_display }}</div>
-                
-                {% if pitch.has_showers %}
-                <div class="feature-badge">🚿 دش وحمامات</div>
-                {% endif %}
-                
-                {% if pitch.has_parking %}
-                <div class="feature-badge">🚗 جراج سيارات</div>
-                {% endif %}
-                
-                {% if pitch.has_ball %}
-                <div class="feature-badge">⚽ الكرة متوفرة</div>
-                {% endif %}
+                {% if pitch.has_showers %}<div class="feature-badge">🚿 دش وحمامات</div>{% endif %}
+                {% if pitch.has_parking %}<div class="feature-badge">🚗 جراج</div>{% endif %}
+                {% if pitch.has_ball %}<div class="feature-badge">⚽ كرة</div>{% endif %}
             </div>
 
             {% if pitch.google_map_link %}
-                <a href="{{ pitch.google_map_link }}" target="_blank" class="map-link">📍 عرض الموقع على الخريطة</a>
+                <a href="{{ pitch.google_map_link }}" target="_blank" style="display: inline-block; color: #3498db; font-weight: bold; text-decoration: none; margin-top: 10px;">📍 عرض الموقع على الخريطة</a>
             {% endif %}
         </div>
     </div>
 
+    <!-- جدول المواعيد -->
     <div class="container">
-        <h3 class="section-title">📅 اختر اليوم</h3>
+        <h3 class="section-title">📅 جدول الحجوزات</h3>
+        
         <div class="days-wrapper">
             {% for day in days_list %}
-            <a href="?date={{ day.full_date }}" 
-               class="day-card {% if selected_date == day.full_date %}active{% endif %}">
+            <a href="?date={{ day.full_date }}" class="day-card {% if selected_date == day.full_date %}active{% endif %}">
                 <span class="day-name">{{ day.day_name }}</span>
                 <span class="day-date">{{ day.display }}</span>
             </a>
             {% endfor %}
         </div>
 
-        <h3 class="section-title" style="margin-top: 30px;">⏰ المواعيد المتاحة ليوم {{ selected_date }}</h3>
+        <h3 class="section-title" style="margin-top: 30px; border: none;">⏰ المواعيد المتاحة ليوم {{ selected_date }}</h3>
         
         <div class="schedule-grid">
             {% for hour in hours_schedule %}
-                {% if hour.is_booked %}
+                
+                {% if hour.status == 'Confirmed' %}
+                    <!-- محجوز مؤكد -->
                     <div class="time-slot booked">
                         <span class="slot-time">{{ hour.hour_display }}</span>
                     </div>
-                {% elif hour.is_past %}
-                    <div class="time-slot past" title="انتهى الوقت">
+
+                {% elif hour.status == 'Pending' %}
+                    <!-- قيد المراجعة (التعديل الجديد) -->
+                    <div class="time-slot pending">
                         <span class="slot-time">{{ hour.hour_display }}</span>
                     </div>
+
+                {% elif hour.is_past %}
+                    <!-- وقت مضى -->
+                    <div class="time-slot past">
+                        <span class="slot-time">{{ hour.hour_display }}</span>
+                    </div>
+
                 {% else %}
+                    <!-- متاح -->
                     <a href="{% url 'booking_confirm' pitch.id hour.hour_value %}?date={{ selected_date }}" class="time-slot available">
                         <span class="slot-time">{{ hour.hour_display }}</span>
-                        <span style="font-size: 12px; color: var(--primary);">احجز الآن</span>
+                        <!-- عرض السعر المتغير لو وجد -->
+                        <span style="font-size: 12px; color: var(--primary);">
+                            {% if hour.price %}
+                                {{ hour.price|floatformat:0 }} ج.م
+                            {% else %}
+                                احجز
+                            {% endif %}
+                        </span>
                     </a>
                 {% endif %}
+
             {% endfor %}
         </div>
         
-        <div style="margin-top: 20px; display: flex; gap: 15px; font-size: 14px; color: #666;">
-            <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 15px; height: 15px; background: #e8f5e9; border: 1px solid var(--primary); border-radius: 3px;"></span> متاح</div>
-            <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 15px; height: 15px; background: #f0f0f0; border-radius: 3px;"></span> محجوز</div>
+        <!-- مفتاح الألوان -->
+        <div style="margin-top: 20px; display: flex; gap: 20px; font-size: 14px; color: #666; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 8px;"><span style="width: 15px; height: 15px; background: #e8f5e9; border: 1px solid var(--primary); border-radius: 3px;"></span> متاح</div>
+            <div style="display: flex; align-items: center; gap: 8px;"><span style="width: 15px; height: 15px; background: #fff8e1; border: 1px solid #f39c12; border-radius: 3px;"></span> جاري الحجز</div>
+            <div style="display: flex; align-items: center; gap: 8px;"><span style="width: 15px; height: 15px; background: #f0f0f0; border-radius: 3px;"></span> محجوز</div>
         </div>
-
     </div>
+
+    <!-- قسم التقييمات -->
+    <div class="container rating-box">
+        <h3 class="section-title">⭐ آراء اللاعبين ({{ review_count }})</h3>
+
+        {% if user.is_authenticated %}
+        <form method="POST" style="background: #fcfcfc; padding: 20px; border-radius: 15px; border: 1px solid #eee; margin-bottom: 30px;">
+            {% csrf_token %}
+            <h4 style="margin-top: 0; color: var(--dark);">شاركنا تجربتك:</h4>
+            
+            <div class="star-rating">
+                <input type="radio" name="rating" id="star5" value="5"><label for="star5">★</label>
+                <input type="radio" name="rating" id="star4" value="4"><label for="star4">★</label>
+                <input type="radio" name="rating" id="star3" value="3"><label for="star3">★</label>
+                <input type="radio" name="rating" id="star2" value="2"><label for="star2">★</label>
+                <input type="radio" name="rating" id="star1" value="1"><label for="star1">★</label>
+            </div>
+            
+            <textarea name="comment" placeholder="كيف كانت حالة الملعب؟ هل الخدمات جيدة؟" rows="3" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; resize: vertical; box-sizing: border-box;"></textarea>
+            
+            <button type="submit" style="background: var(--dark); color: white; border: none; padding: 10px 25px; border-radius: 8px; font-weight: bold; margin-top: 10px; cursor: pointer;">نشر التقييم</button>
+        </form>
+        {% else %}
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; text-align: center;">
+                <p>يرجى <a href="{% url 'login' %}" style="color: var(--primary); font-weight: bold;">تسجيل الدخول</a> لتتمكن من إضافة تقييم.</p>
+            </div>
+        {% endif %}
+
+        {% for review in reviews %}
+        <div class="review-item">
+            <div class="review-header">
+                <span class="review-user">👤 {{ review.user.username }}</span>
+                <span class="review-date">{{ review.created_at|date:"d/m/Y" }}</span>
+            </div>
+            <div class="review-stars">
+                {% if review.rating == 5 %}★★★★★{% endif %}
+                {% if review.rating == 4 %}★★★★☆{% endif %}
+                {% if review.rating == 3 %}★★★☆☆{% endif %}
+                {% if review.rating == 2 %}★★☆☆☆{% endif %}
+                {% if review.rating == 1 %}★☆☆☆☆{% endif %}
+            </div>
+            <p class="review-text">{{ review.comment }}</p>
+        </div>
+        {% empty %}
+            <p style="text-align: center; color: #999; padding: 20px;">لا توجد تقييمات بعد. كن أول من يقيم!</p>
+        {% endfor %}
+    </div>
+
+    <!-- ملاعب مقترحة -->
+    {% if related_pitches %}
+    <div class="container">
+        <h3 class="section-title">⚽ ملاعب أخرى في نفس المنطقة</h3>
+        <div class="schedule-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+            {% for rp in related_pitches %}
+            <a href="{% url 'pitch_detail' rp.id %}" class="related-card">
+                <div class="related-img">
+                    {% if rp.image %}
+                        <img src="{{ rp.image.url }}" style="width:100%; height:100%; object-fit:cover;">
+                    {% else %}
+                        🏟️
+                    {% endif %}
+                </div>
+                <div class="related-info">
+                    <h4 style="margin: 0; color: var(--dark);">{{ rp.name }}</h4>
+                    <span style="color: var(--primary); font-weight: bold;">{{ rp.price_per_hour }} ج.م</span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 
 </body>
 </html>
