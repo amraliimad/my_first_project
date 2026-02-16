@@ -1,0 +1,57 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %} Mal3ab Online {% endblock %}
+
+{% block branding %}
+    <h1 id="site-name">
+        <a href="{% url 'admin:index' %}" style="display: flex; align-items: center; gap: 10px; text-decoration: none;">
+            <!-- هنا اللوجو واسم المشروع -->
+            <span style="font-size: 24px; font-weight: bold; color: #f5dd5d;">Mal3ab Online ⚽</span>
+        </a>
+    </h1>
+{% endblock %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <style>
+        /* 1. كود الـ 3 شرطات (Hamburger Menu) */
+        /* بنجبر المتصفح يغير السهم لرمز القائمة */
+        :root {
+            --primary: #27ae60; /* لون أخضر الملاعب */
+            --header-bg: #2c3e50; /* لون الهيدر */
+        }
+
+        #header {
+            background: var(--header-bg) !important;
+            padding: 15px 40px !important;
+        }
+
+        /* تعديل زر القائمة الجانبية */
+        .toggle-nav-sidebar::before {
+            content: '\2630' !important; /* رمز 3 شرطات */
+            font-size: 26px !important;
+            font-weight: bold !important;
+            color: #fff !important;
+        }
+
+        .toggle-nav-sidebar {
+            background: transparent !important;
+            width: 40px !important;
+            height: 40px !important;
+            display: flex !important;
+            align-items: center;
+            justify-content: center !important;
+        }
+
+        .toggle-nav-sidebar:hover {
+            background: rgba(255,255,255,0.1) !important;
+            border-radius: 5px;
+        }
+
+        /* إخفاء كلمة Django Administration القديمة */
+        #branding h1 {
+            margin: 0;
+        }
+    </style>
+{% endblock %}

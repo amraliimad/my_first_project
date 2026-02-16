@@ -352,3 +352,41 @@ def signup(request):
             return redirect('home')
     else: form = UserCreationForm()
     return render(request, "registration/signup.html", {'form': form})
+def about_us(request):
+    return render(request, 'about_us.html')
+# 1. تأكد إن السطور دي موجودة في أول الملف (فوق خالص)
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone  # ده مهم جداً عشان التوقيت
+from .models import Booking
+
+# ... (باقي الدوال زي home و pitch_detail سيبهم زي ما هما) ...
+
+# 2. استبدل دالة user_profile بالكود ده:
+@login_required
+def user_profile(request):
+    # بنجيب تاريخ النهاردة بناءً على توقيت الدولة اللي في الإعدادات
+    today = timezone.now().date()
+    
+    # الحجوزات القادمة: أي حجز تاريخه النهاردة أو في المستقبل
+    # بنرتبها: التاريخ الأقرب، ثم الساعة الأقرب
+    upcoming = Booking.objects.filter(
+        user=request.user, 
+        date__gte=today
+    ).order_by('date', 'time')
+
+    # الحجوزات السابقة: أي حجز تاريخه قبل النهاردة
+    # بنرتبها: الأحدث (عشان نشوف آخر حاجة لعبناها الأول)
+    past = Booking.objects.filter(
+        user=request.user, 
+        date__lt=today
+    ).order_by('-date', '-time')
+
+    context = {
+        'upcoming_bookings': upcoming, # ده الاسم اللي استخدمناه في HTML الجديد
+        'past_bookings': past,
+        'user': request.user
+    }
+    
+    return render(request, 'user_profile.html', context)
+

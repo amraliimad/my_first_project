@@ -10,5 +10,7 @@ urlpatterns = [
         # رابط صفحة البروفايل
     path('profile/', views.user_profile, name='user_profile'),
     path('cancel-booking/<int:booking_id>/', views.cancel_booking, name='cancel_booking'),
+    path('about-us/', views.about_us, name='about_us'),
+
 
 ]

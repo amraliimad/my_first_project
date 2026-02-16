@@ -8,13 +8,13 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # 2. جلب الأسرار من البيئة
-SECRET_KEY = os.getenv('SECRET_KEY')
-DEBUG = os.getenv('DEBUG') == 'True'
+SECRET_KEY = os.getenv("SECRET_KEY")
+DEBUG = os.getenv("DEBUG") == "True"
 
 
 # 3. الروابط المسموح بها
 # أضف رابط موقعك على PythonAnywhere هنا بجانب الـ localhost
-ALLOWED_HOSTS = ["*"] 
+ALLOWED_HOSTS = ["*"]
 
 # --- Application definition ---
 
@@ -43,8 +43,10 @@ ROOT_URLCONF = "malaeb_project.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "bookings" / "templates"],
-        "APP_DIRS": True,
+        "DIRS": [
+            BASE_DIR / "templates"
+        ],  # التعديل هنا: شلنا bookings وخليناها templates بس
+        "APP_DIRS": True,  # ده هيخلي جانغو يدور جوه bookings أوتوماتيك متقلقش
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.request",
@@ -54,6 +56,7 @@ TEMPLATES = [
         },
     },
 ]
+
 
 WSGI_APPLICATION = "malaeb_project.wsgi.application"
 
@@ -76,6 +79,12 @@ USE_TZ = True
 # --- Static files ---
 
 STATIC_URL = "static/"
+
+# ضيف الجزء ده ضروري جداً
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
+
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # --- Authentication Redirects ---
@@ -97,8 +106,8 @@ else:
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # إعدادات رفع الملفات والصور
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")

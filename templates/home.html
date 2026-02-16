@@ -1,0 +1,427 @@
+{% load static %}
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mal3ab Online - الرئيسية</title>
+    
+    <!-- مكتبة الأيقونات -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* --- 1. المتغيرات --- */
+        :root {
+            --primary: #27ae60; --primary-dark: #219150; --secondary: #e67e22; --secondary-dark: #d35400;
+            --dark: #2c3e50; --light: #f4f7f6; --white: #ffffff; --shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
+
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: var(--light); margin: 0; padding: 0;
+            display: flex; flex-direction: column; min-height: 100vh;
+        }
+
+        /* --- 2. Navbar --- */
+        nav {
+            background: var(--white); padding: 10px 5%; display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1000; height: 70px;
+        }
+        .logo-container { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+        .logo-text { font-size: 24px; font-weight: 800; color: var(--dark); letter-spacing: -1px; }
+        
+        /* زر القائمة (تم استخدام رمز نصي لضمان الظهور) */
+        .menu-btn {
+            font-size: 35px; color: var(--dark); cursor: pointer; padding: 0 10px; line-height: 1;
+            font-weight: bold; transition: 0.3s; user-select: none;
+        }
+        .menu-btn:hover { color: var(--primary); transform: scale(1.1); }
+
+        /* --- 3. Sidebar --- */
+        .sidebar {
+            height: 100%; width: 0; position: fixed; z-index: 2000; top: 0; right: 0;
+            background-color: var(--dark); overflow-x: hidden; transition: 0.4s; padding-top: 60px;
+            box-shadow: -4px 0 15px rgba(0,0,0,0.3);
+        }
+        .sidebar a {
+            padding: 15px 25px; text-decoration: none; font-size: 18px; color: #ecf0f1;
+            display: flex; align-items: center; gap: 12px; transition: 0.3s;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .sidebar a:hover { background-color: var(--primary); padding-right: 35px; }
+        .sidebar .closebtn {
+            position: absolute; top: 10px; left: 20px; font-size: 40px; border: none; background: none; color: #aaa; cursor: pointer;
+        }
+        .sidebar .closebtn:hover { color: white; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1500; display: none; }
+
+        /* --- 4. Hero --- */
+        header { text-align: center; padding: 80px 20px 100px; background: linear-gradient(135deg, #2c3e50 0%, #27ae60 100%); color: white; }
+        header h1 { margin: 0 0 10px; font-size: 2.5rem; }
+        header p { font-size: 1.2rem; opacity: 0.9; }
+
+        /* --- 5. Search --- */
+        .search-container {
+            background: var(--white); padding: 30px; margin: -60px auto 40px; width: 85%; max-width: 1100px;
+            border-radius: 20px; box-shadow: var(--shadow); position: relative; z-index: 10;
+        }
+        .filter-form { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
+        .filter-group { flex: 1; min-width: 160px; }
+        .filter-group label { display: block; margin-bottom: 10px; font-weight: 700; color: var(--dark); font-size: 14px; }
+        .filter-group select, .filter-group input { width: 100%; padding: 14px; border: 2px solid #eee; border-radius: 12px; font-size: 14px; outline: none; background-color: #fcfcfc; transition: 0.3s; }
+        .filter-group select:focus, .filter-group input:focus { border-color: var(--primary); background-color: white; box-shadow: 0 0 0 4px rgba(39, 174, 96, 0.1); }
+        .btn-search { background: var(--dark); color: white; padding: 14px 25px; border: none; border-radius: 12px; cursor: pointer; height: 50px; font-weight: bold; width: 100%; }
+        .btn-search:hover { background: #1a252f; transform: translateY(-2px); }
+        .btn-location { background: var(--secondary); color: white; padding: 14px 20px; border: none; border-radius: 12px; cursor: pointer; height: 50px; font-weight: bold; display: flex; align-items: center; gap: 5px; }
+        .btn-location:hover { background: var(--secondary-dark); transform: translateY(-2px); }
+        .reset-link { color: #e74c3c; font-size: 13px; font-weight: bold; text-decoration: none; display: inline-block; margin-top: 10px; }
+
+        /* --- 6. Grid (التعديل رقم 2: 4 ملاعب) --- */
+        .container { max-width: 1300px; margin: 0 auto 60px; padding: 0 20px; flex: 1; }
+        
+        .grid {
+            display: grid;
+            gap: 20px;
+            /* هنا خليناهم 4 أعمدة في الشاشات الكبيرة */
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        /* تعديلات الموبايل والتابلت للجريد */
+        @media (max-width: 1200px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+
+        /* --- Pitch Card (التعديل رقم 3) --- */
+        .pitch-card {
+            background: var(--white); border-radius: 15px; overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column;
+            transition: transform 0.3s; border: 1px solid #eee;
+        }
+        .pitch-card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
+
+        .pitch-image { 
+        width: 100%; 
+        height: 160px; 
+        background: #ecf0f1; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        font-size: 50px; 
+        color: #bdc3c7; 
+        position: relative; /* <--- ده السطر الجديد المهم جداً */
+    }
+
+        
+        .pitch-image img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .pitch-info { padding: 15px; text-align: right; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; }
+        .pitch-info h3 { margin: 0; color: var(--dark); font-size: 18px; font-weight: bold; }
+        
+        /* بادج المنطقة والنوع */
+        .tags-row { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 5px; }
+        .meta-badge { background: #e8f5e9; color: var(--primary-dark); padding: 4px 8px; border-radius: 5px; font-size: 12px; font-weight: bold; }
+        .type-badge { background: #fff3e0; color: #e67e22; padding: 4px 8px; border-radius: 5px; font-size: 12px; font-weight: bold; }
+
+        /* العنوان التفصيلي */
+        .address-text { font-size: 13px; color: #555; display: flex; align-items: center; gap: 5px; }
+
+        .distance-badge { font-size: 12px; color: #e67e22; font-weight: bold; margin-top: 2px; }
+        
+        .btn-book {
+            display: block; width: 100%; background: var(--primary); color: white;
+            padding: 10px 0; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: auto; text-align: center; font-size: 14px;
+        }
+        .btn-book:hover { background: var(--primary-dark); }
+
+        /* --- 7. Footer --- */
+        footer { background: var(--dark); color: white; padding: 30px; text-align: center; margin-top: auto; }
+        .social-icons { display: flex; justify-content: center; gap: 20px; margin-bottom: 20px; }
+        .social-icon {
+            width: 40px; height: 40px; background: rgba(255,255,255,0.1); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; color: white; text-decoration: none; transition: 0.3s;
+        }
+        .social-icon:hover { background: var(--primary); transform: translateY(-3px); }
+
+        /* --- WhatsApp --- */
+        .floating-whatsapp {
+            position: fixed; bottom: 30px; right: 30px; background: #25d366; color: white;
+            width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 35px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 1000; text-decoration: none; animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(37, 211, 102, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
+        }
+
+        .no-results { text-align: center; padding: 50px; font-size: 18px; color: #7f8c8d; }
+        
+        .pagination { display: flex; justify-content: center; gap: 10px; margin-top: 40px; }
+        .page-link { padding: 8px 15px; background: white; border: 1px solid #ddd; border-radius: 6px; text-decoration: none; color: var(--dark); font-weight: bold; }
+        .page-link.active, .page-link:hover { background: var(--primary); color: white; border-color: var(--primary); }
+
+        @media (max-width: 768px) {
+            .filter-form { flex-direction: column; }
+            .search-container { width: 90%; padding: 20px; margin-top: -40px; }
+            .btn-location { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="overlay" class="overlay" onclick="closeNav()"></div>
+
+    <!-- القائمة الجانبية -->
+    <div id="mySidebar" class="sidebar">
+        <button class="closebtn" onclick="closeNav()">×</button>
+        
+        {% if user.is_authenticated %}
+            <div style="padding: 20px; text-align: center; border-bottom: 1px solid #444; margin-bottom: 10px;">
+                <i class="fas fa-user-circle" style="font-size: 50px; color: white; margin-bottom: 10px;"></i><br>
+                <span style="color: #ccc;">مرحباً،</span> <strong style="color: var(--primary); font-size: 18px;">{{ user.username }}</strong>
+            </div>
+
+            {% if user.is_superuser %}
+                <a href="{% url 'admin:index' %}" style="color: #f1c40f;">
+                    <i class="fas fa-tools"></i> لوحة الإدارة
+                </a>
+            {% endif %}
+
+            <a href="{% url 'user_profile' %}"><i class="fas fa-id-card"></i> حسابي وحجوزاتي</a>
+            <a href="{% url 'home' %}"><i class="fas fa-home"></i> الرئيسية</a>
+            
+            <!-- (التعديل رقم 4: رابط من نحن) -->
+            <a href="{% url 'about_us' %}"><i class="fas fa-info-circle"></i> من نحن</a>
+            
+            <form action="{% url 'logout' %}" method="post" id="logout-form">
+                {% csrf_token %}
+                <a href="#" onclick="document.getElementById('logout-form').submit();" style="color: #e74c3c;">
+                    <i class="fas fa-sign-out-alt"></i> خروج
+                </a>
+            </form>
+        {% else %}
+            <div style="padding: 30px; text-align: center; color: white;">
+                <i class="fas fa-futbol" style="font-size: 40px; color: var(--primary);"></i><br><br>
+                أهلاً بك في Mal3ab Online
+            </div>
+            <a href="{% url 'login' %}"><i class="fas fa-sign-in-alt"></i> تسجيل دخول</a>
+            <a href="{% url 'signup' %}"><i class="fas fa-user-plus"></i> إنشاء حساب جديد</a>
+            <a href="{% url 'about_us' %}"><i class="fas fa-info-circle"></i> من نحن</a>
+        {% endif %}
+    </div>
+
+    <a href="https://wa.me/2010xxxxxxxx" target="_blank" class="floating-whatsapp">
+        <i class="fab fa-whatsapp"></i>
+    </a>
+
+    <nav>
+        <a href="{% url 'home' %}" class="logo-container">
+            <img src="{% static 'img/logo.png' %}" alt="Mal3ab Logo" height="50">
+            <span class="logo-text">Mal3ab <span style="color: var(--primary);">Online</span></span>
+        </a>
+        <div class="menu-btn" onclick="openNav()">&#9776;</div>
+    </nav>
+
+    <header>
+        <h1>احجز ملعبك المفضل في ثوانٍ</h1>
+        <p>أكبر منصة لحجز الملاعب الرياضية في مصر</p>
+    </header>
+
+    <div class="search-container">
+        <form method="GET" class="filter-form">
+            
+            <button type="button" onclick="getLocation()" class="btn-location">
+                📍 أقرب ملعب لي
+            </button>
+
+            <!-- (التعديل رقم 1: المناطق الحقيقية) -->
+            <div class="filter-group">
+                <label>المنطقة</label>
+                <select name="location">
+                    <option value="all">كل المناطق</option>
+                    <option value="Abbaseya" {% if selected_location == 'Abbaseya' %}selected{% endif %}>العباسية</option>
+                    <option value="Nasr City" {% if selected_location == 'Nasr City' %}selected{% endif %}>مدينة نصر</option>
+                    <option value="New Cairo" {% if selected_location == 'New Cairo' %}selected{% endif %}>مصر الجديدة</option>
+                    <option value="Maadi" {% if selected_location == 'Maadi' %}selected{% endif %}>المعادي</option>
+                    <option value="Shoubra" {% if selected_location == 'Shoubra' %}selected{% endif %}>شبرا</option>
+                    <option value="Dokki" {% if selected_location == 'Dokki' %}selected{% endif %}>الدقي</option>
+                    <option value="Giza" {% if selected_location == 'Giza' %}selected{% endif %}>الجيزة</option>
+                    <option value="Zamalek" {% if selected_location == 'Zamalek' %}selected{% endif %}>الزمالك</option>
+                    <option value="Haram" {% if selected_location == 'Haram' %}selected{% endif %}>الهرم</option>
+                    <option value="Faisal" {% if selected_location == 'Faisal' %}selected{% endif %}>فيصل</option>
+                    <option value="Obour" {% if selected_location == 'Obour' %}selected{% endif %}>العبور</option>
+                    <option value="Shorouk" {% if selected_location == 'Shorouk' %}selected{% endif %}>الشروق</option>
+                    <option value="October" {% if selected_location == 'October' %}selected{% endif %}>6 أكتوبر</option>
+                    <option value="Sheikh Zayed" {% if selected_location == 'Sheikh Zayed' %}selected{% endif %}>الشيخ زايد</option>
+                    <option value="Helwan" {% if selected_location == 'Helwan' %}selected{% endif %}>حلوان</option>
+                    <option value="Mokattam" {% if selected_location == 'Mokattam' %}selected{% endif %}>المقطم</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>الحجم</label>
+                <select name="size">
+                    <option value="all">الكل</option>
+                    <option value="5x5" {% if selected_size == '5x5' %}selected{% endif %}>خماسي</option>
+                    <option value="7x7" {% if selected_size == '7x7' %}selected{% endif %}>سباعي</option>
+                    <option value="11x11" {% if selected_size == '11x11' %}selected{% endif %}>قانوني</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>الأرضية</label>
+                <select name="floor_type">
+                    <option value="all">الكل</option>
+                    <option value="Artificial" {% if selected_floor == 'Artificial' %}selected{% endif %}>نجيل صناعي</option>
+                    <option value="Natural" {% if selected_floor == 'Natural' %}selected{% endif %}>نجيل طبيعي</option>
+                    <option value="Tartan" {% if selected_floor == 'Tartan' %}selected{% endif %}>ترتان</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>السعر (أقل من)</label>
+                <input type="number" name="price" placeholder="مثلاً: 200" value="{{ selected_price|default:'' }}">
+            </div>
+
+            <div style="flex-grow:1; text-align: center;">
+                <button type="submit" class="btn-search">بحث 🔍</button>
+                {% if selected_location or selected_size != 'all' or selected_price or is_nearest_search %}
+                    <a href="{% url 'home' %}" class="reset-link">❌ إلغاء الفلتر</a>
+                {% endif %}
+            </div>
+
+        </form>
+    </div>
+
+    <!-- Grid Results -->
+    <div class="container">
+        {% if pitches %}
+            <!-- (التعديل رقم 2: الجريد 4 أعمدة) -->
+            <div class="grid">
+                {% for pitch in pitches %}
+                <div class="pitch-card">
+                    <div class="pitch-image">
+                        {% if pitch.image %}
+                            <img src="{{ pitch.image.url }}" alt="{{ pitch.name }}">
+                        {% else %}
+                            🏟️
+                        {% endif %}
+                    </div>
+                    <div class="pitch-info">
+                        <h3>{{ pitch.name }}</h3>
+                        
+                        <!-- (التعديل رقم 3: البيانات المطلوبة) -->
+                        <div class="tags-row">
+                            <span class="meta-badge">📍 {{ pitch.get_location_display }}</span>
+                            <span class="type-badge">📏 {{ pitch.get_size_display }}</span>
+                        </div>
+
+                        {% if pitch.address %}
+                            <div class="address-text">
+                                <i class="fas fa-map-marker-alt"></i> {{ pitch.address }}
+                            </div>
+                        {% endif %}
+
+                        {% if pitch.distance is not None and pitch.distance != 99999 %}
+                            <div class="distance-badge">
+                                🚶 يبعد عنك {{ pitch.distance }} كم
+                            </div>
+                        {% endif %}
+                        <!-- زر المشاركة السريع -->
+                        <div style="margin-top: 10px; text-align: left;">
+                            <a href="https://wa.me/?text=لقيت ملعب جامد اسمه {{ pitch.name }} في {{ pitch.get_location_display }}.. إيه رأيكم نحجز؟ الرابط: {{ request.build_absolute_uri }}{% url 'pitch_detail' pitch.id %}" 
+                            target="_blank" 
+                            style="color: #25d366; font-size: 14px; text-decoration: none; font-weight: bold;">
+                            <i class="fab fa-whatsapp"></i> شير لأصحابك
+                            </a>
+                        </div>
+
+                        <a href="{% url 'pitch_detail' pitch.id %}" class="btn-book">عرض التفاصيل والحجز</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            {% if pitches.has_other_pages %}
+            <div class="pagination">
+                {% if pitches.has_previous %}
+                    <a href="?page={{ pitches.previous_page_number }}" class="page-link">&laquo; السابق</a>
+                {% endif %}
+                <span class="page-link active">صفحة {{ pitches.number }}</span>
+                {% if pitches.has_next %}
+                    <a href="?page={{ pitches.next_page_number }}" class="page-link">التالي &raquo;</a>
+                {% endif %}
+            </div>
+            {% endif %}
+
+        {% else %}
+            <div class="no-results">
+                <i class="fas fa-search" style="font-size: 50px; margin-bottom: 20px;"></i><br>
+                لا توجد ملاعب تطابق بحثك
+            </div>
+        {% endif %}
+    </div>
+
+    <footer>
+        <h3>تواصل معنا</h3>
+        <div class="social-icons">
+            <a href="https://www.facebook.com" class="social-icon fb"><i class="fab fa-facebook-f"></i></a>
+            <a href="#" class="social-icon ig"><i class="fab fa-instagram"></i></a>
+            <a href="#" class="social-icon wa"><i class="fab fa-whatsapp"></i></a>
+            <a href="#" class="social-icon tw"><i class="fab fa-x-twitter"></i></a>
+            <a href="#" class="social-icon tk"><i class="fab fa-tiktok"></i></a>
+        </div>
+        <p>جميع الحقوق محفوظة &copy; 2024 Mal3ab Online</p>
+    </footer>
+
+    <script>
+        function openNav() {
+            document.getElementById("mySidebar").style.width = "280px";
+            document.getElementById("overlay").style.display = "block";
+        }
+
+        function closeNav() {
+            document.getElementById("mySidebar").style.width = "0";
+            document.getElementById("overlay").style.display = "none";
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === "Escape") closeNav();
+        });
+
+        function getLocation() {
+            if (navigator.geolocation) {
+                const btn = document.querySelector('.btn-location');
+                if (!btn) return;
+                
+                const originalText = btn.innerHTML;
+                btn.innerHTML = 'جاري البحث... ⏳';
+                btn.disabled = true;
+
+                navigator.geolocation.getCurrentPosition(showPosition, function(error) {
+                    showError(error);
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                });
+            } else {
+                alert("المتصفح لا يدعم تحديد الموقع.");
+            }
+        }
+
+        function showPosition(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            window.location.href = `/?lat=${lat}&lng=${lng}`;
+        }
+
+        function showError(error) {
+            let msg = "حدث خطأ أثناء تحديد الموقع.";
+            if(error.code == 1) msg = "يرجى السماح بالوصول للموقع (GPS).";
+            else if(error.code == 3) msg = "انتهت مهلة طلب الموقع.";
+            alert(msg);
+        }
+    </script>
+
+</body>
+</html>

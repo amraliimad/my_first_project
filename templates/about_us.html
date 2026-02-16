@@ -1,0 +1,28 @@
+{% load static %}
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>من نحن - Mal3ab Online</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; margin: 0; padding: 20px; text-align: center; }
+        .container { max-width: 800px; margin: 50px auto; background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; }
+        p { line-height: 1.8; color: #555; font-size: 18px; }
+        .btn-home { display: inline-block; margin-top: 20px; padding: 10px 20px; background: #27ae60; color: white; text-decoration: none; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>من نحن ⚽</h1>
+        <p>
+            أهلاً بك في <strong>Mal3ab Online</strong>، المنصة الأولى في مصر لحجز الملاعب الرياضية بكل سهولة.
+            <br><br>
+            هدفنا هو مساعدة عشاق كرة القدم في العثور على أفضل الملاعب القريبة منهم وحجزها في ثوانٍ، دون الحاجة للاتصالات الهاتفية المعقدة.
+            <br><br>
+            نحن نجمع لك الملاعب في مكان واحد، ونوفر لك طرق دفع متعددة، وتقييمات حقيقية من اللاعبين.
+        </p>
+        <a href="{% url 'home' %}" class="btn-home">العودة للرئيسية</a>
+    </div>
+</body>
+</html>
