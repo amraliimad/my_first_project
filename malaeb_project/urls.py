@@ -37,11 +37,10 @@ urlpatterns += i18n_patterns(
     path('admin/', admin.site.urls),
     # روابط المصادقة (تسجيل دخول/خروج)
     path('accounts/', include('django.contrib.auth.urls')),
-    path('signup/', include('bookings.urls')), # أو المسار اللي فيه الـ signup بتاعك
     
     # روابط تطبيقك (Bookings)
     path('', include('bookings.urls')),
-    path('signup/', booking_views.signup, name='signup'),
+    path('signup/', booking_views.signup, name='signup'), # <--- ✅ هذا هو السطر الصحيح (اتركه)
     
     # هام: لو المستخدم كتب الرابط من غير لغة، i18n_patterns هيحوله للغة الافتراضية
     prefix_default_language=True

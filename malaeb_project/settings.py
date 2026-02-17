@@ -120,3 +120,12 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # إعدادات رفع الملفات والصور
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+# السماح لـ Django بقبول الطلبات من رابط موقعك
+CSRF_TRUSTED_ORIGINS = [
+    'https://amrali011.pythonanywhere.com', # للسيرفر
+    'http://127.0.0.1:8000',                 # لجهازك
+    'http://localhost:8000',                 # لجهازك برضه
+]
+
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = False

@@ -1,154 +1,384 @@
+{% load static %}
+{% load i18n %}
 <!DOCTYPE html>
-<html dir="rtl" lang="ar">
+<html dir="rtl" lang="ar" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>إنشاء حساب جديد - ملاعبك</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
     <style>
+        /* ============================================================
+           1. CSS VARIABLES
+           ============================================================ */
         :root {
-            --primary-color: #27ae60;
-            --secondary-color: #2c3e50;
-            --bg-color: #f4f7f6;
-            --white: #ffffff;
-            --error-color: #e74c3c;
+            --primary:       #27ae60;
+            --primary-light: #2ecc71;
+            --primary-dark:  #1e8449;
+            --primary-ghost: rgba(39, 174, 96, 0.12);
+            --danger:        #e74c3c;
+            --danger-ghost:  rgba(231, 76, 60, 0.08);
+            --bg:            #f0f4f2;
+            --surface:       #ffffff;
+            --surface-2:     #f7faf8;
+            --border:        #e2e8e4;
+            --text:          #1a2e23;
+            --text-2:        #4a6358;
+            --text-muted:    #8fa89c;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+            --shadow-md: 0 8px 28px rgba(0,0,0,0.09);
+            --shadow-lg: 0 20px 56px rgba(0,0,0,0.13);
+            --radius-sm: 8px;
+            --radius-md: 14px;
+            --radius-lg: 20px;
+            --radius-xl: 28px;
         }
+
+        [data-theme="dark"] {
+            --bg:        #0f1a14;
+            --surface:   #182318;
+            --surface-2: #1e2e1e;
+            --border:    #2a3d2a;
+            --text:      #e8f5e9;
+            --text-2:    #a5c8aa;
+            --text-muted:#5a7d5a;
+            --shadow-md: 0 8px 28px rgba(0,0,0,0.4);
+            --shadow-lg: 0 20px 56px rgba(0,0,0,0.5);
+        }
+
+        /* ============================================================
+           2. BASE
+           ============================================================ */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            font-family: 'Cairo', sans-serif;
+            background: var(--bg);
+            color: var(--text);
             min-height: 100vh;
-            margin: 0;
-            background-image: linear-gradient(rgba(244, 247, 246, 0.9), rgba(244, 247, 246, 0.9)), 
-                              url('https://www.transparenttextures.com/patterns/cubes.png');
+            display: flex;
+            transition: background 0.3s, color 0.3s;
+            background-image:
+                radial-gradient(circle at 20% 80%, rgba(39,174,96,0.06) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(39,174,96,0.04) 0%, transparent 50%);
         }
 
+        a { text-decoration: none; color: inherit; }
+        button { font-family: 'Cairo', sans-serif; cursor: pointer; }
+
+        /* ============================================================
+           3. LEFT PANEL
+           ============================================================ */
+        .auth-panel-left {
+            flex: 1;
+            /* Slightly different gradient angle from login for variety */
+            background: linear-gradient(160deg, #1e8449 0%, #27ae60 45%, #16a085 100%);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 60px 48px;
+            position: relative; overflow: hidden;
+        }
+
+        .auth-panel-left::before {
+            content: '';
+            position: absolute; width: 350px; height: 350px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 40% 60% 55% 45% / 55% 45% 60% 40%;
+            bottom: -80px; left: -60px;
+        }
+
+        .auth-panel-left::after {
+            content: '';
+            position: absolute; width: 220px; height: 220px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 60% 40% 35% 65% / 40% 60% 45% 55%;
+            top: -40px; right: -40px;
+        }
+
+        .panel-graphic {
+            font-size: 72px; margin-bottom: 28px;
+            position: relative; z-index: 1;
+            animation: floatBall 5s ease-in-out infinite;
+        }
+
+        @keyframes floatBall {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50%       { transform: translateY(-12px) rotate(8deg); }
+        }
+
+        .panel-tagline {
+            color: white; text-align: center;
+            position: relative; z-index: 1;
+        }
+
+        .panel-tagline h2 { font-size: 30px; font-weight: 900; margin-bottom: 12px; line-height: 1.3; }
+        .panel-tagline p  { font-size: 14px; opacity: 0.85; line-height: 1.8; font-weight: 500; }
+
+        /* Steps list */
+        .signup-steps {
+            list-style: none; margin-top: 32px; width: 100%;
+            position: relative; z-index: 1;
+        }
+
+        .signup-steps li {
+            display: flex; align-items: flex-start; gap: 14px;
+            color: rgba(255,255,255,0.92); font-size: 14px; font-weight: 600;
+            padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .signup-steps li:last-child { border-bottom: none; }
+
+        .step-circle {
+            width: 30px; height: 30px; flex-shrink: 0;
+            background: rgba(255,255,255,0.2);
+            border: 1.5px solid rgba(255,255,255,0.35);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; font-weight: 900;
+        }
+
+        .step-text { padding-top: 4px; }
+
+        /* ============================================================
+           4. RIGHT FORM PANEL
+           ============================================================ */
+        .auth-panel-right {
+            width: 100%; max-width: 520px;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 48px 40px;
+            position: relative;
+            overflow-y: auto;
+        }
+
+        .theme-btn {
+            position: absolute; top: 20px; left: 20px;
+            background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 50px; padding: 7px 14px;
+            font-size: 13px; font-weight: 700; color: var(--text-2);
+            display: flex; align-items: center; gap: 6px; transition: all 0.2s;
+        }
+
+        .theme-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+        /* ============================================================
+           5. FORM CARD
+           ============================================================ */
         .auth-card {
-            background: var(--white);
-            padding: 30px 40px;
-            border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-            width: 100%;
-            max-width: 450px;
-            text-align: center;
-            border-top: 8px solid var(--primary-color);
-            margin: 20px;
+            width: 100%; max-width: 440px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: 36px 32px;
+            box-shadow: var(--shadow-lg);
+            animation: slideUp 0.5s cubic-bezier(0.34,1.2,0.64,1) both;
         }
 
-        .auth-card h2 {
-            color: var(--secondary-color);
-            margin-bottom: 5px;
-            font-size: 26px;
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
-        .subtitle {
-            color: #7f8c8d;
-            font-size: 14px;
-            margin-bottom: 25px;
+        .card-logo {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 24px;
         }
 
-        /* تنسيق فورم ديجانجو */
+        .card-logo-icon {
+            width: 44px; height: 44px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: var(--radius-md);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; box-shadow: 0 4px 12px rgba(39,174,96,0.35);
+        }
+
+        .card-logo-text { font-size: 20px; font-weight: 900; color: var(--text); }
+        .card-logo-text span { color: var(--primary); }
+
+        .card-heading { font-size: 22px; font-weight: 900; color: var(--text); margin-bottom: 4px; }
+        .card-subhead  { font-size: 13px; color: var(--text-muted); font-weight: 600; margin-bottom: 24px; }
+
+        /* ── Django form field loop styling ── */
+        .form-field { margin-bottom: 16px; }
+
         form p {
             text-align: right;
-            margin-bottom: 15px;
+            margin-bottom: 16px;
         }
 
         form label {
             display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-            color: var(--secondary-color);
-            font-size: 14px;
+            font-size: 12px; font-weight: 800;
+            color: var(--text-2); margin-bottom: 7px;
+            text-transform: uppercase; letter-spacing: 0.5px;
         }
 
-        form input {
+        form input[type="text"],
+        form input[type="password"],
+        form input[type="email"] {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #eee;
-            border-radius: 10px;
-            box-sizing: border-box;
-            font-size: 15px;
-            transition: all 0.3s ease;
+            padding: 13px 16px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-md);
+            background: var(--surface-2); color: var(--text);
+            font-family: 'Cairo', sans-serif; font-size: 15px;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
 
-        form input:focus {
-            border-color: var(--primary-color);
+        form input[type="text"]:focus,
+        form input[type="password"]:focus,
+        form input[type="email"]:focus {
             outline: none;
-            box-shadow: 0 0 8px rgba(39, 174, 96, 0.1);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px var(--primary-ghost);
+            background: var(--surface);
         }
 
-        /* تنسيق نصوص المساعدة الرخمة بتاعة ديجانجو */
+        /* Help text */
         .helptext {
-            display: block;
-            font-size: 11px;
-            color: #95a5a6;
-            margin-top: 5px;
-            line-height: 1.4;
+            display: block; font-size: 11px;
+            color: var(--text-muted); margin-top: 5px;
+            line-height: 1.5; font-weight: 600;
         }
 
+        /* Error list */
         ul.errorlist {
-            padding: 0;
-            list-style: none;
-            color: var(--error-color);
-            font-size: 13px;
-            text-align: right;
-            background: #fdf2f2;
-            padding: 10px;
-            border-radius: 8px;
+            list-style: none; padding: 0;
+            margin: 6px 0;
         }
 
-        .btn-auth {
-            width: 100%;
-            padding: 14px;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 17px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 15px;
+        ul.errorlist li {
+            background: var(--danger-ghost);
+            color: var(--danger); font-size: 12px; font-weight: 700;
+            padding: 6px 10px; border-radius: var(--radius-sm);
+            border-right: 3px solid var(--danger); margin-bottom: 4px;
         }
 
-        .btn-auth:hover {
-            background-color: #219150;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.3);
+        /* Non-field errors */
+        .error-container {
+            background: var(--danger-ghost);
+            border: 1px solid rgba(231,76,60,0.2);
+            border-right: 4px solid var(--danger);
+            border-radius: var(--radius-md);
+            padding: 12px 16px; margin-bottom: 18px;
+            color: var(--danger); font-size: 13px; font-weight: 700;
         }
 
-        .footer-links {
-            margin-top: 20px;
-            padding-top: 15px;
-            border-top: 1px solid #eee;
-            font-size: 14px;
+        /* Divider */
+        .fields-divider {
+            height: 1px; background: var(--border);
+            margin: 18px 0;
         }
 
-        .footer-links a {
-            color: var(--primary-color);
-            text-decoration: none;
-            font-weight: bold;
+        /* Submit button */
+        .btn-submit {
+            width: 100%; padding: 15px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white; border: none; border-radius: var(--radius-md);
+            font-size: 16px; font-weight: 900; margin-top: 8px;
+            box-shadow: 0 6px 20px rgba(39,174,96,0.35);
+            transition: all 0.25s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+
+        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(39,174,96,0.45); }
+        .btn-submit:active { transform: translateY(0); }
+
+        /* Footer */
+        .auth-footer {
+            margin-top: 22px; padding-top: 18px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            font-size: 14px; color: var(--text-muted); font-weight: 600;
+        }
+
+        .auth-footer a { color: var(--primary); font-weight: 800; }
+        .auth-footer a:hover { text-decoration: underline; }
+
+        /* Privacy note */
+        .privacy-note {
+            text-align: center; font-size: 11px;
+            color: var(--text-muted); margin-top: 14px; font-weight: 600; line-height: 1.6;
+        }
+
+        /* ============================================================
+           6. RESPONSIVE
+           ============================================================ */
+        @media (max-width: 900px) {
+            .auth-panel-left { display: none; }
+            .auth-panel-right { max-width: 100%; padding: 40px 24px; }
+        }
+
+        @media (max-width: 480px) {
+            .auth-panel-right { padding: 32px 16px; }
+            .auth-card { padding: 28px 20px; }
         }
     </style>
 </head>
 <body>
 
-    <div class="auth-card">
-        <h2>حساب جديد ⚽</h2>
-        <p class="subtitle">انضم إلينا واحجز ملعبك في دقيقة</p>
+    <!-- LEFT PANEL -->
+    <div class="auth-panel-left">
+        <div class="panel-graphic">🏟️</div>
+        <div class="panel-tagline">
+            <h2>انضم إلينا اليوم!</h2>
+            <p>أنشئ حسابك واحجز ملعبك المفضل في دقيقة واحدة.</p>
+        </div>
 
-        <form method="post">
-            {% csrf_token %}
-            
-            {% if form.errors %}
+        <ul class="signup-steps">
+            <li>
+                <div class="step-circle">1</div>
+                <div class="step-text">أنشئ حسابك المجاني الآن</div>
+            </li>
+            <li>
+                <div class="step-circle">2</div>
+                <div class="step-text">ابحث عن ملعبك القريب</div>
+            </li>
+            <li>
+                <div class="step-circle">3</div>
+                <div class="step-text">اختر الوقت المناسب وادفع</div>
+            </li>
+            <li>
+                <div class="step-circle">✓</div>
+                <div class="step-text">استلم كود الحجز والعب!</div>
+            </li>
+        </ul>
+    </div>
+
+    <!-- RIGHT FORM PANEL -->
+    <div class="auth-panel-right">
+
+        <button class="theme-btn" onclick="toggleTheme()">
+            <span id="themeIcon">🌙</span>
+            <span id="themeLabel">ليلي</span>
+        </button>
+
+        <div class="auth-card">
+
+            <!-- Logo -->
+            <div class="card-logo">
+                <div class="card-logo-icon">⚽</div>
+                <div class="card-logo-text">ملاعب<span>ك</span></div>
+            </div>
+
+            <h1 class="card-heading">إنشاء حساب جديد</h1>
+            <p class="card-subhead">انضم وابدأ تجربتك مع أفضل ملاعب مصر</p>
+
+            <form method="post">
+                {% csrf_token %}
+
+                {# Non-field errors #}
+                {% if form.errors %}
                 <div class="error-container">
                     {{ form.non_field_errors }}
                 </div>
-            {% endif %}
+                {% endif %}
 
-            {% for field in form %}
+                {# Field loop - preserves Django helptext and per-field errors #}
+                {% for field in form %}
                 <p>
                     {{ field.label_tag }}
                     {{ field }}
@@ -156,18 +386,51 @@
                         <span class="helptext">{{ field.help_text }}</span>
                     {% endif %}
                     {% for error in field.errors %}
-                        <span style="color: var(--error-color); font-size: 12px;">{{ error }}</span>
+                        <span style="color:var(--danger); font-size:12px; font-weight:700; display:block; margin-top:4px;">⚠ {{ error }}</span>
                     {% endfor %}
                 </p>
-            {% endfor %}
+                {% endfor %}
 
-            <button type="submit" class="btn-auth">إنشاء الحساب</button>
-        </form>
+                <button type="submit" class="btn-submit">
+                    🚀 إنشاء الحساب
+                </button>
+            </form>
 
-        <div class="footer-links">
-            <p>لديك حساب بالفعل؟ <a href="{% url 'login' %}">سجل دخولك الآن</a></p>
+            <div class="auth-footer">
+                لديك حساب بالفعل؟
+                <a href="{% url 'login' %}">سجّل دخولك الآن</a>
+            </div>
+
+            <p class="privacy-note">
+                🔒 بياناتك محمية ولن تُشارك مع أي طرف خارجي
+            </p>
+
         </div>
     </div>
 
+    <script>
+        /* Theme */
+        (function(){
+            const s = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', s);
+            updateThemeBtn(s);
+        })();
+
+        function toggleTheme(){
+            const c = document.documentElement.getAttribute('data-theme');
+            const n = c === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', n);
+            localStorage.setItem('theme', n);
+            updateThemeBtn(n);
+        }
+
+        function updateThemeBtn(theme){
+            const icon  = document.getElementById('themeIcon');
+            const label = document.getElementById('themeLabel');
+            if(!icon || !label) return;
+            if(theme === 'dark'){ icon.textContent = '☀️'; label.textContent = 'نهاري'; }
+            else                { icon.textContent = '🌙'; label.textContent = 'ليلي';  }
+        }
+    </script>
 </body>
 </html>

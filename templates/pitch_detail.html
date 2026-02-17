@@ -1,363 +1,1318 @@
+{% load i18n %}
+{% load static %}
 <!DOCTYPE html>
-<html dir="rtl" lang="ar">
+<html dir="rtl" lang="ar" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>حجز {{ pitch.name }} - ملاعبك</title>
+    <title>{{ pitch.name }} - ملاعبك</title>
+
+    <!-- Google Fonts: Cairo -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
     <style>
+        /* ============================================================
+           1. CSS VARIABLES (Light & Dark Theme)
+           ============================================================ */
         :root {
-            --primary: #27ae60;
-            --dark: #2c3e50;
-            --light: #f4f7f6;
-            --white: #ffffff;
-            --grey: #bdc3c7;
-            --booked: #e74c3c;
-            --star: #f1c40f;
-            --pending: #f39c12; /* لون جديد للحالة المعلقة */
+            /* Core Palette */
+            --primary:        #27ae60;
+            --primary-light:  #2ecc71;
+            --primary-dark:   #1e8449;
+            --primary-ghost:  rgba(39, 174, 96, 0.12);
+            --accent:         #f39c12;
+            --danger:         #e74c3c;
+            --danger-ghost:   rgba(231, 76, 60, 0.1);
+            --pending-color:  #f39c12;
+            --star:           #f1c40f;
+
+            /* Light Theme Surfaces */
+            --bg:             #f0f4f2;
+            --surface:        #ffffff;
+            --surface-2:      #f7faf8;
+            --border:         #e2e8e4;
+            --text:           #1a2e23;
+            --text-2:         #4a6358;
+            --text-muted:     #8fa89c;
+
+            /* Shadows */
+            --shadow-sm:  0 2px 8px rgba(0,0,0,0.06);
+            --shadow-md:  0 6px 24px rgba(0,0,0,0.09);
+            --shadow-lg:  0 16px 48px rgba(0,0,0,0.12);
+
+            /* Layout */
+            --sidebar-width: 260px;
+            --navbar-height: 64px;
+            --radius-sm:  8px;
+            --radius-md:  14px;
+            --radius-lg:  20px;
+            --radius-xl:  28px;
         }
 
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background-color: var(--light); 
-            margin: 0; 
-            padding: 0; 
-            color: #333;
+        [data-theme="dark"] {
+            --bg:             #0f1a14;
+            --surface:        #182318;
+            --surface-2:      #1e2e1e;
+            --border:         #2a3d2a;
+            --text:           #e8f5e9;
+            --text-2:         #a5c8aa;
+            --text-muted:     #5a7d5a;
+            --shadow-sm:  0 2px 8px rgba(0,0,0,0.3);
+            --shadow-md:  0 6px 24px rgba(0,0,0,0.4);
+            --shadow-lg:  0 16px 48px rgba(0,0,0,0.5);
         }
 
-        /* --- Header & Image --- */
-        .pitch-header {
-            position: relative;
-            background: var(--white);
-            margin-bottom: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        /* ============================================================
+           2. RESET & BASE
+           ============================================================ */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            transition: background 0.3s ease, color 0.3s ease;
         }
 
-        .cover-image {
-            width: 100%;
-            height: 350px;
-            object-fit: cover;
-            background-color: #ddd;
-        }
+        a { text-decoration: none; color: inherit; }
+        img { display: block; max-width: 100%; }
+        button { font-family: 'Cairo', sans-serif; cursor: pointer; }
 
-        .pitch-info {
-            max-width: 1000px;
-            margin: -80px auto 0;
-            position: relative;
-            background: white;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            width: 90%;
-        }
-
-        .pitch-title h1 { margin: 0 0 10px 0; color: var(--dark); font-size: 32px; }
-        .price-tag { 
-            background: var(--primary); 
-            color: white; 
-            padding: 5px 15px; 
-            border-radius: 50px; 
-            font-size: 16px; 
-            font-weight: bold; 
-            vertical-align: middle;
-            margin-right: 10px;
-        }
-
-        /* --- Owner & Contact Box --- */
-        .owner-box {
-            background: #f8f9fa;
-            border-right: 5px solid var(--primary);
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
+        /* ============================================================
+           3. SIDEBAR
+           ============================================================ */
+        .sidebar {
+            position: fixed;
+            top: 0; right: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
             display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
+            flex-direction: column;
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sidebar.hidden { transform: translateX(100%); }
+
+        .sidebar-logo {
+            padding: 24px 20px;
+            display: flex;
             align-items: center;
-        }
-        .owner-info { display: flex; align-items: center; gap: 8px; font-weight: bold; color: var(--dark); }
-        .owner-info a { color: var(--primary); text-decoration: none; }
-
-        /* --- Features --- */
-        .features { display: flex; gap: 10px; flex-wrap: wrap; margin: 20px 0; }
-        .feature-badge {
-            background: #e8f5e9; color: var(--primary); padding: 8px 15px;
-            border-radius: 10px; font-size: 14px; font-weight: 600;
+            gap: 12px;
+            border-bottom: 1px solid var(--border);
         }
 
-        .description { color: #555; line-height: 1.8; margin-bottom: 20px; font-size: 16px; }
-
-        /* --- Schedule Section --- */
-        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
-        .section-title { 
-            margin-bottom: 20px; color: var(--dark); 
-            border-right: 5px solid var(--primary); padding-right: 15px; font-size: 22px; 
+        .logo-icon {
+            width: 44px; height: 44px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: var(--radius-md);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px;
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.35);
+            flex-shrink: 0;
         }
 
-        .days-wrapper { 
-            display: flex; gap: 10px; overflow-x: auto; padding: 10px 5px; 
-            scrollbar-width: none; -webkit-overflow-scrolling: touch;
-        }
-        .days-wrapper::-webkit-scrollbar { display: none; }
+        .logo-text { font-size: 20px; font-weight: 800; color: var(--text); }
+        .logo-text span { color: var(--primary); }
 
-        .day-card { 
-            flex: 0 0 auto; width: 90px; text-align: center; padding: 15px 10px; 
-            border: 2px solid #eee; border-radius: 15px; text-decoration: none; 
-            color: #7f8c8d; background: white; transition: 0.3s;
-        }
-        .day-card.active { 
-            border-color: var(--primary); background: #e8f5e9; color: var(--primary); 
-            transform: scale(1.05); font-weight: bold; box-shadow: 0 5px 15px rgba(39, 174, 96, 0.2);
-        }
-        .day-name { display: block; font-size: 14px; margin-bottom: 5px; }
-        .day-date { font-size: 20px; }
+        .sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
 
-        /* --- Time Grid --- */
-        .schedule-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); 
-            gap: 15px; margin-top: 25px;
+        .nav-section-title {
+            font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+            color: var(--text-muted); padding: 8px 10px 6px;
+            text-transform: uppercase;
+        }
+
+        .nav-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 11px 14px; border-radius: var(--radius-sm);
+            font-size: 14px; font-weight: 600; color: var(--text-2);
+            transition: all 0.2s ease; margin-bottom: 2px;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: var(--primary-ghost);
+            color: var(--primary);
+        }
+
+        .nav-item .nav-icon { font-size: 18px; flex-shrink: 0; }
+
+        .sidebar-footer {
+            padding: 16px 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* Dark Mode Toggle in Sidebar */
+        .theme-toggle-btn {
+            width: 100%; display: flex; align-items: center; justify-content: space-between;
+            padding: 11px 14px; border-radius: var(--radius-sm);
+            background: var(--surface-2); border: 1px solid var(--border);
+            color: var(--text-2); font-size: 14px; font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .theme-toggle-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+        .toggle-track {
+            width: 40px; height: 22px; background: var(--border);
+            border-radius: 11px; position: relative; transition: background 0.3s;
+        }
+
+        [data-theme="dark"] .toggle-track { background: var(--primary); }
+
+        .toggle-thumb {
+            position: absolute; top: 3px; right: 3px;
+            width: 16px; height: 16px;
+            background: white; border-radius: 50%;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        }
+
+        [data-theme="dark"] .toggle-thumb { transform: translateX(-18px); }
+
+        /* ============================================================
+           4. SIDEBAR OVERLAY (mobile)
+           ============================================================ */
+        .sidebar-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            z-index: 999;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .sidebar-overlay.visible { opacity: 1; pointer-events: all; }
+
+        /* ============================================================
+           5. NAVBAR
+           ============================================================ */
+        .navbar {
+            position: fixed;
+            top: 0; left: 0;
+            right: var(--sidebar-width);
+            height: var(--navbar-height);
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center;
+            padding: 0 24px;
+            gap: 12px;
+            z-index: 900;
+            box-shadow: var(--shadow-sm);
+            transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .navbar.sidebar-hidden { right: 0; }
+
+        .menu-btn {
+            width: 40px; height: 40px;
+            border-radius: var(--radius-sm);
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text-2); font-size: 18px;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .menu-btn:hover { background: var(--primary-ghost); color: var(--primary); border-color: var(--primary); }
+
+        .navbar-breadcrumb {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 14px; color: var(--text-muted);
+        }
+
+        .navbar-breadcrumb a { color: var(--primary); font-weight: 600; }
+        .navbar-breadcrumb .sep { opacity: 0.4; }
+
+        .navbar-actions { margin-right: auto; display: flex; align-items: center; gap: 10px; }
+
+        .btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 9px 18px; border-radius: var(--radius-sm);
+            font-size: 14px; font-weight: 700; border: none;
+            transition: all 0.2s ease; white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4);
+        }
+
+        .btn-ghost {
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text-2);
+        }
+
+        .btn-ghost:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-ghost); }
+
+        /* ============================================================
+           6. MAIN LAYOUT
+           ============================================================ */
+        .main-content {
+            margin-right: var(--sidebar-width);
+            padding-top: var(--navbar-height);
+            min-height: 100vh;
+            transition: margin-right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .main-content.sidebar-hidden { margin-right: 0; }
+
+        /* ============================================================
+           7. COVER HERO SECTION
+           ============================================================ */
+        .hero-section {
+            position: relative;
+            height: 380px;
+            overflow: hidden;
+        }
+
+        .hero-cover {
+            width: 100%; height: 100%;
+            object-fit: cover;
+        }
+
+        .hero-placeholder {
+            width: 100%; height: 100%;
+            background: linear-gradient(135deg, #1a2e23 0%, #27ae60 60%, #1e8449 100%);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 100px;
+        }
+
+        /* Dark overlay on hero */
+        .hero-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.5) 100%);
+        }
+
+        .hero-badge {
+            position: absolute; top: 20px; left: 20px;
+            background: var(--primary);
+            color: white; padding: 6px 16px;
+            border-radius: 50px; font-size: 13px; font-weight: 700;
+            box-shadow: var(--shadow-md);
+        }
+
+        /* ============================================================
+           8. PITCH INFO CARD (floats above hero)
+           ============================================================ */
+        .page-container { max-width: 1060px; margin: 0 auto; padding: 0 24px; }
+
+        .pitch-card {
+            background: var(--surface);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-lg);
+            padding: 32px;
+            margin-top: -80px;
+            position: relative;
+            z-index: 10;
+            border: 1px solid var(--border);
+        }
+
+        .pitch-card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .pitch-name {
+            font-size: 28px; font-weight: 900;
+            color: var(--text); line-height: 1.2;
+        }
+
+        .price-badge {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white; padding: 8px 20px;
+            border-radius: 50px; font-size: 15px; font-weight: 800;
+            box-shadow: 0 4px 14px rgba(39, 174, 96, 0.35);
+            white-space: nowrap;
+        }
+
+        .rating-inline {
+            display: flex; align-items: center; gap: 6px;
+            background: #fffbea;
+            border: 1px solid #ffe082;
+            padding: 6px 14px; border-radius: 50px;
+            font-size: 14px; font-weight: 700; color: #b7790a;
+        }
+
+        [data-theme="dark"] .rating-inline {
+            background: rgba(241,196,15,0.1);
+            border-color: rgba(241,196,15,0.2);
+            color: var(--star);
+        }
+
+        /* ============================================================
+           9. OWNER INFO BOX
+           ============================================================ */
+        .owner-box {
+            display: flex; flex-wrap: wrap; gap: 16px;
+            padding: 16px 20px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-right: 4px solid var(--primary);
+            border-radius: var(--radius-md);
+            margin-bottom: 20px;
+        }
+
+        .owner-chip {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 14px; font-weight: 600; color: var(--text-2);
+        }
+
+        .owner-chip a { color: var(--primary); }
+        .owner-chip a:hover { text-decoration: underline; }
+
+        .owner-chip .chip-icon { font-size: 18px; }
+
+        /* ============================================================
+           10. DESCRIPTION
+           ============================================================ */
+        .pitch-description {
+            font-size: 15px; line-height: 1.9;
+            color: var(--text-2); margin-bottom: 20px;
+        }
+
+        /* ============================================================
+           11. FEATURE BADGES
+           ============================================================ */
+        .features-row {
+            display: flex; flex-wrap: wrap; gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .feature-pill {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: var(--primary-ghost);
+            border: 1px solid rgba(39, 174, 96, 0.2);
+            color: var(--primary);
+            padding: 7px 14px; border-radius: 50px;
+            font-size: 13px; font-weight: 700;
+            transition: all 0.2s;
+        }
+
+        .feature-pill:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .map-link {
+            display: inline-flex; align-items: center; gap: 8px;
+            color: #3498db; font-weight: 700; font-size: 14px;
+            padding: 8px 16px;
+            background: rgba(52, 152, 219, 0.08);
+            border: 1px solid rgba(52, 152, 219, 0.2);
+            border-radius: var(--radius-sm);
+            transition: all 0.2s;
+        }
+
+        .map-link:hover { background: #3498db; color: white; }
+
+        /* ============================================================
+           12. SCHEDULE SECTION
+           ============================================================ */
+        .section-block {
+            background: var(--surface);
+            border-radius: var(--radius-xl);
+            padding: 28px 32px;
+            margin-top: 28px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .section-heading {
+            font-size: 18px; font-weight: 800;
+            color: var(--text);
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .section-heading::before {
+            content: '';
+            width: 4px; height: 22px;
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        /* Days Picker */
+        .days-scroller {
+            display: flex; gap: 10px;
+            overflow-x: auto; padding: 4px 2px 12px;
+            scrollbar-width: none;
+        }
+
+        .days-scroller::-webkit-scrollbar { display: none; }
+
+        .day-card {
+            flex: 0 0 auto;
+            width: 82px;
+            text-align: center;
+            padding: 14px 8px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            color: var(--text-muted);
+            background: var(--surface-2);
+            transition: all 0.25s ease;
+            font-size: 13px;
+        }
+
+        .day-card:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+            background: var(--primary-ghost);
+        }
+
+        .day-card.active {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(39, 174, 96, 0.35);
+        }
+
+        .day-name { display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+        .day-num  { font-size: 22px; font-weight: 900; line-height: 1; }
+
+        /* Sub-heading for selected date */
+        .sub-heading {
+            font-size: 15px; font-weight: 700;
+            color: var(--text-2); margin: 20px 0 14px;
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        /* Time Slots Grid */
+        .slots-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 12px;
         }
 
         .time-slot {
-            background: white; border: 2px solid #eee; border-radius: 12px; padding: 15px 0;
-            text-align: center; text-decoration: none; color: var(--dark); transition: 0.2s;
+            border-radius: var(--radius-md);
+            padding: 14px 8px;
+            text-align: center;
+            border: 2px solid var(--border);
+            background: var(--surface-2);
+            transition: all 0.2s ease;
             position: relative; overflow: hidden;
         }
 
-        /* الحالة: متاح */
+        .slot-time {
+            display: block;
+            font-size: 17px; font-weight: 800;
+            color: var(--text);
+        }
+
+        .slot-label {
+            display: block; font-size: 11px;
+            margin-top: 4px; font-weight: 700;
+        }
+
+        /* Available */
         .time-slot.available:hover {
-            border-color: var(--primary); background: #e8f5e9; transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.2);
+            border-color: var(--primary);
+            background: var(--primary-ghost);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(39, 174, 96, 0.2);
         }
 
-        /* الحالة: محجوز مؤكد (أحمر) */
-        .time-slot.booked { background: #f0f0f0; color: #aaa; border-color: transparent; cursor: not-allowed; }
-        .time-slot.booked::after {
-            content: 'محجوز'; display: block; font-size: 12px; color: var(--booked); margin-top: 5px; font-weight: bold;
+        .time-slot.available .slot-label { color: var(--primary); }
+
+        /* Booked */
+        .time-slot.booked {
+            background: var(--surface-2);
+            border-color: transparent;
+            cursor: not-allowed;
+            opacity: 0.55;
         }
 
-        /* الحالة: جاري الحجز (أصفر) - إضافة جديدة */
-        .time-slot.pending { 
-            background: #fff8e1; color: #d35400; border-color: #ffe0b2; cursor: not-allowed; opacity: 0.9;
-        }
-        .time-slot.pending::after {
-            content: 'جاري الحجز'; display: block; font-size: 11px; color: var(--pending); margin-top: 5px; font-weight: bold;
+        .time-slot.booked .slot-time { color: var(--text-muted); }
+        .time-slot.booked .slot-label { color: var(--danger); }
+
+        /* Booked ribbon */
+        .time-slot.booked::before {
+            content: '';
+            position: absolute; top: -1px; right: -1px;
+            width: 0; height: 0;
+            border-style: solid;
+            border-width: 0 24px 24px 0;
+            border-color: transparent var(--danger) transparent transparent;
         }
 
-        /* الحالة: وقت مضى */
-        .time-slot.past { background: #f9f9f9; color: #ccc; border-color: transparent; cursor: not-allowed; opacity: 0.6; }
-        .slot-time { font-size: 18px; font-weight: bold; display: block; }
+        /* Pending */
+        .time-slot.pending {
+            background: rgba(243, 156, 18, 0.07);
+            border-color: rgba(243, 156, 18, 0.35);
+            cursor: not-allowed;
+        }
 
-        /* --- Reviews Section --- */
-        .rating-box { background: white; padding: 30px; border-radius: 20px; margin-top: 40px; box-shadow: 0 5px 25px rgba(0,0,0,0.05); }
-        
-        .star-rating { direction: rtl; display: inline-flex; font-size: 35px; cursor: pointer; margin-bottom: 10px; }
+        .time-slot.pending .slot-time { color: #d35400; }
+        .time-slot.pending .slot-label { color: var(--pending-color); }
+
+        /* Past */
+        .time-slot.past {
+            background: var(--surface-2);
+            border-color: transparent;
+            cursor: not-allowed;
+            opacity: 0.4;
+        }
+
+        .time-slot.past .slot-time { color: var(--text-muted); }
+
+        /* Legend */
+        .slots-legend {
+            display: flex; gap: 20px; flex-wrap: wrap;
+            margin-top: 20px; padding-top: 16px;
+            border-top: 1px solid var(--border);
+            font-size: 13px; color: var(--text-muted);
+        }
+
+        .legend-item { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+
+        .legend-dot {
+            width: 12px; height: 12px;
+            border-radius: 3px; border: 1px solid transparent;
+        }
+
+        /* ============================================================
+           13. REVIEWS SECTION
+           ============================================================ */
+        .review-form-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 28px;
+        }
+
+        .form-label {
+            display: block; font-size: 13px; font-weight: 700;
+            color: var(--text-2); margin-bottom: 8px;
+        }
+
+        .star-rating {
+            direction: rtl;
+            display: inline-flex;
+            font-size: 32px;
+            cursor: pointer;
+            margin-bottom: 14px;
+        }
+
         .star-rating input { display: none; }
-        .star-rating label { color: #ddd; transition: 0.2s; cursor: pointer; }
-        .star-rating input:checked ~ label, .star-rating label:hover, .star-rating label:hover ~ label { color: var(--star); }
 
-        .review-item { border-bottom: 1px solid #eee; padding: 20px 0; }
-        .review-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .review-user { font-weight: bold; color: var(--dark); display: flex; align-items: center; gap: 8px; }
-        .review-stars { color: var(--star); letter-spacing: 2px; }
-        .review-date { font-size: 12px; color: #999; }
-        .review-text { color: #555; line-height: 1.6; margin: 0; background: #f9f9f9; padding: 10px; border-radius: 8px; }
-
-        /* --- Related Pitches --- */
-        .related-card { 
-            background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.05); 
-            transition: 0.3s; text-decoration: none; color: inherit; display: block;
+        .star-rating label {
+            color: var(--border);
+            transition: color 0.15s, transform 0.15s;
+            cursor: pointer;
         }
-        .related-card:hover { transform: translateY(-5px); }
-        .related-img { height: 150px; background: #eee; display: flex; align-items: center; justify-content: center; font-size: 40px; }
-        .related-info { padding: 15px; text-align: center; }
 
-        .back-btn {
-            position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.6); color: white;
-            padding: 10px 20px; border-radius: 30px; text-decoration: none; font-weight: bold; z-index: 10;
+        .star-rating label:hover { transform: scale(1.2); }
+        .star-rating input:checked ~ label,
+        .star-rating label:hover,
+        .star-rating label:hover ~ label { color: var(--star); }
+
+        .form-textarea {
+            width: 100%; padding: 14px;
+            border-radius: var(--radius-md);
+            border: 1.5px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            font-family: 'Cairo', sans-serif;
+            font-size: 14px;
+            resize: vertical; min-height: 90px;
+            transition: border-color 0.2s;
         }
+
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px var(--primary-ghost);
+        }
+
+        .btn-submit {
+            margin-top: 12px;
+            background: linear-gradient(135deg, var(--text), var(--text-2));
+            color: white; border: none;
+            padding: 11px 28px; border-radius: var(--radius-sm);
+            font-size: 14px; font-weight: 800;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s;
+        }
+
+        .btn-submit:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+
+        /* Auth prompt */
+        .auth-prompt {
+            background: var(--surface-2);
+            border: 1px dashed var(--border);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            text-align: center;
+            color: var(--text-2);
+            font-size: 15px;
+            margin-bottom: 28px;
+        }
+
+        .auth-prompt a { color: var(--primary); font-weight: 800; }
+
+        /* Review Items */
+        .review-item {
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .review-item:last-child { border-bottom: none; }
+
+        .review-meta {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            margin-bottom: 10px; flex-wrap: wrap; gap: 6px;
+        }
+
+        .reviewer-name {
+            font-size: 15px; font-weight: 800; color: var(--text);
+            display: flex; align-items: center; gap: 6px;
+        }
+
+        .reviewer-avatar {
+            width: 32px; height: 32px;
+            background: var(--primary-ghost);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 15px;
+        }
+
+        .review-stars { color: var(--star); letter-spacing: 2px; font-size: 16px; }
+        .review-date  { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+
+        .review-body {
+            font-size: 14px; line-height: 1.7;
+            color: var(--text-2);
+            background: var(--surface-2);
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            border-right: 3px solid var(--border);
+        }
+
+        .empty-state {
+            text-align: center; padding: 40px;
+            color: var(--text-muted); font-size: 15px;
+        }
+
+        /* ============================================================
+           14. RELATED PITCHES
+           ============================================================ */
+        .related-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .related-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .related-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--primary);
+        }
+
+        .related-thumb {
+            height: 140px;
+            background: linear-gradient(135deg, var(--surface-2), var(--bg));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 42px; overflow: hidden;
+        }
+
+        .related-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+        .related-body {
+            padding: 14px 16px;
+            text-align: center;
+        }
+
+        .related-name {
+            font-size: 14px; font-weight: 800; color: var(--text);
+            margin-bottom: 6px;
+        }
+
+        .related-price { color: var(--primary); font-size: 15px; font-weight: 900; }
+
+        /* ============================================================
+           15. TOAST NOTIFICATIONS
+           ============================================================ */
+        .toast-container {
+            position: fixed; bottom: 24px; left: 24px;
+            display: flex; flex-direction: column-reverse; gap: 10px;
+            z-index: 2000;
+        }
+
+        .toast {
+            display: flex; align-items: center; gap: 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 14px 18px;
+            box-shadow: var(--shadow-lg);
+            font-size: 14px; font-weight: 600;
+            color: var(--text);
+            min-width: 260px; max-width: 360px;
+            animation: slideInToast 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        .toast.success { border-right: 4px solid var(--primary); }
+        .toast.error   { border-right: 4px solid var(--danger);  }
+        .toast.warning { border-right: 4px solid var(--accent);  }
+
+        .toast-icon { font-size: 20px; flex-shrink: 0; }
+
+        .toast-close {
+            margin-right: auto; background: none; border: none;
+            color: var(--text-muted); font-size: 18px; cursor: pointer; padding: 0 4px;
+        }
+
+        @keyframes slideInToast {
+            from { opacity: 0; transform: translateY(20px) scale(0.9); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes fadeOutToast {
+            to { opacity: 0; transform: translateY(10px) scale(0.95); }
+        }
+
+        /* ============================================================
+           16. SKELETON LOADER
+           ============================================================ */
+        .skeleton {
+            background: linear-gradient(90deg, var(--border) 25%, var(--surface-2) 50%, var(--border) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 6px;
+        }
+
+        @keyframes shimmer {
+            from { background-position: 200% 0; }
+            to   { background-position: -200% 0; }
+        }
+
+        /* ============================================================
+           17. PAGE ENTRANCE ANIMATION
+           ============================================================ */
+        .fade-up {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeUp 0.5s ease forwards;
+        }
+
+        @keyframes fadeUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-up:nth-child(1) { animation-delay: 0.05s; }
+        .fade-up:nth-child(2) { animation-delay: 0.12s; }
+        .fade-up:nth-child(3) { animation-delay: 0.19s; }
+        .fade-up:nth-child(4) { animation-delay: 0.26s; }
+
+        /* ============================================================
+           18. RESPONSIVE
+           ============================================================ */
+        @media (max-width: 768px) {
+            :root { --sidebar-width: 0px; }
+
+            .sidebar { width: 260px; transform: translateX(100%); }
+            .sidebar.open { transform: translateX(0); }
+
+            .navbar { right: 0; }
+            .main-content { margin-right: 0; }
+
+            .hero-section { height: 240px; }
+            .pitch-card { margin-top: -50px; padding: 20px; }
+            .pitch-name { font-size: 22px; }
+            .section-block { padding: 20px; }
+            .slots-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
+            .page-container { padding: 0 14px; }
+        }
+
+        /* ============================================================
+           19. MISC UTILITY
+           ============================================================ */
+        .divider { height: 1px; background: var(--border); margin: 24px 0; }
+        .pb-40   { padding-bottom: 40px; }
     </style>
 </head>
 <body>
 
-    <div class="pitch-header">
-        <a href="{% url 'home' %}" class="back-btn">🏠 الرئيسية</a>
-        
-        {% if pitch.image %}
-            <img src="{{ pitch.image.url }}" alt="{{ pitch.name }}" class="cover-image">
-        {% else %}
-            <div class="cover-image" style="background: linear-gradient(45deg, #2c3e50, #27ae60); display: flex; align-items: center; justify-content: center; color: white; font-size: 80px;">⚽</div>
-        {% endif %}
+    <!-- ================================================================
+         SIDEBAR
+         ================================================================ -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-logo">
+            <div class="logo-icon"></logo.png></div>
+            <div class="logo-text">Mal3ab<span>Online</span></div>
+        </div>
 
-        <div class="pitch-info">
-            <div class="pitch-title">
-                <h1>{{ pitch.name }} <span class="price-tag">{{ pitch.price_per_hour }} ج.م / ساعة</span></h1>
-            </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-title">القائمة</div>
 
-            <!-- معلومات المالك والاتصال -->
-            <div class="owner-box">
-                <div class="owner-info">
-                    👤 الإدارة: <span>{{ pitch.owner_name|default:"إدارة الملعب" }}</span>
+            <a href="{% url 'home' %}" class="nav-item">
+                <span class="nav-icon">🏠</span> الرئيسية
+            </a>
+            <a href="{% url 'home' %}" class="nav-item active">
+                <span class="nav-icon">🏟️</span> الملاعب
+            </a>
+
+            {% if user.is_authenticated %}
+                <div class="nav-section-title" style="margin-top:10px;">حسابي</div>
+                <a href="{% url 'user_profile' %}" class="nav-item">
+                    <span class="nav-icon">👤</span> ملفي الشخصي
+                </a>
+                <!-- 1. فورم مخفي عشان يبعت طلب POST -->
+                <form id="logout-form" action="{% url 'logout' %}" method="POST" style="display: none;">
+                    {% csrf_token %}
+                </form>
+
+                <!-- 2. الزر بيشغل الفورم ده بالجافاسكريبت لما تدوس عليه -->
+                <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" style="color: #e74c3c;">
+                    <i class="fas fa-sign-out-alt"></i> {% trans "تسجيل خروج" %}
+                </a>
+
+            {% else %}
+                <div class="nav-section-title" style="margin-top:10px;">الدخول</div>
+                <a href="{% url 'login' %}" class="nav-item">
+                    <span class="nav-icon">🔑</span> تسجيل الدخول
+                </a>
+                <a href="{% url 'signup' %}" class="nav-item">
+                    <span class="nav-icon">📝</span> إنشاء حساب
+                </a>
+            {% endif %}
+        </nav>
+
+        <div class="sidebar-footer">
+            <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">
+                <span id="themeLabel">🌙 الوضع الليلي</span>
+                <div class="toggle-track">
+                    <div class="toggle-thumb"></div>
                 </div>
-                {% if pitch.phone_number %}
-                <div class="owner-info">
-                    📞 للحجز: <a href="tel:{{ pitch.phone_number }}">{{ pitch.phone_number }}</a>
-                </div>
-                {% endif %}
-                <div class="owner-info" style="margin-right: auto; color: var(--star);">
-                    ⭐ التقييم العام: {{ average_rating }} / 5
-                </div>
-            </div>
+            </button>
+        </div>
+    </aside>
 
-            <p class="description">
-                {{ pitch.description|default:"لا يوجد وصف إضافي لهذا الملعب حالياً." }}
-            </p>
+    <!-- Sidebar Overlay (mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
-            <div class="features">
-                <div class="feature-badge">📏 {{ pitch.get_size_display }}</div>
-                <div class="feature-badge">🌱 {{ pitch.get_floor_type_display }}</div>
-                {% if pitch.has_showers %}<div class="feature-badge">🚿 دش وحمامات</div>{% endif %}
-                {% if pitch.has_parking %}<div class="feature-badge">🚗 جراج</div>{% endif %}
-                {% if pitch.has_ball %}<div class="feature-badge">⚽ كرة</div>{% endif %}
-            </div>
+    <!-- ================================================================
+         NAVBAR
+         ================================================================ -->
+    <header class="navbar" id="navbar">
+        <button class="menu-btn" onclick="toggleSidebar()" title="القائمة">☰</button>
 
-            {% if pitch.google_map_link %}
-                <a href="{{ pitch.google_map_link }}" target="_blank" style="display: inline-block; color: #3498db; font-weight: bold; text-decoration: none; margin-top: 10px;">📍 عرض الموقع على الخريطة</a>
+        <nav class="navbar-breadcrumb">
+            <a href="{% url 'home' %}">الرئيسية</a>
+            <span class="sep">›</span>
+            <span>الملاعب</span>
+            <span class="sep">›</span>
+            <span style="color:var(--text-2);">{{ pitch.name }}</span>
+        </nav>
+
+        <div class="navbar-actions">
+            {% if user.is_authenticated %}
+                <a href="{% url 'user_profile' %}" class="btn btn-ghost">👤 {{ user.username }}</a>
+            {% else %}
+                <a href="{% url 'login' %}" class="btn btn-primary">🔑 دخول</a>
             {% endif %}
         </div>
-    </div>
+    </header>
 
-    <!-- جدول المواعيد -->
-    <div class="container">
-        <h3 class="section-title">📅 جدول الحجوزات</h3>
-        
-        <div class="days-wrapper">
-            {% for day in days_list %}
-            <a href="?date={{ day.full_date }}" class="day-card {% if selected_date == day.full_date %}active{% endif %}">
-                <span class="day-name">{{ day.day_name }}</span>
-                <span class="day-date">{{ day.display }}</span>
-            </a>
-            {% endfor %}
+    <!-- ================================================================
+         MAIN CONTENT
+         ================================================================ -->
+    <main class="main-content" id="mainContent">
+
+        <!-- HERO -->
+        <div class="hero-section">
+            {% if pitch.image %}
+                <img src="{{ pitch.image.url }}" alt="{{ pitch.name }}" class="hero-cover">
+            {% else %}
+                <div class="hero-placeholder">⚽</div>
+            {% endif %}
+            <div class="hero-overlay"></div>
+            <span class="hero-badge">🏟️ ملعب كرة قدم</span>
         </div>
 
-        <h3 class="section-title" style="margin-top: 30px; border: none;">⏰ المواعيد المتاحة ليوم {{ selected_date }}</h3>
-        
-        <div class="schedule-grid">
-            {% for hour in hours_schedule %}
-                
-                {% if hour.status == 'Confirmed' %}
-                    <!-- محجوز مؤكد -->
-                    <div class="time-slot booked">
-                        <span class="slot-time">{{ hour.hour_display }}</span>
+        <!-- PAGE CONTAINER -->
+        <div class="page-container pb-40">
+
+            <!-- ── PITCH INFO CARD ── -->
+            <div class="pitch-card fade-up">
+
+                <div class="pitch-card-header">
+                    <h1 class="pitch-name">{{ pitch.name }}</h1>
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <div class="rating-inline">
+                            ⭐ {{ average_rating }} / 5
+                        </div>
+                        <span class="price-badge">💰 {{ pitch.price_per_hour }} ج.م / ساعة</span>
                     </div>
+                </div>
 
-                {% elif hour.status == 'Pending' %}
-                    <!-- قيد المراجعة (التعديل الجديد) -->
-                    <div class="time-slot pending">
-                        <span class="slot-time">{{ hour.hour_display }}</span>
+                <!-- Owner & Contact -->
+                <div class="owner-box">
+                    <div class="owner-chip">
+                        <span class="chip-icon">👤</span>
+                        الإدارة: <strong>{{ pitch.owner_name|default:"إدارة الملعب" }}</strong>
                     </div>
-
-                {% elif hour.is_past %}
-                    <!-- وقت مضى -->
-                    <div class="time-slot past">
-                        <span class="slot-time">{{ hour.hour_display }}</span>
+                    {% if pitch.phone_number %}
+                    <div class="owner-chip">
+                        <span class="chip-icon">📞</span>
+                        للحجز: <a href="tel:{{ pitch.phone_number }}">{{ pitch.phone_number }}</a>
                     </div>
-
-                {% else %}
-                    <!-- متاح -->
-                    <a href="{% url 'booking_confirm' pitch.id hour.hour_value %}?date={{ selected_date }}" class="time-slot available">
-                        <span class="slot-time">{{ hour.hour_display }}</span>
-                        <!-- عرض السعر المتغير لو وجد -->
-                        <span style="font-size: 12px; color: var(--primary);">
-                            {% if hour.price %}
-                                {{ hour.price|floatformat:0 }} ج.م
-                            {% else %}
-                                احجز
-                            {% endif %}
-                        </span>
-                    </a>
-                {% endif %}
-
-            {% endfor %}
-        </div>
-        
-        <!-- مفتاح الألوان -->
-        <div style="margin-top: 20px; display: flex; gap: 20px; font-size: 14px; color: #666; flex-wrap: wrap;">
-            <div style="display: flex; align-items: center; gap: 8px;"><span style="width: 15px; height: 15px; background: #e8f5e9; border: 1px solid var(--primary); border-radius: 3px;"></span> متاح</div>
-            <div style="display: flex; align-items: center; gap: 8px;"><span style="width: 15px; height: 15px; background: #fff8e1; border: 1px solid #f39c12; border-radius: 3px;"></span> جاري الحجز</div>
-            <div style="display: flex; align-items: center; gap: 8px;"><span style="width: 15px; height: 15px; background: #f0f0f0; border-radius: 3px;"></span> محجوز</div>
-        </div>
-    </div>
-
-    <!-- قسم التقييمات -->
-    <div class="container rating-box">
-        <h3 class="section-title">⭐ آراء اللاعبين ({{ review_count }})</h3>
-
-        {% if user.is_authenticated %}
-        <form method="POST" style="background: #fcfcfc; padding: 20px; border-radius: 15px; border: 1px solid #eee; margin-bottom: 30px;">
-            {% csrf_token %}
-            <h4 style="margin-top: 0; color: var(--dark);">شاركنا تجربتك:</h4>
-            
-            <div class="star-rating">
-                <input type="radio" name="rating" id="star5" value="5"><label for="star5">★</label>
-                <input type="radio" name="rating" id="star4" value="4"><label for="star4">★</label>
-                <input type="radio" name="rating" id="star3" value="3"><label for="star3">★</label>
-                <input type="radio" name="rating" id="star2" value="2"><label for="star2">★</label>
-                <input type="radio" name="rating" id="star1" value="1"><label for="star1">★</label>
-            </div>
-            
-            <textarea name="comment" placeholder="كيف كانت حالة الملعب؟ هل الخدمات جيدة؟" rows="3" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; resize: vertical; box-sizing: border-box;"></textarea>
-            
-            <button type="submit" style="background: var(--dark); color: white; border: none; padding: 10px 25px; border-radius: 8px; font-weight: bold; margin-top: 10px; cursor: pointer;">نشر التقييم</button>
-        </form>
-        {% else %}
-            <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; text-align: center;">
-                <p>يرجى <a href="{% url 'login' %}" style="color: var(--primary); font-weight: bold;">تسجيل الدخول</a> لتتمكن من إضافة تقييم.</p>
-            </div>
-        {% endif %}
-
-        {% for review in reviews %}
-        <div class="review-item">
-            <div class="review-header">
-                <span class="review-user">👤 {{ review.user.username }}</span>
-                <span class="review-date">{{ review.created_at|date:"d/m/Y" }}</span>
-            </div>
-            <div class="review-stars">
-                {% if review.rating == 5 %}★★★★★{% endif %}
-                {% if review.rating == 4 %}★★★★☆{% endif %}
-                {% if review.rating == 3 %}★★★☆☆{% endif %}
-                {% if review.rating == 2 %}★★☆☆☆{% endif %}
-                {% if review.rating == 1 %}★☆☆☆☆{% endif %}
-            </div>
-            <p class="review-text">{{ review.comment }}</p>
-        </div>
-        {% empty %}
-            <p style="text-align: center; color: #999; padding: 20px;">لا توجد تقييمات بعد. كن أول من يقيم!</p>
-        {% endfor %}
-    </div>
-
-    <!-- ملاعب مقترحة -->
-    {% if related_pitches %}
-    <div class="container">
-        <h3 class="section-title">⚽ ملاعب أخرى في نفس المنطقة</h3>
-        <div class="schedule-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
-            {% for rp in related_pitches %}
-            <a href="{% url 'pitch_detail' rp.id %}" class="related-card">
-                <div class="related-img">
-                    {% if rp.image %}
-                        <img src="{{ rp.image.url }}" style="width:100%; height:100%; object-fit:cover;">
-                    {% else %}
-                        🏟️
                     {% endif %}
                 </div>
-                <div class="related-info">
-                    <h4 style="margin: 0; color: var(--dark);">{{ rp.name }}</h4>
-                    <span style="color: var(--primary); font-weight: bold;">{{ rp.price_per_hour }} ج.م</span>
+
+                <!-- Description -->
+                <p class="pitch-description">
+                    {{ pitch.description|default:"لا يوجد وصف إضافي لهذا الملعب حالياً." }}
+                </p>
+
+                <!-- Features -->
+                <div class="features-row">
+                    <span class="feature-pill">📏 {{ pitch.get_size_display }}</span>
+                    <span class="feature-pill">🌱 {{ pitch.get_floor_type_display }}</span>
+                    {% if pitch.has_showers %}<span class="feature-pill">🚿 دش وحمامات</span>{% endif %}
+                    {% if pitch.has_parking %}<span class="feature-pill">🚗 جراج</span>{% endif %}
+                    {% if pitch.has_ball %}<span class="feature-pill">⚽ كرة</span>{% endif %}
                 </div>
-            </a>
+
+                {% if pitch.google_map_link %}
+                    <a href="{{ pitch.google_map_link }}" target="_blank" class="map-link">
+                        📍 عرض الموقع على خرائط جوجل
+                    </a>
+                {% endif %}
+            </div>
+
+            <!-- ── SCHEDULE SECTION ── -->
+            <div class="section-block fade-up">
+                <h2 class="section-heading">📅 جدول الحجوزات</h2>
+
+                <!-- Days scroller -->
+                <div class="days-scroller">
+                    {% for day in days_list %}
+                    <a href="?date={{ day.full_date }}"
+                       class="day-card {% if selected_date == day.full_date %}active{% endif %}">
+                        <span class="day-name">{{ day.day_name }}</span>
+                        <span class="day-num">{{ day.display }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+
+                <p class="sub-heading">⏰ المواعيد المتاحة ليوم {{ selected_date }}</p>
+
+                <!-- Time slots -->
+                <div class="slots-grid">
+                    {% for hour in hours_schedule %}
+
+                        {% if hour.status == 'Confirmed' %}
+                            <div class="time-slot booked">
+                                <span class="slot-time">{{ hour.hour_display }}</span>
+                                <span class="slot-label">محجوز</span>
+                            </div>
+
+                        {% elif hour.status == 'Pending' %}
+                            <div class="time-slot pending">
+                                <span class="slot-time">{{ hour.hour_display }}</span>
+                                <span class="slot-label">جاري الحجز</span>
+                            </div>
+
+                        {% elif hour.is_past %}
+                            <div class="time-slot past">
+                                <span class="slot-time">{{ hour.hour_display }}</span>
+                                <span class="slot-label" style="color:var(--text-muted);">انتهى</span>
+                            </div>
+
+                        {% else %}
+                            <a href="{% url 'booking_confirm' pitch.id hour.hour_value %}?date={{ selected_date }}"
+                               class="time-slot available">
+                                <span class="slot-time">{{ hour.hour_display }}</span>
+                                <span class="slot-label">
+                                    {% if hour.price %}
+                                        {{ hour.price|floatformat:0 }} ج.م
+                                    {% else %}
+                                        احجز الآن
+                                    {% endif %}
+                                </span>
+                            </a>
+                        {% endif %}
+
+                    {% endfor %}
+                </div>
+
+                <!-- Legend -->
+                <div class="slots-legend">
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:var(--primary-ghost); border-color:var(--primary);"></div>
+                        متاح
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:rgba(243,156,18,0.1); border-color:rgba(243,156,18,0.4);"></div>
+                        جاري الحجز
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:var(--surface-2);"></div>
+                        محجوز
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background:var(--surface-2); opacity:0.4;"></div>
+                        وقت مضى
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── REVIEWS SECTION ── -->
+            <div class="section-block fade-up">
+                <h2 class="section-heading">⭐ آراء اللاعبين ({{ review_count }})</h2>
+
+                <!-- Review Form -->
+                {% if user.is_authenticated %}
+                <div class="review-form-card">
+                    <h4 style="margin:0 0 16px; color:var(--text); font-size:16px; font-weight:800;">شاركنا تجربتك مع الملعب</h4>
+                    <form method="POST">
+                        {% csrf_token %}
+
+                        <label class="form-label">تقييمك:</label>
+                        <div class="star-rating">
+                            <input type="radio" name="rating" id="star5" value="5"><label for="star5">★</label>
+                            <input type="radio" name="rating" id="star4" value="4"><label for="star4">★</label>
+                            <input type="radio" name="rating" id="star3" value="3"><label for="star3">★</label>
+                            <input type="radio" name="rating" id="star2" value="2"><label for="star2">★</label>
+                            <input type="radio" name="rating" id="star1" value="1"><label for="star1">★</label>
+                        </div>
+
+                        <label class="form-label">تعليقك:</label>
+                        <textarea
+                            name="comment"
+                            class="form-textarea"
+                            placeholder="كيف كانت حالة الملعب؟ هل الخدمات جيدة؟ ما رأيك بالأسعار؟">
+                        </textarea>
+
+                        <button type="submit" class="btn-submit">نشر التقييم ✉️</button>
+                    </form>
+                </div>
+
+                {% else %}
+                <div class="auth-prompt">
+                    💬 يرجى <a href="{% url 'login' %}">تسجيل الدخول</a> لتتمكن من إضافة تقييم.
+                </div>
+                {% endif %}
+
+                <!-- Review List -->
+                {% for review in reviews %}
+                <div class="review-item">
+                    <div class="review-meta">
+                        <div class="reviewer-name">
+                            <div class="reviewer-avatar">👤</div>
+                            {{ review.user.username }}
+                        </div>
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+                            <div class="review-stars">
+                                {% if review.rating == 5 %}★★★★★{% endif %}
+                                {% if review.rating == 4 %}★★★★☆{% endif %}
+                                {% if review.rating == 3 %}★★★☆☆{% endif %}
+                                {% if review.rating == 2 %}★★☆☆☆{% endif %}
+                                {% if review.rating == 1 %}★☆☆☆☆{% endif %}
+                            </div>
+                            <span class="review-date">{{ review.created_at|date:"d/m/Y" }}</span>
+                        </div>
+                    </div>
+                    <p class="review-body">{{ review.comment }}</p>
+                </div>
+                {% empty %}
+                <div class="empty-state">
+                    🌟 لا توجد تقييمات بعد. كن أول من يقيّم هذا الملعب!
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- ── RELATED PITCHES ── -->
+            {% if related_pitches %}
+            <div class="section-block fade-up">
+                <h2 class="section-heading">⚽ ملاعب أخرى في نفس المنطقة</h2>
+
+                <div class="related-grid">
+                    {% for rp in related_pitches %}
+                    <a href="{% url 'pitch_detail' rp.id %}" class="related-card">
+                        <div class="related-thumb">
+                            {% if rp.image %}
+                                <img src="{{ rp.image.url }}" alt="{{ rp.name }}">
+                            {% else %}
+                                🏟️
+                            {% endif %}
+                        </div>
+                        <div class="related-body">
+                            <div class="related-name">{{ rp.name }}</div>
+                            <div class="related-price">{{ rp.price_per_hour }} ج.م / ساعة</div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+        </div><!-- /page-container -->
+    </main>
+
+    <!-- ================================================================
+         TOAST CONTAINER (Django Messages)
+         ================================================================ -->
+    <div class="toast-container" id="toastContainer">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="toast {{ message.tags }}" id="toast-{{ forloop.counter }}">
+                    <span class="toast-icon">
+                        {% if message.tags == 'success' %}✅
+                        {% elif message.tags == 'error' %}❌
+                        {% else %}ℹ️{% endif %}
+                    </span>
+                    <span>{{ message }}</span>
+                    <button class="toast-close" onclick="dismissToast('toast-{{ forloop.counter }}')">✕</button>
+                </div>
             {% endfor %}
-        </div>
+        {% endif %}
     </div>
-    {% endif %}
+
+    <!-- ================================================================
+         JAVASCRIPT
+         ================================================================ -->
+    <script>
+        /* ── 1. THEME (Dark Mode) ── */
+        (function () {
+            const saved = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', saved);
+            updateThemeLabel(saved);
+        })();
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next    = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            updateThemeLabel(next);
+        }
+
+        function updateThemeLabel(theme) {
+            const el = document.getElementById('themeLabel');
+            if (el) el.textContent = theme === 'dark' ? '☀️ الوضع النهاري' : '🌙 الوضع الليلي';
+        }
+
+        /* ── 2. SIDEBAR ── */
+        const sidebar        = document.getElementById('sidebar');
+        const overlay        = document.getElementById('sidebarOverlay');
+        const navbar         = document.getElementById('navbar');
+        const mainContent    = document.getElementById('mainContent');
+
+        // On desktop, start open; on mobile, start closed
+        function applyInitialSidebarState() {
+            if (window.innerWidth <= 768) {
+                sidebar.classList.remove('open');
+                sidebar.classList.add('hidden');
+                navbar.classList.add('sidebar-hidden');
+                mainContent.classList.add('sidebar-hidden');
+            } else {
+                sidebar.classList.remove('hidden', 'open');
+            }
+        }
+
+        applyInitialSidebarState();
+
+        function toggleSidebar() {
+            if (window.innerWidth <= 768) {
+                const isOpen = sidebar.classList.contains('open');
+                if (isOpen) { closeSidebar(); } else { openSidebar(); }
+            } else {
+                const isHidden = sidebar.classList.contains('hidden');
+                if (isHidden) {
+                    sidebar.classList.remove('hidden');
+                    navbar.classList.remove('sidebar-hidden');
+                    mainContent.classList.remove('sidebar-hidden');
+                } else {
+                    sidebar.classList.add('hidden');
+                    navbar.classList.add('sidebar-hidden');
+                    mainContent.classList.add('sidebar-hidden');
+                }
+            }
+        }
+
+        function openSidebar() {
+            sidebar.classList.add('open');
+            overlay.classList.add('visible');
+        }
+
+        function closeSidebar() {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('visible');
+        }
+
+        window.addEventListener('resize', applyInitialSidebarState);
+
+        /* ── 3. TOAST AUTO-DISMISS ── */
+        document.querySelectorAll('.toast').forEach(function(toast) {
+            setTimeout(function () { dismissToast(toast.id); }, 5000);
+        });
+
+        function dismissToast(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.style.animation = 'fadeOutToast 0.3s ease forwards';
+            setTimeout(function () { el.remove(); }, 320);
+        }
+
+        /* ── 4. TIME SLOT CLICK RIPPLE ── */
+        document.querySelectorAll('.time-slot.available').forEach(function(slot) {
+            slot.addEventListener('click', function(e) {
+                const ripple = document.createElement('span');
+                ripple.style.cssText = `
+                    position:absolute; border-radius:50%;
+                    width:60px; height:60px;
+                    background:rgba(39,174,96,0.2);
+                    transform:scale(0);
+                    animation: rippleAnim 0.5s ease forwards;
+                    top:50%; left:50%;
+                    margin:-30px 0 0 -30px;
+                    pointer-events:none;
+                `;
+                slot.appendChild(ripple);
+                setTimeout(() => ripple.remove(), 500);
+            });
+        });
+
+        // Inject ripple keyframes
+        const styleEl = document.createElement('style');
+        styleEl.textContent = '@keyframes rippleAnim { to { transform:scale(3); opacity:0; } }';
+        document.head.appendChild(styleEl);
+    </script>
 
 </body>
 </html>

@@ -101,15 +101,15 @@ def home(request):
     })
 
 
-# ---------------------------------------------------------
-# تفاصيل الملعب (مع الأسعار الديناميكية والجدول)
-# ---------------------------------------------------------
 def pitch_detail(request, pitch_id):
     pitch = get_object_or_404(Pitch, id=pitch_id)
     
-    # 1. إضافة تقييم
+    # ---------------------------------------------------
+    # 1. معالجة إضافة التقييم (Review)
+    # ---------------------------------------------------
     if request.method == 'POST' and 'rating' in request.POST:
         if request.user.is_authenticated:
+            # التحقق من عدم التكرار
             if not Review.objects.filter(pitch=pitch, user=request.user).exists():
                 Review.objects.create(
                     pitch=pitch, user=request.user,
@@ -123,111 +123,102 @@ def pitch_detail(request, pitch_id):
         else:
             messages.error(request, "يجب تسجيل الدخول للتقييم.")
 
-    # 2. الإحصائيات
+    # ---------------------------------------------------
+    # 2. تجهيز البيانات الأساسية
+    # ---------------------------------------------------
     average_rating = pitch.reviews.aggregate(Avg('rating'))['rating__avg'] or 0
     reviews = pitch.reviews.all()
-
-    # 3. الجدول الزمني (المنطق المعدل)
+    
+    # تحديد التاريخ المختار
     date_str = request.GET.get('date')
-    try: selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-    except: selected_date = datetime.now().date()
+    try:
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        selected_date = datetime.now().date()
 
-    # جلب الحجوزات النشطة (المؤكدة والمعلقة)
+    # ---------------------------------------------------
+    # 3. التحضير للجدول (Optimization Step)
+    # ---------------------------------------------------
+    
+    # أ) جلب الحجوزات مرة واحدة
     active_bookings = Booking.objects.filter(
         pitch=pitch, date=selected_date
     ).exclude(status='Cancelled')
-    
-    # عمل خريطة للساعات وحالتها: {18: 'Confirmed', 19: 'Pending'}
+    # خريطة الساعات المحجوزة: {18: 'Confirmed', ...}
     hours_status_map = {int(b.time.split(':')[0]): b.status for b in active_bookings}
+
+    # ب) جلب قواعد الأسعار الخاصة مرة واحدة (بدلاً من 24 مرة)
+    # نجلب القواعد التي تنطبق على هذا التاريخ أو القواعد العامة
+    pricing_rules = PitchPricing.objects.filter(
+        pitch=pitch
+    ).filter(
+        Q(specific_date=selected_date) | Q(specific_date__isnull=True)
+    ).order_by('price') # نرتب بالأرخص عشان لو في تداخل ناخد السعر الأقل
+    
+    # تحويل القواعد لقائمة في الذاكرة لتسريع البحث
+    pricing_rules_list = list(pricing_rules)
 
     hours_schedule = []
     current_hour = datetime.now().hour
     is_today = (selected_date == datetime.now().date())
 
-def pitch_detail(request, pitch_id):
-    pitch = get_object_or_404(Pitch, id=pitch_id)
-    
-    # 1. إضافة تقييم
-    if request.method == 'POST' and 'rating' in request.POST:
-        if request.user.is_authenticated:
-            if not Review.objects.filter(pitch=pitch, user=request.user).exists():
-                Review.objects.create(
-                    pitch=pitch, user=request.user,
-                    rating=request.POST.get('rating'),
-                    comment=request.POST.get('comment')
-                )
-                messages.success(request, "تم نشر تقييمك!")
-            else:
-                messages.warning(request, "لقد قمت بتقييم هذا الملعب مسبقاً.")
-            return redirect('pitch_detail', pitch_id=pitch.id)
-        else:
-            messages.error(request, "يجب تسجيل الدخول للتقييم.")
-
-    # 2. الإحصائيات
-    average_rating = pitch.reviews.aggregate(Avg('rating'))['rating__avg'] or 0
-    reviews = pitch.reviews.all()
-
-    # 3. الجدول الزمني (المنطق المعدل)
-    date_str = request.GET.get('date')
-    try: selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-    except: selected_date = datetime.now().date()
-
-    # جلب الحجوزات النشطة (المؤكدة والمعلقة)
-    active_bookings = Booking.objects.filter(
-        pitch=pitch, date=selected_date
-    ).exclude(status='Cancelled')
-    
-    # عمل خريطة للساعات وحالتها: {18: 'Confirmed', 19: 'Pending'}
-    hours_status_map = {int(b.time.split(':')[0]): b.status for b in active_bookings}
-
-    hours_schedule = []
-    current_hour = datetime.now().hour
-    is_today = (selected_date == datetime.now().date())
-
+    # ---------------------------------------------------
+    # 4. بناء جدول الـ 24 ساعة
+    # ---------------------------------------------------
     for i in range(24): 
-        # بنشوف هل الساعة دي موجودة في الخريطة ولا لأ
-        status = hours_status_map.get(i) # هترجع 'Confirmed' أو 'Pending' أو None
+        # الحالة (متاح/محجوز/قيد الانتظار)
+        status = hours_status_map.get(i)
         
+        # هل الوقت مضى؟
         is_past = is_today and i <= current_hour
         
-        # --- (التعديل الجديد: تحويل الوقت لـ ص و م) ---
-        if i == 0:
-            formatted_time = "12:00 ص"
-        elif i < 12:
-            formatted_time = f"{i}:00 ص"
-        elif i == 12:
-            formatted_time = "12:00 م"
-        else:
-            formatted_time = f"{i-12}:00 م"
-        # ---------------------------------------------
+        # تنسيق العرض (12 ساعة)
+        if i == 0: formatted_time = "12:00 ص"
+        elif i < 12: formatted_time = f"{i}:00 ص"
+        elif i == 12: formatted_time = "12:00 م"
+        else: formatted_time = f"{i-12}:00 م"
 
-        # سعر الساعة
-        hour_price = pitch.price_per_hour
-        special_price = PitchPricing.objects.filter(
-            pitch=pitch, start_hour__lte=i, end_hour__gt=i
-        ).filter(Q(specific_date=selected_date) | Q(specific_date__isnull=True)).order_by('price').first()
-        if special_price: hour_price = special_price.price
+        # حساب السعر (من الذاكرة بدلاً من الداتابيز)
+        hour_price = pitch.price_per_hour # السعر الافتراضي
+        
+        # نبحث في القواعد التي جلبناها سابقاً
+        for rule in pricing_rules_list:
+            if rule.start_hour <= i < rule.end_hour:
+                hour_price = rule.price
+                break # وجدنا سعر خاص، نعتمد الأرخص (لأننا رتبناهم) ونوقف البحث
 
         hours_schedule.append({
-            'hour_display': formatted_time, # هنا بنستخدم الوقت المعدل للعرض
-            'hour_value': i,                # وهنا بنسيب الرقم زي ما هو للسيستم
+            'hour_display': formatted_time,
+            'hour_value': i,
             'status': status,      
             'is_past': is_past,
             'price': hour_price
         })
 
-    # 4. شريط الأيام
-    days_list = [{'full_date': (datetime.now().date() + timedelta(days=i)).strftime('%Y-%m-%d'), 
-                  'day_name': (datetime.now().date() + timedelta(days=i)).strftime('%A'), 
-                  'display': (datetime.now().date() + timedelta(days=i)).strftime('%d/%m')} for i in range(14)]
+    # ---------------------------------------------------
+    # 5. شريط الأيام والملاعب المقترحة
+    # ---------------------------------------------------
+    days_list = []
+    today = datetime.now().date()
+    for i in range(14):
+        day_date = today + timedelta(days=i)
+        days_list.append({
+            'full_date': day_date.strftime('%Y-%m-%d'),
+            'day_name': day_date.strftime('%A'), # اسم اليوم (السبت، الأحد...)
+            'display': day_date.strftime('%d/%m')
+        })
 
-    # 5. ملاعب مقترحة (في نفس المنطقة)
     related_pitches = Pitch.objects.filter(location=pitch.location).exclude(id=pitch.id)[:3]
 
     return render(request, 'pitch_detail.html', {
-        'pitch': pitch, 'days_list': days_list, 'selected_date': selected_date.strftime('%Y-%m-%d'),
-        'hours_schedule': hours_schedule, 'reviews': reviews, 'average_rating': round(average_rating, 1),
-        'review_count': reviews.count(), 'related_pitches': related_pitches
+        'pitch': pitch,
+        'days_list': days_list,
+        'selected_date': selected_date.strftime('%Y-%m-%d'),
+        'hours_schedule': hours_schedule,
+        'reviews': reviews,
+        'average_rating': round(average_rating, 1),
+        'review_count': reviews.count(),
+        'related_pitches': related_pitches
     })
 
 # ---------------------------------------------------------

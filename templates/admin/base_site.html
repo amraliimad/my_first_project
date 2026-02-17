@@ -1,13 +1,28 @@
 {% extends "admin/base.html" %}
 {% load static %}
 
-{% block title %} Mal3ab Online {% endblock %}
+{% block title %} لوحة التحكم | Mal3ab Online {% endblock %}
 
+{% load i18n %}
 {% block branding %}
     <h1 id="site-name">
-        <a href="{% url 'admin:index' %}" style="display: flex; align-items: center; gap: 10px; text-decoration: none;">
-            <!-- هنا اللوجو واسم المشروع -->
-            <span style="font-size: 24px; font-weight: bold; color: #f5dd5d;">Mal3ab Online ⚽</span>
+        <a href="{% url 'admin:index' %}" style="display: flex; align-items: center; gap: 12px; text-decoration: none;">
+            <!-- Logo icon -->
+            <span style="
+                width: 38px; height: 38px;
+                background: linear-gradient(135deg, #27ae60, #1e8449);
+                border-radius: 10px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+                box-shadow: 0 3px 10px rgba(39,174,96,0.4);
+                flex-shrink: 0;
+            ">⚽</span>
+            <!-- Name -->
+            <span style="font-size: 20px; font-weight: 800; color: #ffffff; letter-spacing: 0.3px;">
+                Mal3ab <span style="color: #2ecc71;">Online</span>
+            </span>
         </a>
     </h1>
 {% endblock %}
@@ -15,43 +30,402 @@
 {% block extrahead %}
     {{ block.super }}
     <style>
-        /* 1. كود الـ 3 شرطات (Hamburger Menu) */
-        /* بنجبر المتصفح يغير السهم لرمز القائمة */
+        /* ============================================================
+           Mal3ab Online — Custom Django Admin Theme
+           Design Language: matches main site (Cairo font, green palette)
+           ============================================================ */
+
+        /* ── 1. Font ── */
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
+
+        body, #header, .module, .form-row, table, input, select, textarea, button {
+            font-family: 'Cairo', 'Segoe UI', sans-serif !important;
+        }
+
+        /* ── 2. CSS Variables ── */
         :root {
-            --primary: #27ae60; /* لون أخضر الملاعب */
-            --header-bg: #2c3e50; /* لون الهيدر */
+            --adm-primary:      #27ae60;
+            --adm-primary-dark: #1e8449;
+            --adm-primary-lt:   rgba(39, 174, 96, 0.12);
+            --adm-header:       #1a2e23;
+            --adm-sidebar:      #1e2d1e;
+            --adm-surface:      #ffffff;
+            --adm-bg:           #f0f4f2;
+            --adm-border:       #dde5e0;
+            --adm-text:         #1a2e23;
+            --adm-text-2:       #4a6358;
+            --adm-muted:        #8fa89c;
+            --adm-danger:       #e74c3c;
+            --adm-warning:      #f39c12;
         }
 
+        /* ── 3. HEADER ── */
         #header {
-            background: var(--header-bg) !important;
-            padding: 15px 40px !important;
+            background: var(--adm-header) !important;
+            padding: 0 32px !important;
+            height: 60px !important;
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 3px solid var(--adm-primary) !important;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.25) !important;
         }
 
-        /* تعديل زر القائمة الجانبية */
-        .toggle-nav-sidebar::before {
-            content: '\2630' !important; /* رمز 3 شرطات */
-            font-size: 26px !important;
-            font-weight: bold !important;
-            color: #fff !important;
-        }
-
+        /* Hamburger / sidebar toggle */
         .toggle-nav-sidebar {
             background: transparent !important;
-            width: 40px !important;
-            height: 40px !important;
-            display: flex !important;
-            align-items: center;
-            justify-content: center !important;
+            border: 1px solid rgba(255,255,255,0.15) !important;
+            border-radius: 8px !important;
+            width: 40px !important; height: 40px !important;
+            display: flex !important; align-items: center !important; justify-content: center !important;
+            transition: all 0.2s !important;
         }
 
         .toggle-nav-sidebar:hover {
             background: rgba(255,255,255,0.1) !important;
-            border-radius: 5px;
+            border-color: var(--adm-primary) !important;
         }
 
-        /* إخفاء كلمة Django Administration القديمة */
-        #branding h1 {
-            margin: 0;
+        .toggle-nav-sidebar::before {
+            content: '☰' !important;
+            font-size: 20px !important;
+            color: #fff !important;
+            font-weight: bold !important;
+        }
+
+        /* User tools in header */
+        #user-tools {
+            color: rgba(255,255,255,0.75) !important;
+            font-size: 13px !important; font-weight: 600 !important;
+        }
+
+        #user-tools a {
+            color: var(--adm-primary) !important;
+            font-weight: 700 !important; transition: color 0.2s;
+        }
+
+        #user-tools a:hover { color: #2ecc71 !important; }
+
+        /* ── 4. BODY & BACKGROUND ── */
+        body { background: var(--adm-bg) !important; color: var(--adm-text) !important; }
+
+        /* ── 5. NAV SIDEBAR ── */
+        #nav-sidebar {
+            background: var(--adm-sidebar) !important;
+            border-left: none !important;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.3) !important;
+        }
+
+        #nav-sidebar .current-app {
+            background: var(--adm-primary) !important;
+            border-radius: 0 !important;
+        }
+
+        #nav-sidebar .sticky {
+            background: var(--adm-sidebar) !important;
+        }
+
+        #nav-sidebar a {
+            color: rgba(255,255,255,0.75) !important;
+            font-size: 13px !important; font-weight: 600 !important;
+            transition: all 0.2s !important;
+        }
+
+        #nav-sidebar a:hover {
+            color: #ffffff !important;
+            background: rgba(39,174,96,0.15) !important;
+        }
+
+        #nav-sidebar .section:nth-child(odd) .section-title,
+        .sidebar-title { color: rgba(255,255,255,0.4) !important; font-size: 11px !important; letter-spacing: 1px !important; }
+
+        /* ── 6. BREADCRUMBS ── */
+        div.breadcrumbs {
+            background: var(--adm-surface) !important;
+            border-bottom: 1px solid var(--adm-border) !important;
+            padding: 12px 32px !important;
+            font-size: 13px !important; font-weight: 600 !important;
+            color: var(--adm-muted) !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04) !important;
+        }
+
+        div.breadcrumbs a {
+            color: var(--adm-primary) !important; font-weight: 700;
+        }
+
+        div.breadcrumbs a:hover { text-decoration: underline; }
+
+        /* ── 7. CONTENT AREA ── */
+        #content {
+            background: transparent !important;
+            padding: 28px 32px !important;
+        }
+
+        #content-main { max-width: 1100px; }
+
+        /* Page title */
+        #content h1 {
+            color: var(--adm-text) !important;
+            font-size: 24px !important; font-weight: 900 !important;
+            margin-bottom: 20px !important;
+        }
+
+        /* ── 8. MODULES / CARDS ── */
+        .module {
+            border: 1px solid var(--adm-border) !important;
+            border-radius: 14px !important;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.05) !important;
+            overflow: hidden !important;
+            background: var(--adm-surface) !important;
+            margin-bottom: 20px !important;
+        }
+
+        .module caption, .module h2, .module > h2 {
+            background: linear-gradient(135deg, var(--adm-header), #2c3e50) !important;
+            color: white !important;
+            padding: 14px 20px !important;
+            font-size: 14px !important; font-weight: 800 !important;
+            border-radius: 13px 13px 0 0 !important;
+            letter-spacing: 0.3px !important;
+        }
+
+        /* ── 9. DASHBOARD APP MODULES ── */
+        .app-pitch .section, .dashboard .module table {
+            width: 100%;
+        }
+
+        .model-row td, .model-row th {
+            padding: 12px 16px !important;
+            border-bottom: 1px solid var(--adm-border) !important;
+            font-size: 13px !important; font-weight: 600 !important;
+            color: var(--adm-text-2) !important;
+        }
+
+        .model-row tr:last-child td { border-bottom: none !important; }
+        .model-row tr:hover td { background: #f7faf8 !important; }
+
+        /* ── 10. TABLES (changelist) ── */
+        #result_list {
+            border-radius: 12px !important;
+            overflow: hidden !important;
+            border: 1px solid var(--adm-border) !important;
+        }
+
+        #result_list thead th {
+            background: #f0f4f2 !important;
+            color: var(--adm-muted) !important;
+            font-size: 11px !important; font-weight: 800 !important;
+            text-transform: uppercase !important; letter-spacing: 0.8px !important;
+            padding: 14px 16px !important;
+            border-bottom: 2px solid var(--adm-border) !important;
+        }
+
+        #result_list thead th a {
+            color: var(--adm-muted) !important;
+        }
+
+        #result_list thead th.sorted a {
+            color: var(--adm-primary) !important;
+        }
+
+        #result_list tbody td, #result_list tbody th {
+            padding: 13px 16px !important;
+            border-bottom: 1px solid var(--adm-border) !important;
+            font-size: 14px !important; font-weight: 600 !important;
+            color: var(--adm-text) !important;
+        }
+
+        #result_list tbody tr:hover td,
+        #result_list tbody tr:hover th {
+            background: var(--adm-primary-lt) !important;
+        }
+
+        #result_list tbody tr:last-child td { border-bottom: none !important; }
+
+        /* Striped rows */
+        #result_list tbody tr.row1 { background: var(--adm-surface) !important; }
+        #result_list tbody tr.row2 { background: #fafcfb !important; }
+
+        /* ── 11. SEARCH BAR ── */
+        #toolbar { background: var(--adm-surface) !important; padding: 14px 20px !important; border-radius: 12px !important; border: 1px solid var(--adm-border) !important; margin-bottom: 14px !important; }
+
+        #searchbar {
+            border: 1.5px solid var(--adm-border) !important;
+            border-radius: 8px !important;
+            padding: 9px 14px !important;
+            font-family: 'Cairo', sans-serif !important;
+            font-size: 14px !important;
+            background: #f7faf8 !important;
+            color: var(--adm-text) !important;
+            transition: all 0.2s !important;
+        }
+
+        #searchbar:focus {
+            border-color: var(--adm-primary) !important;
+            box-shadow: 0 0 0 4px rgba(39,174,96,0.12) !important;
+            outline: none !important;
+            background: white !important;
+        }
+
+        /* ── 12. BUTTONS ── */
+        .button, input[type="submit"], input[type="button"],
+        .submit-row input, a.button {
+            background: var(--adm-primary) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 8px !important;
+            padding: 9px 20px !important;
+            font-family: 'Cairo', sans-serif !important;
+            font-size: 13px !important; font-weight: 800 !important;
+            cursor: pointer !important;
+            transition: all 0.2s !important;
+            box-shadow: 0 3px 10px rgba(39,174,96,0.25) !important;
+        }
+
+        .button:hover, input[type="submit"]:hover {
+            background: var(--adm-primary-dark) !important;
+            transform: translateY(-1px) !important;
+        }
+
+        .button.default, input[type="submit"].default {
+            background: linear-gradient(135deg, var(--adm-primary), var(--adm-primary-dark)) !important;
+        }
+
+        /* Delete button */
+        .deletelink, .deletelink-box a {
+            background: var(--adm-danger) !important;
+            box-shadow: 0 3px 10px rgba(231,76,60,0.25) !important;
+        }
+
+        .deletelink:hover { background: #c0392b !important; }
+
+        /* ── 13. SUBMIT ROW ── */
+        .submit-row {
+            background: #f7faf8 !important;
+            border: 1px solid var(--adm-border) !important;
+            border-radius: 12px !important;
+            padding: 16px 20px !important;
+            box-shadow: var(--adm-shadow-sm) !important;
+        }
+
+        /* ── 14. FORM FIELDS ── */
+        .form-row {
+            border-bottom: 1px solid #eef1ef !important;
+            padding: 14px 16px !important;
+        }
+
+        .form-row:last-child { border-bottom: none !important; }
+
+        .field-box label, .form-row label {
+            color: var(--adm-text-2) !important;
+            font-weight: 700 !important; font-size: 13px !important;
+        }
+
+        input[type="text"], input[type="password"], input[type="email"],
+        input[type="url"], input[type="number"], select, textarea {
+            border: 1.5px solid var(--adm-border) !important;
+            border-radius: 8px !important;
+            padding: 9px 12px !important;
+            font-family: 'Cairo', sans-serif !important;
+            font-size: 14px !important;
+            background: #f7faf8 !important;
+            color: var(--adm-text) !important;
+            transition: all 0.2s !important;
+        }
+
+        input[type="text"]:focus, input[type="password"]:focus,
+        input[type="email"]:focus, select:focus, textarea:focus {
+            border-color: var(--adm-primary) !important;
+            box-shadow: 0 0 0 4px rgba(39,174,96,0.1) !important;
+            outline: none !important;
+            background: white !important;
+        }
+
+        /* ── 15. STATUS INDICATORS (custom colors in changelist) ── */
+        .field-status .confirmed { color: var(--adm-primary); font-weight: 800; }
+        .field-status .pending   { color: var(--adm-warning); font-weight: 800; }
+        .field-status .cancelled { color: var(--adm-danger);  font-weight: 800; }
+
+        /* ── 16. PAGINATION ── */
+        .paginator {
+            background: var(--adm-surface) !important;
+            border: 1px solid var(--adm-border) !important;
+            border-radius: 10px !important;
+            padding: 10px 16px !important;
+            font-size: 13px !important; font-weight: 700 !important;
+        }
+
+        .paginator a { color: var(--adm-primary) !important; }
+        .paginator .this-page {
+            background: var(--adm-primary) !important;
+            color: white !important;
+            border-radius: 6px !important;
+            padding: 3px 9px !important;
+        }
+
+        /* ── 17. MESSAGES ── */
+        ul.messagelist li {
+            border-radius: 10px !important;
+            padding: 12px 18px !important;
+            font-size: 14px !important; font-weight: 700 !important;
+            border: none !important;
+            margin-bottom: 8px !important;
+        }
+
+        ul.messagelist li.success {
+            background: rgba(39,174,96,0.1) !important;
+            color: #1e6e3a !important;
+            border-right: 4px solid var(--adm-primary) !important;
+        }
+
+        ul.messagelist li.warning {
+            background: rgba(243,156,18,0.1) !important;
+            color: #8a5c00 !important;
+            border-right: 4px solid var(--adm-warning) !important;
+        }
+
+        ul.messagelist li.error {
+            background: rgba(231,76,60,0.1) !important;
+            color: #8c1a0e !important;
+            border-right: 4px solid var(--adm-danger) !important;
+        }
+
+        /* ── 18. CALENDAR / DATE WIDGETS ── */
+        .calendarbox, .clockbox {
+            border-radius: 12px !important;
+            border: 1px solid var(--adm-border) !important;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important;
+        }
+
+        /* ── 19. OBJECT TOOLS (top-right of changelist) ── */
+        .object-tools a {
+            background: var(--adm-primary) !important;
+            border-radius: 8px !important;
+            padding: 8px 16px !important;
+            font-weight: 700 !important;
+            transition: all 0.2s !important;
+        }
+
+        .object-tools a:hover {
+            background: var(--adm-primary-dark) !important;
+            transform: translateY(-1px) !important;
+        }
+
+        /* ── 20. INLINE ADMIN ── */
+        .inline-group {
+            border: 1px solid var(--adm-border) !important;
+            border-radius: 12px !important;
+            overflow: hidden !important;
+        }
+
+        .inline-group h2 {
+            background: linear-gradient(135deg, var(--adm-header), #2c3e50) !important;
+            color: white !important; font-size: 13px !important;
+            font-weight: 800 !important; padding: 12px 18px !important;
+        }
+
+        /* ── 21. RESPONSIVE TWEAKS ── */
+        @media (max-width: 767px) {
+            #header { padding: 0 16px !important; }
+            #content { padding: 16px !important; }
         }
     </style>
 {% endblock %}

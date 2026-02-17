@@ -1199,12 +1199,22 @@
             <a href="{% url 'about_us' %}">
                 <i class="fas fa-info-circle"></i> {% trans "من نحن" %}
             </a>
-
-            <form action="{% url 'logout' %}" method="post" id="logout-form">
+            <!-- 1. فورم مخفي عشان يبعت طلب POST -->
+            <form id="logout-form" action="{% url 'logout' %}" method="POST" style="display: none;">
                 {% csrf_token %}
-                <a href="#" onclick="document.getElementById('logout-form').submit();" style="color: #e74c3c;">
-                    <i class="fas fa-sign-out-alt" style="color:#e74c3c;"></i> {% trans "خروج" %}
-                </a>
+            </form>
+
+            <!-- 2. الزر بيشغل الفورم ده بالجافاسكريبت لما تدوس عليه -->
+            <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" style="color: #e74c3c;">
+                <i class="fas fa-sign-out-alt"></i> {% trans "تسجيل خروج" %}
+            </a>
+
+
+            <form action="{% url 'set_language' %}" method="post">
+                {% csrf_token %} <!-- لازم يكون أول سطر جوه الفورم -->
+                <input name="next" type="hidden" value="{{ request.get_full_path }}"> <!-- تعديل ذكي: بيرجع لنفس الصفحة بالضبط -->
+                <input name="language" type="hidden" value="ar">
+                <button type="submit">العربية</button>
             </form>
         {% else %}
             <div style="padding: 30px 25px; text-align: center; color: #8aabca; border-bottom: 1px solid rgba(255,255,255,0.07);">
