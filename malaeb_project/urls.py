@@ -41,6 +41,7 @@ urlpatterns += i18n_patterns(
     
     # روابط تطبيقك (Bookings)
     path('', include('bookings.urls')),
+    path('signup/', booking_views.signup, name='signup'),
     
     # هام: لو المستخدم كتب الرابط من غير لغة، i18n_patterns هيحوله للغة الافتراضية
     prefix_default_language=True
