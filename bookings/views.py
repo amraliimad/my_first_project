@@ -144,12 +144,63 @@ def pitch_detail(request, pitch_id):
     current_hour = datetime.now().hour
     is_today = (selected_date == datetime.now().date())
 
+def pitch_detail(request, pitch_id):
+    pitch = get_object_or_404(Pitch, id=pitch_id)
+    
+    # 1. إضافة تقييم
+    if request.method == 'POST' and 'rating' in request.POST:
+        if request.user.is_authenticated:
+            if not Review.objects.filter(pitch=pitch, user=request.user).exists():
+                Review.objects.create(
+                    pitch=pitch, user=request.user,
+                    rating=request.POST.get('rating'),
+                    comment=request.POST.get('comment')
+                )
+                messages.success(request, "تم نشر تقييمك!")
+            else:
+                messages.warning(request, "لقد قمت بتقييم هذا الملعب مسبقاً.")
+            return redirect('pitch_detail', pitch_id=pitch.id)
+        else:
+            messages.error(request, "يجب تسجيل الدخول للتقييم.")
+
+    # 2. الإحصائيات
+    average_rating = pitch.reviews.aggregate(Avg('rating'))['rating__avg'] or 0
+    reviews = pitch.reviews.all()
+
+    # 3. الجدول الزمني (المنطق المعدل)
+    date_str = request.GET.get('date')
+    try: selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except: selected_date = datetime.now().date()
+
+    # جلب الحجوزات النشطة (المؤكدة والمعلقة)
+    active_bookings = Booking.objects.filter(
+        pitch=pitch, date=selected_date
+    ).exclude(status='Cancelled')
+    
+    # عمل خريطة للساعات وحالتها: {18: 'Confirmed', 19: 'Pending'}
+    hours_status_map = {int(b.time.split(':')[0]): b.status for b in active_bookings}
+
+    hours_schedule = []
+    current_hour = datetime.now().hour
+    is_today = (selected_date == datetime.now().date())
+
     for i in range(24): 
         # بنشوف هل الساعة دي موجودة في الخريطة ولا لأ
         status = hours_status_map.get(i) # هترجع 'Confirmed' أو 'Pending' أو None
         
         is_past = is_today and i <= current_hour
         
+        # --- (التعديل الجديد: تحويل الوقت لـ ص و م) ---
+        if i == 0:
+            formatted_time = "12:00 ص"
+        elif i < 12:
+            formatted_time = f"{i}:00 ص"
+        elif i == 12:
+            formatted_time = "12:00 م"
+        else:
+            formatted_time = f"{i-12}:00 م"
+        # ---------------------------------------------
+
         # سعر الساعة
         hour_price = pitch.price_per_hour
         special_price = PitchPricing.objects.filter(
@@ -158,25 +209,12 @@ def pitch_detail(request, pitch_id):
         if special_price: hour_price = special_price.price
 
         hours_schedule.append({
-            'hour_display': f"{i:02d}:00",
-            'hour_value': i,
-            'status': status,      # هنا التغيير المهم: بنبعت الحالة نفسها
+            'hour_display': formatted_time, # هنا بنستخدم الوقت المعدل للعرض
+            'hour_value': i,                # وهنا بنسيب الرقم زي ما هو للسيستم
+            'status': status,      
             'is_past': is_past,
             'price': hour_price
         })
-
-    days_list = [{'full_date': (datetime.now().date() + timedelta(days=i)).strftime('%Y-%m-%d'), 
-                  'day_name': (datetime.now().date() + timedelta(days=i)).strftime('%A'), 
-                  'display': (datetime.now().date() + timedelta(days=i)).strftime('%d/%m')} for i in range(14)]
-
-    related_pitches = Pitch.objects.filter(location=pitch.location).exclude(id=pitch.id)[:3]
-
-    return render(request, 'pitch_detail.html', {
-        'pitch': pitch, 'days_list': days_list, 'selected_date': selected_date.strftime('%Y-%m-%d'),
-        'hours_schedule': hours_schedule, 'reviews': reviews, 'average_rating': round(average_rating, 1),
-        'review_count': reviews.count(), 'related_pitches': related_pitches
-    })
-
 
     # 4. شريط الأيام
     days_list = [{'full_date': (datetime.now().date() + timedelta(days=i)).strftime('%Y-%m-%d'), 
@@ -191,7 +229,6 @@ def pitch_detail(request, pitch_id):
         'hours_schedule': hours_schedule, 'reviews': reviews, 'average_rating': round(average_rating, 1),
         'review_count': reviews.count(), 'related_pitches': related_pitches
     })
-
 
 # ---------------------------------------------------------
 # تأكيد الحجز (VIP - حد يومي - أسعار متغيرة - عربون)

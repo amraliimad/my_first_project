@@ -1,317 +1,1459 @@
 {% load static %}
+{% load i18n %}
 <!DOCTYPE html>
-<html dir="rtl" lang="ar">
+<html dir="{% if LANGUAGE_CODE == 'ar' %}rtl{% else %}ltr{% endif %}" lang="{{ LANGUAGE_CODE }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mal3ab Online - الرئيسية</title>
-    
-    <!-- مكتبة الأيقونات -->
+    <meta name="description" content="{% trans 'أكبر منصة لحجز الملاعب الرياضية في مصر - احجز ملعبك المفضل في ثوانٍ' %}">
+    <title>Mal3ab Online — {% trans "الرئيسية" %}</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="{% static 'img/logo.png' %}" type="image/png">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        /* --- 1. المتغيرات --- */
+        /* ============================================================
+           1. CSS Variables & Dark Mode
+        ============================================================ */
         :root {
-            --primary: #27ae60; --primary-dark: #219150; --secondary: #e67e22; --secondary-dark: #d35400;
-            --dark: #2c3e50; --light: #f4f7f6; --white: #ffffff; --shadow: 0 10px 30px rgba(0,0,0,0.08);
+            --primary:        #27ae60;
+            --primary-dark:   #219150;
+            --primary-light:  #e8f5e9;
+            --secondary:      #e67e22;
+            --secondary-dark: #d35400;
+            --dark:           #1a2332;
+            --dark-soft:      #2c3e50;
+            --light:          #f0f4f3;
+            --white:          #ffffff;
+            --card-bg:        #ffffff;
+            --border:         #e8edf0;
+            --text-main:      #1a2332;
+            --text-sub:       #5a6a7a;
+            --text-muted:     #9aabba;
+            --shadow-sm:      0 2px 8px rgba(0,0,0,0.06);
+            --shadow-md:      0 8px 24px rgba(0,0,0,0.09);
+            --shadow-lg:      0 20px 48px rgba(0,0,0,0.12);
+            --shadow-green:   0 8px 24px rgba(39,174,96,0.25);
+            --radius-sm:      8px;
+            --radius-md:      14px;
+            --radius-lg:      20px;
+            --transition:     0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            --nav-h:          70px;
         }
 
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background-color: var(--light); margin: 0; padding: 0;
-            display: flex; flex-direction: column; min-height: 100vh;
+        [data-theme="dark"] {
+            --light:      #0f1923;
+            --white:      #1a2840;
+            --card-bg:    #1e3050;
+            --border:     #253650;
+            --text-main:  #e8f0f8;
+            --text-sub:   #8aabca;
+            --text-muted: #4a6a8a;
+            --shadow-sm:  0 2px 8px rgba(0,0,0,0.3);
+            --shadow-md:  0 8px 24px rgba(0,0,0,0.4);
+            --shadow-lg:  0 20px 48px rgba(0,0,0,0.5);
         }
 
-        /* --- 2. Navbar --- */
+        /* ============================================================
+           2. Reset & Base
+        ============================================================ */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--light);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            transition: background-color var(--transition), color var(--transition);
+        }
+
+        /* ============================================================
+           3. Scroll Progress Bar (NEW)
+        ============================================================ */
+        #scroll-progress {
+            position: fixed;
+            top: 0; left: 0;
+            height: 3px;
+            width: 0%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            z-index: 9999;
+            transition: width 0.1s linear;
+        }
+
+        /* ============================================================
+           4. Navbar
+        ============================================================ */
         nav {
-            background: var(--white); padding: 10px 5%; display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1000; height: 70px;
+            background: var(--white);
+            padding: 0 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-sm);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            height: var(--nav-h);
+            transition: background-color var(--transition), box-shadow var(--transition);
+            border-bottom: 1px solid var(--border);
         }
-        .logo-container { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-        .logo-text { font-size: 24px; font-weight: 800; color: var(--dark); letter-spacing: -1px; }
-        
-        /* زر القائمة (تم استخدام رمز نصي لضمان الظهور) */
+
+        nav.scrolled {
+            box-shadow: var(--shadow-md);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            flex-shrink: 0;
+        }
+
+        .logo-text {
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--text-main);
+            letter-spacing: -0.5px;
+        }
+        .logo-text span { color: var(--primary); }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Dark Mode Toggle (NEW) */
+        .dark-toggle {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            border: 1.5px solid var(--border);
+            background: var(--light);
+            color: var(--text-sub);
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 17px;
+            transition: var(--transition);
+        }
+        .dark-toggle:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: rotate(15deg);
+        }
+
         .menu-btn {
-            font-size: 35px; color: var(--dark); cursor: pointer; padding: 0 10px; line-height: 1;
-            font-weight: bold; transition: 0.3s; user-select: none;
+            width: 40px; height: 40px;
+            border-radius: var(--radius-sm);
+            border: 1.5px solid var(--border);
+            background: var(--light);
+            color: var(--text-main);
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+            transition: var(--transition);
+            flex-shrink: 0;
         }
-        .menu-btn:hover { color: var(--primary); transform: scale(1.1); }
+        .menu-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
 
-        /* --- 3. Sidebar --- */
+        /* ============================================================
+           5. Sidebar
+        ============================================================ */
         .sidebar {
-            height: 100%; width: 0; position: fixed; z-index: 2000; top: 0; right: 0;
-            background-color: var(--dark); overflow-x: hidden; transition: 0.4s; padding-top: 60px;
-            box-shadow: -4px 0 15px rgba(0,0,0,0.3);
+            height: 100%;
+            width: 0;
+            position: fixed;
+            z-index: 2000;
+            top: 0;
+            right: 0;
+            background: var(--dark);
+            overflow-x: hidden;
+            transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            padding-top: 0;
+            box-shadow: -8px 0 40px rgba(0,0,0,0.35);
         }
-        .sidebar a {
-            padding: 15px 25px; text-decoration: none; font-size: 18px; color: #ecf0f1;
-            display: flex; align-items: center; gap: 12px; transition: 0.3s;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+
+        .sidebar-header {
+            background: linear-gradient(135deg, var(--dark-soft), var(--dark));
+            padding: 20px 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            min-height: 70px;
         }
-        .sidebar a:hover { background-color: var(--primary); padding-right: 35px; }
+
+        .sidebar-logo {
+            color: white;
+            font-size: 18px;
+            font-weight: 900;
+            opacity: 0;
+            transition: opacity 0.3s 0.2s;
+        }
+        .sidebar.open .sidebar-logo { opacity: 1; }
+        .sidebar-logo span { color: var(--primary); }
+
         .sidebar .closebtn {
-            position: absolute; top: 10px; left: 20px; font-size: 40px; border: none; background: none; color: #aaa; cursor: pointer;
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: #aaa;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex; align-items: center; justify-content: center;
+            transition: var(--transition);
+            flex-shrink: 0;
         }
-        .sidebar .closebtn:hover { color: white; }
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1500; display: none; }
+        .sidebar .closebtn:hover { background: #e74c3c; color: white; }
 
-        /* --- 4. Hero --- */
-        header { text-align: center; padding: 80px 20px 100px; background: linear-gradient(135deg, #2c3e50 0%, #27ae60 100%); color: white; }
-        header h1 { margin: 0 0 10px; font-size: 2.5rem; }
-        header p { font-size: 1.2rem; opacity: 0.9; }
-
-        /* --- 5. Search --- */
-        .search-container {
-            background: var(--white); padding: 30px; margin: -60px auto 40px; width: 85%; max-width: 1100px;
-            border-radius: 20px; box-shadow: var(--shadow); position: relative; z-index: 10;
+        .sidebar-user {
+            padding: 20px 25px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
         }
-        .filter-form { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
-        .filter-group { flex: 1; min-width: 160px; }
-        .filter-group label { display: block; margin-bottom: 10px; font-weight: 700; color: var(--dark); font-size: 14px; }
-        .filter-group select, .filter-group input { width: 100%; padding: 14px; border: 2px solid #eee; border-radius: 12px; font-size: 14px; outline: none; background-color: #fcfcfc; transition: 0.3s; }
-        .filter-group select:focus, .filter-group input:focus { border-color: var(--primary); background-color: white; box-shadow: 0 0 0 4px rgba(39, 174, 96, 0.1); }
-        .btn-search { background: var(--dark); color: white; padding: 14px 25px; border: none; border-radius: 12px; cursor: pointer; height: 50px; font-weight: bold; width: 100%; }
-        .btn-search:hover { background: #1a252f; transform: translateY(-2px); }
-        .btn-location { background: var(--secondary); color: white; padding: 14px 20px; border: none; border-radius: 12px; cursor: pointer; height: 50px; font-weight: bold; display: flex; align-items: center; gap: 5px; }
-        .btn-location:hover { background: var(--secondary-dark); transform: translateY(-2px); }
-        .reset-link { color: #e74c3c; font-size: 13px; font-weight: bold; text-decoration: none; display: inline-block; margin-top: 10px; }
 
-        /* --- 6. Grid (التعديل رقم 2: 4 ملاعب) --- */
-        .container { max-width: 1300px; margin: 0 auto 60px; padding: 0 20px; flex: 1; }
-        
+        .sidebar-avatar {
+            width: 60px; height: 60px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 26px;
+            color: white;
+            margin: 0 auto 10px;
+            box-shadow: 0 4px 15px rgba(39,174,96,0.35);
+        }
+
+        .sidebar a {
+            padding: 13px 25px;
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 600;
+            color: #c8d8e8;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: var(--transition);
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            white-space: nowrap;
+        }
+        .sidebar a i {
+            width: 20px;
+            text-align: center;
+            color: var(--text-muted);
+            transition: var(--transition);
+        }
+        .sidebar a:hover {
+            background: rgba(39,174,96,0.12);
+            color: white;
+            padding-right: 32px;
+        }
+        .sidebar a:hover i { color: var(--primary); }
+
+        .overlay {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(3px);
+            z-index: 1500;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .overlay.active { opacity: 1; }
+
+        /* Language buttons in sidebar */
+        .lang-container {
+            padding: 16px 25px;
+            border-top: 1px solid rgba(255,255,255,0.07);
+            margin-top: auto;
+        }
+        .lang-title {
+            color: #556a7a;
+            font-size: 11px;
+            margin-bottom: 10px;
+            display: block;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .lang-buttons { display: flex; gap: 8px; }
+        .lang-btn {
+            flex: 1;
+            background: transparent;
+            border: 1.5px solid #334a5e;
+            color: #8aabca;
+            padding: 7px 0;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 700;
+            font-family: 'Cairo', sans-serif;
+            transition: var(--transition);
+        }
+        .lang-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        .lang-btn:hover:not(.active) {
+            border-color: #8aabca;
+            color: white;
+        }
+
+        /* ============================================================
+           6. Hero Section
+        ============================================================ */
+        .hero {
+            text-align: center;
+            padding: 90px 20px 130px;
+            background: linear-gradient(135deg, #1a2332 0%, #1e4d35 50%, #27ae60 100%);
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Animated background mesh */
+        .hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(circle at 20% 50%, rgba(39,174,96,0.15) 0%, transparent 50%),
+                              radial-gradient(circle at 80% 20%, rgba(230,126,34,0.1) 0%, transparent 40%),
+                              radial-gradient(circle at 60% 80%, rgba(39,174,96,0.08) 0%, transparent 35%);
+            pointer-events: none;
+        }
+
+        /* Subtle grid pattern */
+        .hero::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+        }
+
+        .hero-content { position: relative; z-index: 1; }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(39,174,96,0.2);
+            border: 1px solid rgba(39,174,96,0.4);
+            color: #6ee09a;
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            backdrop-filter: blur(4px);
+        }
+
+        .hero-title {
+            margin: 0 0 14px;
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 900;
+            line-height: 1.2;
+        }
+        .hero-title .highlight {
+            background: linear-gradient(90deg, #6ee09a, #27ae60);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1rem, 2.5vw, 1.15rem);
+            opacity: 0.75;
+            max-width: 500px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+
+        /* ============================================================
+           7. Stats Section (NEW)
+        ============================================================ */
+        .stats-bar {
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            padding: 0;
+        }
+
+        .stats-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            
+        }
+
+        .stat-item {
+            padding: 22px 20px;
+            text-align: center;
+            border-left: 1px solid var(--border);
+            transition: var(--transition);
+        }
+        .stat-item:last-child { border-left: none; }
+        html[dir="rtl"] .stat-item { border-left: none; border-right: 1px solid var(--border); }
+        html[dir="rtl"] .stat-item:last-child { border-right: none; }
+
+        .stat-item:hover { background: var(--primary-light); }
+
+        .stat-icon {
+            font-size: 22px;
+            margin-bottom: 4px;
+        }
+
+        .stat-number {
+            font-size: 1.75rem;
+            font-weight: 900;
+            color: var(--primary);
+            line-height: 1.1;
+            direction: ltr;
+            display: inline-block;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-sub);
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        /* ============================================================
+           8. Search Container
+        ============================================================ */
+        .search-wrapper {
+            background: var(--white);
+            padding: 28px 32px;
+            margin: -70px auto 40px;
+            width: 88%;
+            max-width: 1150px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            z-index: 10;
+            border: 1px solid var(--border);
+        }
+
+        .search-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-sub);
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .search-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .filter-form {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .filter-group { flex: 1; min-width: 150px; }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 700;
+            color: var(--text-main);
+            font-size: 13px;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-family: 'Cairo', sans-serif;
+            font-weight: 600;
+            outline: none;
+            background-color: var(--light);
+            color: var(--text-main);
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .filter-group select:focus,
+        .filter-group input:focus {
+            border-color: var(--primary);
+            background-color: var(--white);
+            box-shadow: 0 0 0 3px rgba(39,174,96,0.12);
+        }
+
+        .btn-search {
+            background: var(--dark);
+            color: white;
+            padding: 12px 22px;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            height: 46px;
+            font-weight: 800;
+            font-family: 'Cairo', sans-serif;
+            font-size: 14px;
+            width: 100%;
+            transition: var(--transition);
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .btn-search:hover {
+            background: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-green);
+        }
+
+        .btn-location {
+            background: linear-gradient(135deg, var(--secondary), var(--secondary-dark));
+            color: white;
+            padding: 12px 18px;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            height: 46px;
+            font-weight: 800;
+            font-family: 'Cairo', sans-serif;
+            font-size: 13px;
+            display: flex; align-items: center; gap: 6px;
+            transition: var(--transition);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .btn-location:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(230,126,34,0.3);
+        }
+        .btn-location:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .reset-link {
+            color: #e74c3c;
+            font-size: 12px;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 8px;
+            transition: var(--transition);
+        }
+        .reset-link:hover { color: #c0392b; }
+
+        /* ============================================================
+           9. Results Header (NEW)
+        ============================================================ */
+        .results-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .results-count {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-sub);
+        }
+        .results-count strong {
+            color: var(--primary);
+            font-size: 18px;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 4px;
+        }
+        .view-btn {
+            width: 34px; height: 34px;
+            border-radius: 6px;
+            border: 1.5px solid var(--border);
+            background: var(--white);
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px;
+            transition: var(--transition);
+        }
+        .view-btn.active, .view-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* ============================================================
+           10. Grid & Cards
+        ============================================================ */
+        .container {
+            max-width: 1300px;
+            margin: 0 auto 60px;
+            padding: 0 24px;
+            flex: 1;
+        }
+
         .grid {
             display: grid;
             gap: 20px;
-            /* هنا خليناهم 4 أعمدة في الشاشات الكبيرة */
             grid-template-columns: repeat(4, 1fr);
         }
 
-        /* تعديلات الموبايل والتابلت للجريد */
-        @media (max-width: 1200px) { .grid { grid-template-columns: repeat(3, 1fr); } }
-        @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+        .grid.list-view { grid-template-columns: 1fr; }
+        .grid.list-view .pitch-card { flex-direction: row; max-height: 160px; }
+        .grid.list-view .pitch-image { width: 220px; height: 160px; flex-shrink: 0; }
 
-        /* --- Pitch Card (التعديل رقم 3) --- */
+        @media (max-width: 1200px) { .grid:not(.list-view) { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 900px)  { .grid:not(.list-view) { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 600px)  { .grid:not(.list-view) { grid-template-columns: 1fr; } .grid.list-view .pitch-card { flex-direction: column; max-height: none; } .grid.list-view .pitch-image { width: 100%; height: 160px; } }
+
+        /* Pitch Card */
         .pitch-card {
-            background: var(--white); border-radius: 15px; overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column;
-            transition: transform 0.3s; border: 1px solid #eee;
+            background: var(--card-bg);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            flex-direction: column;
+            transition: transform var(--transition), box-shadow var(--transition);
+            border: 1px solid var(--border);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: cardIn 0.45s forwards;
         }
-        .pitch-card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
 
-        .pitch-image { 
-        width: 100%; 
-        height: 160px; 
-        background: #ecf0f1; 
-        display: flex; 
-        align-items: center; 
-        justify-content: center; 
-        font-size: 50px; 
-        color: #bdc3c7; 
-        position: relative; /* <--- ده السطر الجديد المهم جداً */
-    }
+        @keyframes cardIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-        
-        .pitch-image img { width: 100%; height: 100%; object-fit: cover; }
-        
-        .pitch-info { padding: 15px; text-align: right; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; }
-        .pitch-info h3 { margin: 0; color: var(--dark); font-size: 18px; font-weight: bold; }
-        
-        /* بادج المنطقة والنوع */
-        .tags-row { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 5px; }
-        .meta-badge { background: #e8f5e9; color: var(--primary-dark); padding: 4px 8px; border-radius: 5px; font-size: 12px; font-weight: bold; }
-        .type-badge { background: #fff3e0; color: #e67e22; padding: 4px 8px; border-radius: 5px; font-size: 12px; font-weight: bold; }
+        /* Staggered delay for each card */
+        .pitch-card:nth-child(1)  { animation-delay: 0.05s; }
+        .pitch-card:nth-child(2)  { animation-delay: 0.10s; }
+        .pitch-card:nth-child(3)  { animation-delay: 0.15s; }
+        .pitch-card:nth-child(4)  { animation-delay: 0.20s; }
+        .pitch-card:nth-child(5)  { animation-delay: 0.25s; }
+        .pitch-card:nth-child(6)  { animation-delay: 0.30s; }
+        .pitch-card:nth-child(7)  { animation-delay: 0.35s; }
+        .pitch-card:nth-child(8)  { animation-delay: 0.40s; }
+        .pitch-card:nth-child(n+9){ animation-delay: 0.45s; }
 
-        /* العنوان التفصيلي */
-        .address-text { font-size: 13px; color: #555; display: flex; align-items: center; gap: 5px; }
+        .pitch-card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--shadow-lg);
+        }
 
-        .distance-badge { font-size: 12px; color: #e67e22; font-weight: bold; margin-top: 2px; }
-        
+        /* Card Image */
+        .pitch-image {
+            width: 100%;
+            height: 165px;
+            background: linear-gradient(135deg, #dde8e4, #c8dfd4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        [data-theme="dark"] .pitch-image { background: linear-gradient(135deg, #1a3040, #0f2030); }
+
+        .pitch-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+        }
+        .pitch-card:hover .pitch-image img { transform: scale(1.05); }
+
+        /* Image overlay on hover */
+        .pitch-image::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.35) 0%, transparent 55%);
+            opacity: 0;
+            transition: opacity var(--transition);
+        }
+        .pitch-card:hover .pitch-image::after { opacity: 1; }
+
+        /* Badges on image */
+        .img-badges {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            z-index: 1;
+        }
+
+        .badge-new {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 800;
+            box-shadow: 0 2px 8px rgba(231,76,60,0.4);
+        }
+
+        .badge-available {
+            background: rgba(39,174,96,0.92);
+            color: white;
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 800;
+            backdrop-filter: blur(4px);
+        }
+
+        .badge-busy {
+            background: rgba(231,76,60,0.92);
+            color: white;
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 800;
+            backdrop-filter: blur(4px);
+        }
+
+        /* Floor type badge on image */
+        .floor-badge {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 700;
+            backdrop-filter: blur(6px);
+            z-index: 1;
+        }
+
+        /* Card Body */
+        .pitch-info {
+            padding: 14px 16px;
+            text-align: right;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+
+        .pitch-name-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .pitch-info h3 {
+            margin: 0;
+            color: var(--text-main);
+            font-size: 16px;
+            font-weight: 800;
+            line-height: 1.3;
+            flex: 1;
+        }
+
+        /* Favorite button (NEW) */
+        .btn-fav {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 16px;
+            padding: 2px;
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+        .btn-fav:hover { color: #e74c3c; transform: scale(1.2); }
+        .btn-fav.active { color: #e74c3c; }
+
+        .tags-row { display: flex; gap: 5px; flex-wrap: wrap; }
+
+        .meta-badge {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            padding: 3px 9px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .type-badge {
+            background: #fff3e0;
+            color: #e67e22;
+            padding: 3px 9px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        [data-theme="dark"] .type-badge { background: rgba(230,126,34,0.15); }
+
+        .address-text {
+            font-size: 12px;
+            color: var(--text-sub);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .address-text i { color: #e74c3c; font-size: 11px; }
+
+        .distance-badge {
+            font-size: 11px;
+            color: var(--secondary);
+            font-weight: 700;
+            display: flex; align-items: center; gap: 4px;
+        }
+
+        /* Card footer row */
+        .card-footer-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: auto;
+            padding-top: 8px;
+            border-top: 1px solid var(--border);
+            gap: 8px;
+        }
+
+        .share-btn {
+            color: #25d366;
+            font-size: 13px;
+            text-decoration: none;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+        .share-btn:hover { color: #1ea352; transform: scale(1.05); }
+
         .btn-book {
-            display: block; width: 100%; background: var(--primary); color: white;
-            padding: 10px 0; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: auto; text-align: center; font-size: 14px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 9px 16px;
+            text-decoration: none;
+            border-radius: var(--radius-sm);
+            font-weight: 800;
+            font-size: 12px;
+            transition: var(--transition);
+            white-space: nowrap;
+            box-shadow: 0 3px 10px rgba(39,174,96,0.2);
         }
-        .btn-book:hover { background: var(--primary-dark); }
+        .btn-book:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-green);
+        }
 
-        /* --- 7. Footer --- */
-        footer { background: var(--dark); color: white; padding: 30px; text-align: center; margin-top: auto; }
-        .social-icons { display: flex; justify-content: center; gap: 20px; margin-bottom: 20px; }
+        /* ============================================================
+           11. Skeleton Loading (NEW)
+        ============================================================ */
+        .skeleton-grid {
+            display: grid;
+            gap: 20px;
+            grid-template-columns: repeat(4, 1fr);
+        }
+        @media (max-width: 1200px) { .skeleton-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 900px)  { .skeleton-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 600px)  { .skeleton-grid { grid-template-columns: 1fr; } }
+
+        .skeleton-card {
+            background: var(--card-bg);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .skeleton-img  { height: 165px; }
+        .skeleton-body { padding: 14px 16px; }
+        .skeleton-line {
+            border-radius: 4px;
+            margin-bottom: 10px;
+            animation: shimmer 1.6s infinite;
+            background: linear-gradient(90deg, var(--border) 25%, var(--light) 50%, var(--border) 75%);
+            background-size: 200% 100%;
+        }
+        .skeleton-line.h20 { height: 20px; width: 75%; }
+        .skeleton-line.h14 { height: 14px; }
+        .skeleton-line.h14.w50 { width: 50%; }
+        .skeleton-line.h12 { height: 12px; width: 60%; }
+        .skeleton-line.btn  { height: 36px; border-radius: var(--radius-sm); }
+
+        @keyframes shimmer {
+            0%   { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* ============================================================
+           12. No Results
+        ============================================================ */
+        .no-results {
+            text-align: center;
+            padding: 70px 20px;
+            color: var(--text-sub);
+        }
+        .no-results-icon {
+            font-size: 64px;
+            opacity: 0.25;
+            margin-bottom: 20px;
+            display: block;
+        }
+        .no-results h3 {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+        .no-results p {
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        .btn-reset-search {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--primary);
+            color: white;
+            padding: 12px 28px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 800;
+            font-size: 14px;
+            transition: var(--transition);
+        }
+        .btn-reset-search:hover { background: var(--primary-dark); transform: translateY(-2px); }
+
+        /* ============================================================
+           13. Pagination
+        ============================================================ */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            margin-top: 48px;
+        }
+
+        .page-link {
+            padding: 9px 16px;
+            background: var(--white);
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            text-decoration: none;
+            color: var(--text-main);
+            font-weight: 700;
+            font-size: 14px;
+            transition: var(--transition);
+            display: flex; align-items: center; gap: 4px;
+        }
+        .page-link:hover, .page-link.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            box-shadow: var(--shadow-green);
+        }
+
+        /* ============================================================
+           14. Footer
+        ============================================================ */
+        footer {
+            background: var(--dark);
+            color: #8aabca;
+            padding: 40px 24px 30px;
+            text-align: center;
+            margin-top: auto;
+        }
+
+        .footer-logo {
+            font-size: 20px;
+            font-weight: 900;
+            color: white;
+            margin-bottom: 6px;
+        }
+        .footer-logo span { color: var(--primary); }
+
+        .footer-desc {
+            font-size: 13px;
+            opacity: 0.6;
+            margin-bottom: 24px;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .social-icons {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
         .social-icon {
-            width: 40px; height: 40px; background: rgba(255,255,255,0.1); border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; color: white; text-decoration: none; transition: 0.3s;
+            width: 40px; height: 40px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: #8aabca;
+            text-decoration: none;
+            font-size: 16px;
+            transition: var(--transition);
         }
-        .social-icon:hover { background: var(--primary); transform: translateY(-3px); }
+        .social-icon:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(39,174,96,0.3);
+        }
 
-        /* --- WhatsApp --- */
+        .footer-divider {
+            border: none;
+            border-top: 1px solid rgba(255,255,255,0.07);
+            margin: 0 auto 20px;
+            max-width: 600px;
+        }
+
+        .footer-copy {
+            font-size: 12px;
+            opacity: 0.45;
+        }
+
+        /* ============================================================
+           15. Floating Buttons
+        ============================================================ */
         .floating-whatsapp {
-            position: fixed; bottom: 30px; right: 30px; background: #25d366; color: white;
-            width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-size: 35px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 1000; text-decoration: none; animation: pulse 2s infinite;
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #25d366;
+            color: white;
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 6px 24px rgba(37,211,102,0.4);
+            z-index: 1000;
+            text-decoration: none;
+            animation: pulse 2.5s infinite;
+            transition: transform var(--transition);
         }
+        .floating-whatsapp:hover { transform: scale(1.1); }
+
         @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); }
-            70% { box-shadow: 0 0 0 15px rgba(37, 211, 102, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
+            0%   { box-shadow: 0 0 0 0 rgba(37,211,102,0.6); }
+            70%  { box-shadow: 0 0 0 14px rgba(37,211,102,0); }
+            100% { box-shadow: 0 0 0 0 rgba(37,211,102,0); }
         }
 
-        .no-results { text-align: center; padding: 50px; font-size: 18px; color: #7f8c8d; }
-        
-        .pagination { display: flex; justify-content: center; gap: 10px; margin-top: 40px; }
-        .page-link { padding: 8px 15px; background: white; border: 1px solid #ddd; border-radius: 6px; text-decoration: none; color: var(--dark); font-weight: bold; }
-        .page-link.active, .page-link:hover { background: var(--primary); color: white; border-color: var(--primary); }
+        /* Back to Top (NEW) */
+        #back-to-top {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            width: 44px; height: 44px;
+            background: var(--dark-soft);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 999;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity var(--transition), transform var(--transition);
+            box-shadow: var(--shadow-md);
+        }
+        #back-to-top.visible { opacity: 1; transform: translateY(0); }
+        #back-to-top:hover { background: var(--primary); }
 
+        /* ============================================================
+           16. Toast Notification (NEW)
+        ============================================================ */
+        #toast {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: var(--dark);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 700;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+            white-space: nowrap;
+            border: 1px solid rgba(255,255,255,0.1);
+            display: flex; align-items: center; gap: 8px;
+        }
+        #toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        #toast .toast-icon { color: var(--primary); font-size: 16px; }
+
+        /* ============================================================
+           17. Responsive
+        ============================================================ */
         @media (max-width: 768px) {
             .filter-form { flex-direction: column; }
-            .search-container { width: 90%; padding: 20px; margin-top: -40px; }
+            .search-wrapper { width: 92%; padding: 20px; margin-top: -50px; }
             .btn-location { width: 100%; justify-content: center; }
+            .stats-inner { grid-template-columns: repeat(2, 1fr); }
+            .hero { padding: 70px 20px 110px; }
+        }
+        @media (max-width: 480px) {
+            .stats-inner { grid-template-columns: repeat(2, 1fr); }
+            .floating-whatsapp { bottom: 20px; right: 16px; }
+            #back-to-top { bottom: 88px; right: 16px; }
         }
     </style>
 </head>
 
 <body>
 
+    <!-- Scroll Progress Bar (NEW) -->
+    <div id="scroll-progress"></div>
+
+    <!-- Toast Notification (NEW) -->
+    <div id="toast">
+        <i class="fas fa-check-circle toast-icon"></i>
+        <span id="toast-msg">{% trans "تم النسخ!" %}</span>
+    </div>
+
+    <!-- Back to Top (NEW) -->
+    <button id="back-to-top" title="{% trans 'العودة للأعلى' %}">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+
+    <!-- Overlay -->
     <div id="overlay" class="overlay" onclick="closeNav()"></div>
 
-    <!-- القائمة الجانبية -->
+    <!-- ======================== SIDEBAR ======================== -->
     <div id="mySidebar" class="sidebar">
-        <button class="closebtn" onclick="closeNav()">×</button>
-        
+
+        <div class="sidebar-header">
+            <span class="sidebar-logo">Mal3ab <span>Online</span></span>
+            <button class="closebtn" onclick="closeNav()" title="{% trans 'إغلاق' %}">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
         {% if user.is_authenticated %}
-            <div style="padding: 20px; text-align: center; border-bottom: 1px solid #444; margin-bottom: 10px;">
-                <i class="fas fa-user-circle" style="font-size: 50px; color: white; margin-bottom: 10px;"></i><br>
-                <span style="color: #ccc;">مرحباً،</span> <strong style="color: var(--primary); font-size: 18px;">{{ user.username }}</strong>
+            <div class="sidebar-user">
+                <div class="sidebar-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <span style="color: #8aabca; font-size: 12px;">{% trans "مرحباً،" %}</span>
+                <strong style="color: white; font-size: 16px; display: block;">{{ user.username }}</strong>
             </div>
 
             {% if user.is_superuser %}
                 <a href="{% url 'admin:index' %}" style="color: #f1c40f;">
-                    <i class="fas fa-tools"></i> لوحة الإدارة
+                    <i class="fas fa-tools"></i> {% trans "لوحة الإدارة" %}
                 </a>
             {% endif %}
 
-            <a href="{% url 'user_profile' %}"><i class="fas fa-id-card"></i> حسابي وحجوزاتي</a>
-            <a href="{% url 'home' %}"><i class="fas fa-home"></i> الرئيسية</a>
-            
-            <!-- (التعديل رقم 4: رابط من نحن) -->
-            <a href="{% url 'about_us' %}"><i class="fas fa-info-circle"></i> من نحن</a>
-            
+            <a href="{% url 'user_profile' %}">
+                <i class="fas fa-id-card"></i> {% trans "حسابي وحجوزاتي" %}
+            </a>
+            <a href="{% url 'home' %}">
+                <i class="fas fa-home"></i> {% trans "الرئيسية" %}
+            </a>
+            <a href="{% url 'about_us' %}">
+                <i class="fas fa-info-circle"></i> {% trans "من نحن" %}
+            </a>
+
             <form action="{% url 'logout' %}" method="post" id="logout-form">
                 {% csrf_token %}
                 <a href="#" onclick="document.getElementById('logout-form').submit();" style="color: #e74c3c;">
-                    <i class="fas fa-sign-out-alt"></i> خروج
+                    <i class="fas fa-sign-out-alt" style="color:#e74c3c;"></i> {% trans "خروج" %}
                 </a>
             </form>
         {% else %}
-            <div style="padding: 30px; text-align: center; color: white;">
-                <i class="fas fa-futbol" style="font-size: 40px; color: var(--primary);"></i><br><br>
-                أهلاً بك في Mal3ab Online
+            <div style="padding: 30px 25px; text-align: center; color: #8aabca; border-bottom: 1px solid rgba(255,255,255,0.07);">
+                <div style="font-size:40px; margin-bottom:10px;">⚽</div>
+                <strong style="color:white;">{% trans "أهلاً بك في Mal3ab Online" %}</strong>
             </div>
-            <a href="{% url 'login' %}"><i class="fas fa-sign-in-alt"></i> تسجيل دخول</a>
-            <a href="{% url 'signup' %}"><i class="fas fa-user-plus"></i> إنشاء حساب جديد</a>
-            <a href="{% url 'about_us' %}"><i class="fas fa-info-circle"></i> من نحن</a>
+            <a href="{% url 'login' %}">
+                <i class="fas fa-sign-in-alt"></i> {% trans "تسجيل دخول" %}
+            </a>
+            <a href="{% url 'signup' %}">
+                <i class="fas fa-user-plus"></i> {% trans "إنشاء حساب جديد" %}
+            </a>
+            <a href="{% url 'about_us' %}">
+                <i class="fas fa-info-circle"></i> {% trans "من نحن" %}
+            </a>
         {% endif %}
+
+        <div class="lang-container">
+            <span class="lang-title"><i class="fas fa-globe"></i> {% trans "تغيير اللغة / Language" %}</span>
+            <div class="lang-buttons">
+                {% get_current_language as LANGUAGE_CODE %}
+                <form action="{% url 'set_language' %}" method="post" style="flex:1;">
+                    {% csrf_token %}
+                    <input name="next" type="hidden" value="{{ request.path }}">
+                    <input name="language" type="hidden" value="ar">
+                    <button type="submit" class="lang-btn {% if LANGUAGE_CODE == 'ar' %}active{% endif %}">
+                        {% trans "العربية" %}
+                    </button>
+                </form>
+                <form action="{% url 'set_language' %}" method="post" style="flex:1;">
+                    {% csrf_token %}
+                    <input name="next" type="hidden" value="{{ request.path }}">
+                    <input name="language" type="hidden" value="en">
+                    <button type="submit" class="lang-btn {% if LANGUAGE_CODE == 'en' %}active{% endif %}">
+                        English
+                    </button>
+                </form>
+            </div>
+        </div>
+
     </div>
 
-    <a href="https://wa.me/2010xxxxxxxx" target="_blank" class="floating-whatsapp">
+    <!-- ======================== WHATSAPP FLOAT ======================== -->
+    <a href="https://wa.me/2010xxxxxxxx" target="_blank" class="floating-whatsapp" title="{% trans 'تواصل معنا عبر واتساب' %}">
         <i class="fab fa-whatsapp"></i>
     </a>
 
-    <nav>
+    <!-- ======================== NAVBAR ======================== -->
+    <nav id="main-nav">
         <a href="{% url 'home' %}" class="logo-container">
-            <img src="{% static 'img/logo.png' %}" alt="Mal3ab Logo" height="50">
-            <span class="logo-text">Mal3ab <span style="color: var(--primary);">Online</span></span>
+            <img src="{% static 'img/logo.png' %}" alt="Mal3ab Logo" height="44">
+            <span class="logo-text">Mal3ab <span>Online</span></span>
         </a>
-        <div class="menu-btn" onclick="openNav()">&#9776;</div>
+
+        <div class="nav-actions">
+            <!-- Dark Mode Toggle (NEW) -->
+            <button class="dark-toggle" id="dark-toggle" title="{% trans 'تبديل الوضع الليلي' %}" onclick="toggleDark()">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="menu-btn" onclick="openNav()" title="{% trans 'القائمة' %}">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
     </nav>
+    
 
-    <header>
-        <h1>احجز ملعبك المفضل في ثوانٍ</h1>
-        <p>أكبر منصة لحجز الملاعب الرياضية في مصر</p>
+    <!-- ======================== HERO ======================== -->
+    <header class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <i class="fas fa-bolt"></i> {% trans "الأسرع والأسهل في مصر" %}
+            </div>
+            <h1 class="hero-title">
+                {% trans "احجز" %} <span class="highlight">{% trans "ملعبك المفضل" %}</span><br>{% trans "في ثوانٍ" %}
+            </h1>
+            <p class="hero-subtitle">{% trans "أكبر منصة لحجز الملاعب الرياضية في مصر — اختر، احجز، العب!" %}</p>
+        </div>
     </header>
+    
 
-    <div class="search-container">
+
+
+    <!-- ======================== SEARCH ======================== -->
+    <div class="search-wrapper">
+                                    <!-- ======================== STATS BAR (NEW) ======================== -->
+            <div class="stats-bar">
+                <div class="stats-inner">
+                    <div class="stat-item">
+                        <div class="stat-icon">🏟️</div>
+                        <div class="stat-number" data-target="{{ pitches_count|default:'120' }}">0</div>
+                        <div class="stat-label">{% trans "ملعب مسجّل" %}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-icon">📅</div>
+                        <div class="stat-number" data-target="5400">0</div>
+                        <div class="stat-label">{% trans "حجز ناجح" %}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-icon">📍</div>
+                        <div class="stat-number" data-target="16">0</div>
+                        <div class="stat-label">{% trans "منطقة مغطّاة" %}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-icon">⭐</div>
+                        <div class="stat-number" data-target="98">0</div>
+                        <div class="stat-label">{% trans "% رضا العملاء" %}</div>
+                    </div>
+                </div>
+            </div>
+
+        <div class="search-title">
+            <i class="fas fa-sliders-h" style="color: var(--primary);"></i>
+            {% trans "فلتر البحث" %}
+        </div>
         <form method="GET" class="filter-form">
-            
-            <button type="button" onclick="getLocation()" class="btn-location">
-                📍 أقرب ملعب لي
+
+            <button type="button" onclick="getLocation()" class="btn-location" id="location-btn">
+                <i class="fas fa-location-crosshairs"></i> {% trans "أقرب ملعب لي" %}
             </button>
 
-            <!-- (التعديل رقم 1: المناطق الحقيقية) -->
             <div class="filter-group">
-                <label>المنطقة</label>
+                <label><i class="fas fa-map-marker-alt" style="color:var(--primary);"></i> {% trans "المنطقة" %}</label>
                 <select name="location">
-                    <option value="all">كل المناطق</option>
-                    <option value="Abbaseya" {% if selected_location == 'Abbaseya' %}selected{% endif %}>العباسية</option>
-                    <option value="Nasr City" {% if selected_location == 'Nasr City' %}selected{% endif %}>مدينة نصر</option>
-                    <option value="New Cairo" {% if selected_location == 'New Cairo' %}selected{% endif %}>مصر الجديدة</option>
-                    <option value="Maadi" {% if selected_location == 'Maadi' %}selected{% endif %}>المعادي</option>
-                    <option value="Shoubra" {% if selected_location == 'Shoubra' %}selected{% endif %}>شبرا</option>
-                    <option value="Dokki" {% if selected_location == 'Dokki' %}selected{% endif %}>الدقي</option>
-                    <option value="Giza" {% if selected_location == 'Giza' %}selected{% endif %}>الجيزة</option>
-                    <option value="Zamalek" {% if selected_location == 'Zamalek' %}selected{% endif %}>الزمالك</option>
-                    <option value="Haram" {% if selected_location == 'Haram' %}selected{% endif %}>الهرم</option>
-                    <option value="Faisal" {% if selected_location == 'Faisal' %}selected{% endif %}>فيصل</option>
-                    <option value="Obour" {% if selected_location == 'Obour' %}selected{% endif %}>العبور</option>
-                    <option value="Shorouk" {% if selected_location == 'Shorouk' %}selected{% endif %}>الشروق</option>
-                    <option value="October" {% if selected_location == 'October' %}selected{% endif %}>6 أكتوبر</option>
-                    <option value="Sheikh Zayed" {% if selected_location == 'Sheikh Zayed' %}selected{% endif %}>الشيخ زايد</option>
-                    <option value="Helwan" {% if selected_location == 'Helwan' %}selected{% endif %}>حلوان</option>
-                    <option value="Mokattam" {% if selected_location == 'Mokattam' %}selected{% endif %}>المقطم</option>
+                    <option value="all">{% trans "كل المناطق" %}</option>
+                    <option value="Abbaseya"    {% if selected_location == 'Abbaseya'    %}selected{% endif %}>{% trans "العباسية" %}</option>
+                    <option value="Nasr City"   {% if selected_location == 'Nasr City'   %}selected{% endif %}>{% trans "مدينة نصر" %}</option>
+                    <option value="New Cairo"   {% if selected_location == 'New Cairo'   %}selected{% endif %}>{% trans "مصر الجديدة" %}</option>
+                    <option value="Maadi"       {% if selected_location == 'Maadi'       %}selected{% endif %}>{% trans "المعادي" %}</option>
+                    <option value="Shoubra"     {% if selected_location == 'Shoubra'     %}selected{% endif %}>{% trans "شبرا" %}</option>
+                    <option value="Dokki"       {% if selected_location == 'Dokki'       %}selected{% endif %}>{% trans "الدقي" %}</option>
+                    <option value="Giza"        {% if selected_location == 'Giza'        %}selected{% endif %}>{% trans "الجيزة" %}</option>
+                    <option value="Zamalek"     {% if selected_location == 'Zamalek'     %}selected{% endif %}>{% trans "الزمالك" %}</option>
+                    <option value="Haram"       {% if selected_location == 'Haram'       %}selected{% endif %}>{% trans "الهرم" %}</option>
+                    <option value="Faisal"      {% if selected_location == 'Faisal'      %}selected{% endif %}>{% trans "فيصل" %}</option>
+                    <option value="Obour"       {% if selected_location == 'Obour'       %}selected{% endif %}>{% trans "العبور" %}</option>
+                    <option value="Shorouk"     {% if selected_location == 'Shorouk'     %}selected{% endif %}>{% trans "الشروق" %}</option>
+                    <option value="October"     {% if selected_location == 'October'     %}selected{% endif %}>{% trans "6 أكتوبر" %}</option>
+                    <option value="Sheikh Zayed"{% if selected_location == 'Sheikh Zayed'%}selected{% endif %}>{% trans "الشيخ زايد" %}</option>
+                    <option value="Helwan"      {% if selected_location == 'Helwan'      %}selected{% endif %}>{% trans "حلوان" %}</option>
+                    <option value="Mokattam"    {% if selected_location == 'Mokattam'    %}selected{% endif %}>{% trans "المقطم" %}</option>
                 </select>
             </div>
 
+
             <div class="filter-group">
-                <label>الحجم</label>
+                <label><i class="fas fa-users" style="color:var(--primary);"></i> {% trans "الحجم" %}</label>
                 <select name="size">
-                    <option value="all">الكل</option>
-                    <option value="5x5" {% if selected_size == '5x5' %}selected{% endif %}>خماسي</option>
-                    <option value="7x7" {% if selected_size == '7x7' %}selected{% endif %}>سباعي</option>
-                    <option value="11x11" {% if selected_size == '11x11' %}selected{% endif %}>قانوني</option>
+                    <option value="all">{% trans "الكل" %}</option>
+                    <option value="5x5"   {% if selected_size == '5x5'   %}selected{% endif %}>{% trans "خماسي" %}</option>
+                    <option value="7x7"   {% if selected_size == '7x7'   %}selected{% endif %}>{% trans "سباعي" %}</option>
+                    <option value="11x11" {% if selected_size == '11x11' %}selected{% endif %}>{% trans "قانوني" %}</option>
                 </select>
             </div>
 
             <div class="filter-group">
-                <label>الأرضية</label>
+                <label><i class="fas fa-leaf" style="color:var(--primary);"></i> {% trans "الأرضية" %}</label>
                 <select name="floor_type">
-                    <option value="all">الكل</option>
-                    <option value="Artificial" {% if selected_floor == 'Artificial' %}selected{% endif %}>نجيل صناعي</option>
-                    <option value="Natural" {% if selected_floor == 'Natural' %}selected{% endif %}>نجيل طبيعي</option>
-                    <option value="Tartan" {% if selected_floor == 'Tartan' %}selected{% endif %}>ترتان</option>
+                    <option value="all">{% trans "الكل" %}</option>
+                    <option value="Artificial" {% if selected_floor == 'Artificial' %}selected{% endif %}>{% trans "نجيل صناعي" %}</option>
+                    <option value="Natural"    {% if selected_floor == 'Natural'    %}selected{% endif %}>{% trans "نجيل طبيعي" %}</option>
+                    <option value="Tartan"     {% if selected_floor == 'Tartan'     %}selected{% endif %}>{% trans "ترتان" %}</option>
                 </select>
             </div>
 
             <div class="filter-group">
-                <label>السعر (أقل من)</label>
-                <input type="number" name="price" placeholder="مثلاً: 200" value="{{ selected_price|default:'' }}">
+                <label><i class="fas fa-tag" style="color:var(--primary);"></i> {% trans "السعر (أقل من)" %}</label>
+                <input type="number" name="price" placeholder="{% trans 'مثلاً: 200' %}" value="{{ selected_price|default:'' }}">
             </div>
 
-            <div style="flex-grow:1; text-align: center;">
-                <button type="submit" class="btn-search">بحث 🔍</button>
-                {% if selected_location or selected_size != 'all' or selected_price or is_nearest_search %}
-                    <a href="{% url 'home' %}" class="reset-link">❌ إلغاء الفلتر</a>
+            <div style="flex-grow:1; text-align:center; min-width: 130px;">
+                <button type="submit" class="btn-search">
+                    <i class="fas fa-search"></i> {% trans "بحث" %}
+                </button>
+
+                <!-- التعديل هنا: الشرط بقى دقيق عشان يخفي الزرار لو مفيش فلتر حقيقي -->
+                {% if selected_location != 'all' and selected_location or selected_size != 'all' and selected_size or selected_floor != 'all' and selected_floor or selected_price or is_nearest_search %}
+
+                    <a href="{% url 'home' %}" class="reset-link">
+                        <i class="fas fa-xmark"></i> {% trans "إلغاء الفلتر" %}
+                    </a>
                 {% endif %}
             </div>
 
+
         </form>
     </div>
+    
 
-    <!-- Grid Results -->
+    <!-- ======================== RESULTS ======================== -->
     <div class="container">
+
         {% if pitches %}
-            <!-- (التعديل رقم 2: الجريد 4 أعمدة) -->
-            <div class="grid">
+
+            <!-- Results Header (NEW) -->
+            <div class="results-header">
+                <div class="results-count">
+                    {% blocktrans with count=pitches.paginator.count %}
+                        تم إيجاد <strong>{{ count }}</strong> ملعب
+                    {% endblocktrans %}
+                </div>
+                <div class="view-toggle">
+                    <button class="view-btn active" id="btn-grid" onclick="setView('grid')" title="{% trans 'عرض شبكي' %}">
+                        <i class="fas fa-grip"></i>
+                    </button>
+                    <button class="view-btn" id="btn-list" onclick="setView('list')" title="{% trans 'عرض قائمة' %}">
+                        <i class="fas fa-list"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid" id="pitches-grid">
                 {% for pitch in pitches %}
                 <div class="pitch-card">
                     <div class="pitch-image">
                         {% if pitch.image %}
-                            <img src="{{ pitch.image.url }}" alt="{{ pitch.name }}">
+                            <img src="{{ pitch.image.url }}" alt="{{ pitch.name }}" loading="lazy">
                         {% else %}
                             🏟️
                         {% endif %}
+
+                        <!-- Image Badges -->
+                        <div class="img-badges">
+                            {% if pitch.is_new %}
+                                <span class="badge-new">{% trans "جديد" %}</span>
+                            {% endif %}
+                            {% if pitch.is_available %}
+                                <span class="badge-available">{% trans "متاح الآن" %}</span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Floor type on image -->
+                        {% if pitch.floor_type %}
+                        <span class="floor-badge">
+                            {% if pitch.floor_type == 'Artificial' %}🌿 {% trans "صناعي" %}
+                            {% elif pitch.floor_type == 'Natural' %}🍃 {% trans "طبيعي" %}
+                            {% else %}⬛ {% trans "ترتان" %}{% endif %}
+                        </span>
+                        {% endif %}
                     </div>
+
                     <div class="pitch-info">
-                        <h3>{{ pitch.name }}</h3>
-                        
-                        <!-- (التعديل رقم 3: البيانات المطلوبة) -->
+                        <div class="pitch-name-row">
+                            <h3>{{ pitch.name }}</h3>
+                            <!-- Favorite button (NEW) -->
+                            <button class="btn-fav" onclick="toggleFav(this, '{{ pitch.id }}')" title="{% trans 'حفظ في المفضلة' %}">
+                                <i class="far fa-heart"></i>
+                            </button>
+                        </div>
+
                         <div class="tags-row">
                             <span class="meta-badge">📍 {{ pitch.get_location_display }}</span>
                             <span class="type-badge">📏 {{ pitch.get_size_display }}</span>
@@ -325,101 +1467,236 @@
 
                         {% if pitch.distance is not None and pitch.distance != 99999 %}
                             <div class="distance-badge">
-                                🚶 يبعد عنك {{ pitch.distance }} كم
+                                <i class="fas fa-person-walking"></i>
+                                {% blocktrans with distance=pitch.distance %}يبعد عنك {{ distance }} كم{% endblocktrans %}
                             </div>
                         {% endif %}
-                        <!-- زر المشاركة السريع -->
-                        <div style="margin-top: 10px; text-align: left;">
-                            <a href="https://wa.me/?text=لقيت ملعب جامد اسمه {{ pitch.name }} في {{ pitch.get_location_display }}.. إيه رأيكم نحجز؟ الرابط: {{ request.build_absolute_uri }}{% url 'pitch_detail' pitch.id %}" 
-                            target="_blank" 
-                            style="color: #25d366; font-size: 14px; text-decoration: none; font-weight: bold;">
-                            <i class="fab fa-whatsapp"></i> شير لأصحابك
+
+                        <!-- Card Footer Row -->
+                        <div class="card-footer-row">
+                            <a href="https://wa.me/?text={% blocktrans with name=pitch.name location=pitch.get_location_display %}لقيت ملعب جامد اسمه {{ name }} في {{ location }}.. إيه رأيكم نحجز؟ الرابط: {% endblocktrans %}{{ request.build_absolute_uri }}{% url 'pitch_detail' pitch.id %}"
+                               target="_blank"
+                                         class="share-btn"onclick="showToast('{% trans "تم فتح الواتساب!" %}')">
+                                         
+                                <i class="fab fa-whatsapp"></i> {% trans "شير" %}
+                            </a>
+                            <a href="{% url 'pitch_detail' pitch.id %}" class="btn-book">
+                                {% trans "عرض التفاصيل" %} <i class="fas fa-arrow-left"></i>
                             </a>
                         </div>
-
-                        <a href="{% url 'pitch_detail' pitch.id %}" class="btn-book">عرض التفاصيل والحجز</a>
                     </div>
                 </div>
                 {% endfor %}
             </div>
-            
+
+            <!-- Pagination -->
             {% if pitches.has_other_pages %}
             <div class="pagination">
                 {% if pitches.has_previous %}
-                    <a href="?page={{ pitches.previous_page_number }}" class="page-link">&laquo; السابق</a>
+                    <a href="?page={{ pitches.previous_page_number }}" class="page-link">
+                        <i class="fas fa-chevron-right"></i> {% trans "السابق" %}
+                    </a>
                 {% endif %}
-                <span class="page-link active">صفحة {{ pitches.number }}</span>
+                <span class="page-link active">
+                    {% blocktrans with num=pitches.number total=pitches.paginator.num_pages %}{{ num }} / {{ total }}{% endblocktrans %}
+                </span>
                 {% if pitches.has_next %}
-                    <a href="?page={{ pitches.next_page_number }}" class="page-link">التالي &raquo;</a>
+                    <a href="?page={{ pitches.next_page_number }}" class="page-link">
+                        {% trans "التالي" %} <i class="fas fa-chevron-left"></i>
+                    </a>
                 {% endif %}
             </div>
             {% endif %}
 
         {% else %}
+
+            <!-- Enhanced Empty State (NEW) -->
             <div class="no-results">
-                <i class="fas fa-search" style="font-size: 50px; margin-bottom: 20px;"></i><br>
-                لا توجد ملاعب تطابق بحثك
+                <span class="no-results-icon">🔍</span>
+                <h3>{% trans "لا توجد ملاعب تطابق بحثك" %}</h3>
+                <p>{% trans "جرّب تغيير الفلتر أو اعرض جميع الملاعب المتاحة" %}</p>
+                <a href="{% url 'home' %}" class="btn-reset-search">
+                    <i class="fas fa-rotate-left"></i> {% trans "عرض كل الملاعب" %}
+                </a>
             </div>
+
         {% endif %}
     </div>
 
+    <!-- ======================== FOOTER ======================== -->
     <footer>
-        <h3>تواصل معنا</h3>
+        <div class="footer-logo">Mal3ab <span>Online</span></div>
+        <p class="footer-desc">{% trans "أكبر منصة لحجز الملاعب الرياضية في مصر" %}</p>
         <div class="social-icons">
-            <a href="https://www.facebook.com" class="social-icon fb"><i class="fab fa-facebook-f"></i></a>
-            <a href="#" class="social-icon ig"><i class="fab fa-instagram"></i></a>
-            <a href="#" class="social-icon wa"><i class="fab fa-whatsapp"></i></a>
-            <a href="#" class="social-icon tw"><i class="fab fa-x-twitter"></i></a>
-            <a href="#" class="social-icon tk"><i class="fab fa-tiktok"></i></a>
+            <a href="https://www.facebook.com" class="social-icon" target="_blank" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+            <a href="#" class="social-icon" title="Instagram"><i class="fab fa-instagram"></i></a>
+            <a href="https://wa.me/2010xxxxxxxx" class="social-icon" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+            <a href="#" class="social-icon" title="X / Twitter"><i class="fab fa-x-twitter"></i></a>
+            <a href="#" class="social-icon" title="TikTok"><i class="fab fa-tiktok"></i></a>
         </div>
-        <p>جميع الحقوق محفوظة &copy; 2024 Mal3ab Online</p>
+        <hr class="footer-divider">
+        <p class="footer-copy">{% trans "جميع الحقوق محفوظة" %} &copy; 2024 Mal3ab Online</p>
     </footer>
 
+    <!-- ======================== JAVASCRIPT ======================== -->
     <script>
+        /* ---- Sidebar ---- */
         function openNav() {
-            document.getElementById("mySidebar").style.width = "280px";
-            document.getElementById("overlay").style.display = "block";
+            const sb = document.getElementById("mySidebar");
+            const ov = document.getElementById("overlay");
+            sb.style.width = "280px";
+            sb.classList.add("open");
+            ov.style.display = "block";
+            setTimeout(() => ov.classList.add("active"), 10);
         }
-
         function closeNav() {
-            document.getElementById("mySidebar").style.width = "0";
-            document.getElementById("overlay").style.display = "none";
+            const sb = document.getElementById("mySidebar");
+            const ov = document.getElementById("overlay");
+            sb.style.width = "0";
+            sb.classList.remove("open");
+            ov.classList.remove("active");
+            setTimeout(() => ov.style.display = "none", 300);
+        }
+        document.addEventListener('keydown', e => { if (e.key === "Escape") closeNav(); });
+
+        /* ---- Dark Mode (NEW) ---- */
+        const savedTheme = localStorage.getItem('mal3ab-theme') || 'light';
+        if (savedTheme === 'dark') applyDark();
+
+        function toggleDark() {
+            if (document.documentElement.getAttribute('data-theme') === 'dark') {
+                removeDark();
+            } else {
+                applyDark();
+            }
+        }
+        function applyDark() {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            document.querySelector('#dark-toggle i').className = 'fas fa-sun';
+            localStorage.setItem('mal3ab-theme', 'dark');
+        }
+        function removeDark() {
+            document.documentElement.removeAttribute('data-theme');
+            document.querySelector('#dark-toggle i').className = 'fas fa-moon';
+            localStorage.setItem('mal3ab-theme', 'light');
         }
 
-        document.addEventListener('keydown', function(e) {
-            if (e.key === "Escape") closeNav();
+        /* ---- Scroll Progress Bar (NEW) ---- */
+        window.addEventListener('scroll', () => {
+            const scrolled = window.scrollY;
+            const total = document.body.scrollHeight - window.innerHeight;
+            const pct = total > 0 ? (scrolled / total) * 100 : 0;
+            document.getElementById('scroll-progress').style.width = pct + '%';
+
+            // Navbar shadow on scroll
+            document.getElementById('main-nav').classList.toggle('scrolled', scrolled > 10);
+
+            // Back to top visibility
+            document.getElementById('back-to-top').classList.toggle('visible', scrolled > 400);
         });
 
-        function getLocation() {
-            if (navigator.geolocation) {
-                const btn = document.querySelector('.btn-location');
-                if (!btn) return;
-                
-                const originalText = btn.innerHTML;
-                btn.innerHTML = 'جاري البحث... ⏳';
-                btn.disabled = true;
+        /* ---- Back to Top (NEW) ---- */
+        document.getElementById('back-to-top').addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
 
-                navigator.geolocation.getCurrentPosition(showPosition, function(error) {
-                    showError(error);
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                });
+        /* ---- Toast Notification (NEW) ---- */
+        let toastTimer;
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg || '{% trans "تم!" %}';
+            toast.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
+        }
+
+        /* ---- Favorite Button (NEW) ---- */
+        function toggleFav(btn, pitchId) {
+            btn.classList.toggle('active');
+            const icon = btn.querySelector('i');
+            if (btn.classList.contains('active')) {
+                icon.className = 'fas fa-heart';
+                showToast('{% trans "تمت الإضافة للمفضلة!" %}');
             } else {
-                alert("المتصفح لا يدعم تحديد الموقع.");
+                icon.className = 'far fa-heart';
+                showToast('{% trans "تمت الإزالة من المفضلة" %}');
             }
         }
 
-        function showPosition(position) {
-            const lat = position.coords.latitude;
-            const lng = position.coords.longitude;
-            window.location.href = `/?lat=${lat}&lng=${lng}`;
+        /* ---- View Toggle (NEW) ---- */
+        function setView(mode) {
+            const grid = document.getElementById('pitches-grid');
+            const btnGrid = document.getElementById('btn-grid');
+            const btnList = document.getElementById('btn-list');
+            if (!grid) return;
+            if (mode === 'list') {
+                grid.classList.add('list-view');
+                btnList.classList.add('active');
+                btnGrid.classList.remove('active');
+            } else {
+                grid.classList.remove('list-view');
+                btnGrid.classList.add('active');
+                btnList.classList.remove('active');
+            }
+            localStorage.setItem('mal3ab-view', mode);
+        }
+        // Restore saved view
+        const savedView = localStorage.getItem('mal3ab-view');
+        if (savedView === 'list') setView('list');
+
+        /* ---- Animated Counters (NEW) ---- */
+        function animateCounters() {
+            document.querySelectorAll('.stat-number').forEach(el => {
+                const target = parseInt(el.getAttribute('data-target'), 10);
+                if (isNaN(target)) return;
+                let current = 0;
+                const step = Math.ceil(target / 60);
+                const timer = setInterval(() => {
+                    current = Math.min(current + step, target);
+                    el.textContent = current.toLocaleString('ar-EG');
+                    if (current >= target) clearInterval(timer);
+                }, 20);
+            });
         }
 
-        function showError(error) {
-            let msg = "حدث خطأ أثناء تحديد الموقع.";
-            if(error.code == 1) msg = "يرجى السماح بالوصول للموقع (GPS).";
-            else if(error.code == 3) msg = "انتهت مهلة طلب الموقع.";
-            alert(msg);
+        // Trigger counters when stats bar is visible
+        const statsObserver = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    animateCounters();
+                    statsObserver.disconnect();
+                }
+            });
+        }, { threshold: 0.5 });
+
+        const statsBar = document.querySelector('.stats-bar');
+        if (statsBar) statsObserver.observe(statsBar);
+
+        /* ---- Geolocation ---- */
+        function getLocation() {
+            if (!navigator.geolocation) {
+                alert("{% trans 'المتصفح لا يدعم تحديد الموقع.' %}");
+                return;
+            }
+            const btn = document.getElementById('location-btn');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> {% trans "جاري البحث..." %}';
+            btn.disabled = true;
+
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    window.location.href = `/?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`;
+                },
+                err => {
+                    let msg = "{% trans 'حدث خطأ أثناء تحديد الموقع.' %}";
+                    if (err.code === 1) msg = "{% trans 'يرجى السماح بالوصول للموقع (GPS).' %}";
+                    else if (err.code === 3) msg = "{% trans 'انتهت مهلة طلب الموقع.' %}";
+                    alert(msg);
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                },
+                { timeout: 10000 }
+            );
         }
     </script>
 

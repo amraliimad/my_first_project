@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from django.utils.translation import gettext_lazy as _
 
 # 1. تحميل الإعدادات من ملف .env
 load_dotenv()
@@ -36,7 +37,9 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    'django.middleware.locale.LocaleMiddleware', # ترجمه
 ]
+
 
 ROOT_URLCONF = "malaeb_project.urls"
 
@@ -71,9 +74,15 @@ DATABASES = {
 
 # --- Internationalization ---
 
-LANGUAGE_CODE = "en-us"
+# 1. تعريف اللغات
+LANGUAGE_CODE = 'ar' # اللغة الافتراضية
+LANGUAGES = [
+    ('ar', _('Arabic')),
+    ('en', _('English')),
+]
 TIME_ZONE = "UTC"
 USE_I18N = True
+USE_L10N = True
 USE_TZ = True
 
 # --- Static files ---
