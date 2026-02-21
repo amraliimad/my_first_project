@@ -1564,11 +1564,17 @@
                                aria-label="{{ wa_label }}">
                                 <i class="fab fa-whatsapp"></i> {% trans "شير" %}
                             </a>
+                                <!-- ✅ زرار احجز الآن -->
+                            <a href="{% url 'pitch_detail' pitch.id %}" class="btn-book">
+                                <i class="fas fa-calendar-check"></i> {% trans "احجز الآن" %}
+                            </a>
+
                         </div>
                     </div>
                 </article>
                 {% endfor %}
             </div>
+            
 
             <!-- Pagination -->
             {% if pitches.has_other_pages %}
