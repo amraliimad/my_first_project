@@ -1,412 +1,271 @@
+{% extends 'base.html' %}
 {% load static %}
 {% load i18n %}
-<!DOCTYPE html>
-<html dir="rtl" lang="ar" data-theme="light">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تم الحجز بنجاح - ملاعبك</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-    <style>
-        /* ============================================================
-           1. CSS VARIABLES
-           ============================================================ */
-        :root {
-            --primary:       #27ae60;
-            --primary-light: #2ecc71;
-            --primary-dark:  #1e8449;
-            --primary-ghost: rgba(39, 174, 96, 0.12);
-            --accent:        #f39c12;
-            --danger:        #e74c3c;
-            --bg:            #f0f4f2;
-            --surface:       #ffffff;
-            --surface-2:     #f7faf8;
-            --border:        #e2e8e4;
-            --text:          #1a2e23;
-            --text-2:        #4a6358;
-            --text-muted:    #8fa89c;
-            --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
-            --shadow-md: 0 6px 24px rgba(0,0,0,0.09);
-            --shadow-lg: 0 16px 48px rgba(0,0,0,0.12);
-            --sidebar-width: 260px;
-            --navbar-height: 64px;
-            --radius-sm: 8px;
-            --radius-md: 14px;
-            --radius-lg: 20px;
-            --radius-xl: 28px;
-        }
+{% block title %}{% trans "تم الحجز بنجاح" %} — Mal3ab Online{% endblock %}
 
-        [data-theme="dark"] {
-            --bg:        #0f1a14;
-            --surface:   #182318;
-            --surface-2: #1e2e1e;
-            --border:    #2a3d2a;
-            --text:      #e8f5e9;
-            --text-2:    #a5c8aa;
-            --text-muted:#5a7d5a;
-            --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
-            --shadow-md: 0 6px 24px rgba(0,0,0,0.4);
-            --shadow-lg: 0 16px 48px rgba(0,0,0,0.5);
-        }
+{% block breadcrumb %}
+    <a href="{% url 'home' %}">{% trans "الرئيسية" %}</a>
+    <span>›</span>
+    <span style="color:var(--text-2);">{% trans "تم الحجز" %} ✅</span>
+{% endblock %}
 
-        /* ============================================================
-           2. BASE
-           ============================================================ */
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Cairo', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            transition: background 0.3s, color 0.3s;
-        }
-        a { text-decoration: none; color: inherit; }
-        button { font-family: 'Cairo', sans-serif; cursor: pointer; }
+{% block extra_css %}
+<style>
+    /* ============================================================
+       BOOKING SUCCESS — Page-Specific Styles
+       ============================================================ */
 
-        /* ============================================================
-           3. SIDEBAR (shared)
-           ============================================================ */
-        .sidebar {
-            position: fixed; top: 0; right: 0;
-            width: var(--sidebar-width); height: 100vh;
-            background: var(--surface); border-left: 1px solid var(--border);
-            box-shadow: var(--shadow-lg); z-index: 1000;
-            display: flex; flex-direction: column;
-            transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
-        }
-        .sidebar.hidden { transform: translateX(100%); }
-        .sidebar-logo { padding: 24px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); }
-        .logo-icon {
-            width: 44px; height: 44px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center;
-            font-size: 22px; box-shadow: 0 4px 12px rgba(39,174,96,0.35); flex-shrink: 0;
-        }
-        .logo-text { font-size: 20px; font-weight: 800; color: var(--text); }
-        .logo-text span { color: var(--primary); }
-        .sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
-        .nav-section-title { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: var(--text-muted); padding: 8px 10px 6px; text-transform: uppercase; }
-        .nav-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; color: var(--text-2); transition: all 0.2s; margin-bottom: 2px; }
-        .nav-item:hover, .nav-item.active { background: var(--primary-ghost); color: var(--primary); }
-        .nav-icon { font-size: 18px; flex-shrink: 0; }
-        .sidebar-footer { padding: 16px 12px; border-top: 1px solid var(--border); }
-        .theme-toggle-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--border); color: var(--text-2); font-size: 14px; font-weight: 600; transition: all 0.2s; }
-        .theme-toggle-btn:hover { border-color: var(--primary); color: var(--primary); }
-        .toggle-track { width: 40px; height: 22px; background: var(--border); border-radius: 11px; position: relative; transition: background 0.3s; }
-        [data-theme="dark"] .toggle-track { background: var(--primary); }
-        .toggle-thumb { position: absolute; top: 3px; right: 3px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
-        [data-theme="dark"] .toggle-thumb { transform: translateX(-18px); }
+    .success-layout {
+        display: flex; align-items: center; justify-content: center;
+        min-height: calc(100vh - var(--navbar-height));
+        padding: 40px 24px;
+    }
 
-        /* ============================================================
-           4. OVERLAY & NAVBAR
-           ============================================================ */
-        .sidebar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
-        .sidebar-overlay.visible { opacity: 1; pointer-events: all; }
-        .navbar { position: fixed; top: 0; left: 0; right: var(--sidebar-width); height: var(--navbar-height); background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 24px; gap: 12px; z-index: 900; box-shadow: var(--shadow-sm); transition: right 0.35s cubic-bezier(0.4,0,0.2,1); }
-        .navbar.sidebar-hidden { right: 0; }
-        .menu-btn { width: 40px; height: 40px; border-radius: var(--radius-sm); background: transparent; border: 1px solid var(--border); color: var(--text-2); font-size: 18px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-        .menu-btn:hover { background: var(--primary-ghost); color: var(--primary); border-color: var(--primary); }
-        .navbar-breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-muted); }
-        .navbar-breadcrumb a { color: var(--primary); font-weight: 600; }
-        .navbar-actions { margin-right: auto; display: flex; align-items: center; gap: 10px; }
-        .btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 700; border: none; transition: all 0.2s; }
-        .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; box-shadow: 0 4px 12px rgba(39,174,96,0.3); }
-        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(39,174,96,0.4); }
-        .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-2); }
-        .btn-ghost:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-ghost); }
+    .success-wrapper {
+        text-align: center;
+        width: 100%; max-width: 560px;
+    }
 
-        /* ============================================================
-           5. LAYOUT
-           ============================================================ */
-        .main-content {
-            margin-right: var(--sidebar-width);
-            padding-top: var(--navbar-height);
-            min-height: 100vh;
-            display: flex; align-items: center; justify-content: center;
-            transition: margin-right 0.35s cubic-bezier(0.4,0,0.2,1);
-        }
-        .main-content.sidebar-hidden { margin-right: 0; }
+    /* Animated Checkmark */
+    .success-icon-wrap {
+        width: 110px; height: 110px;
+        margin: 0 auto 28px; position: relative;
+    }
+    .success-circle {
+        width: 110px; height: 110px;
+        background: var(--primary-ghost);
+        border: 3px solid var(--primary);
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 52px;
+        animation: popIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+    @keyframes popIn {
+        0%   { transform: scale(0); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    .success-circle::before,
+    .success-circle::after {
+        content: ''; position: absolute;
+        width: 12px; height: 12px; border-radius: 50%;
+        animation: flyOut 0.8s 0.3s ease-out both;
+    }
+    .success-circle::before { background: var(--primary); top: -4px; right: 20px; }
+    .success-circle::after  { background: var(--accent); bottom: -4px; left: 20px; }
+    @keyframes flyOut {
+        from { transform: scale(0); opacity: 1; }
+        to   { transform: scale(1) translateY(-8px); opacity: 0; }
+    }
 
-        /* ============================================================
-           6. SUCCESS PAGE
-           ============================================================ */
-        .success-wrapper {
-            text-align: center;
-            padding: 40px 24px;
-            width: 100%; max-width: 520px;
-        }
+    .success-title {
+        font-size: 28px; font-weight: 900; color: var(--text);
+        margin-bottom: 12px;
+        animation: fadeUp 0.5s 0.3s ease both;
+    }
+    .success-subtitle {
+        font-size: 15px; color: var(--text-2); line-height: 1.8;
+        margin-bottom: 32px;
+        animation: fadeUp 0.5s 0.4s ease both;
+    }
 
-        /* Animated checkmark circle */
-        .success-icon-wrap {
-            width: 110px; height: 110px;
-            margin: 0 auto 28px;
-            position: relative;
-        }
+    @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(14px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
 
-        .success-circle {
-            width: 110px; height: 110px;
-            background: var(--primary-ghost);
-            border: 3px solid var(--primary);
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 52px;
-            animation: popIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-        }
+    /* Booking Details Card */
+    .details-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        padding: 24px 28px;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 20px;
+        text-align: right;
+        animation: fadeUp 0.5s 0.45s ease both;
+    }
+    .details-card-title {
+        font-size: 14px; font-weight: 800; color: var(--text);
+        margin-bottom: 14px; padding-bottom: 10px;
+        border-bottom: 1px solid var(--border);
+        display: flex; align-items: center; gap: 8px;
+    }
+    .detail-row {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 9px 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 14px;
+    }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-row .detail-label {
+        color: var(--text-muted); font-weight: 600;
+        display: flex; align-items: center; gap: 6px;
+    }
+    .detail-row .detail-value {
+        color: var(--text); font-weight: 800;
+    }
+    .detail-row .detail-value.price-value {
+        color: var(--primary); font-size: 16px;
+    }
+    .detail-row .detail-value .badge-status {
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 4px 12px; border-radius: 50px;
+        font-size: 12px; font-weight: 800;
+        background: rgba(243,156,18,0.12);
+        color: #c87f0a;
+        border: 1px solid rgba(243,156,18,0.2);
+    }
 
-        @keyframes popIn {
-            0%   { transform: scale(0); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-        }
+    /* Booking Code Card */
+    .code-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        padding: 28px; box-shadow: var(--shadow-md);
+        margin-bottom: 20px;
+        animation: fadeUp 0.5s 0.5s ease both;
+    }
+    .code-label {
+        font-size: 13px; font-weight: 700; color: var(--text-muted);
+        text-transform: uppercase; letter-spacing: 1.5px;
+        margin-bottom: 12px;
+    }
+    .booking-code {
+        font-size: 36px; font-weight: 900;
+        color: var(--primary); letter-spacing: 4px;
+        font-family: 'Cairo', monospace;
+        background: var(--primary-ghost);
+        padding: 14px 28px; border-radius: var(--radius-md);
+        border: 2px dashed rgba(39,174,96,0.3);
+        display: inline-block; margin-bottom: 14px;
+    }
+    .code-note {
+        font-size: 13px; color: var(--text-2); font-weight: 600;
+        display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
 
-        /* Confetti dots */
-        .success-circle::before, .success-circle::after {
-            content: ''; position: absolute;
-            width: 12px; height: 12px; border-radius: 50%;
-            animation: flyOut 0.8s 0.3s ease-out both;
-        }
-        .success-circle::before {
-            background: var(--primary); top: -4px; right: 20px;
-        }
-        .success-circle::after {
-            background: var(--accent); bottom: -4px; left: 20px;
-        }
-        @keyframes flyOut {
-            from { transform: scale(0); opacity: 1; }
-            to   { transform: scale(1) translateY(-8px); opacity: 0; }
-        }
+    /* Screenshot Hint */
+    .screenshot-hint {
+        background: rgba(243, 156, 18, 0.08);
+        border: 1px solid rgba(243, 156, 18, 0.3);
+        border-radius: var(--radius-md);
+        padding: 12px 16px;
+        font-size: 13px; color: var(--text-2); font-weight: 600;
+        display: flex; align-items: center; gap: 8px;
+        margin-bottom: 24px;
+        animation: fadeUp 0.5s 0.55s ease both;
+    }
 
-        .success-title {
-            font-size: 28px; font-weight: 900; color: var(--text);
-            margin-bottom: 12px;
-            animation: fadeUp 0.5s 0.3s ease both;
-        }
+    /* Action Buttons */
+    .action-group {
+        display: flex; flex-direction: column; gap: 12px;
+        animation: fadeUp 0.5s 0.65s ease both;
+    }
+    .btn-home-big {
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+        padding: 16px;
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: white; border-radius: var(--radius-md);
+        font-size: 16px; font-weight: 900;
+        box-shadow: 0 6px 20px rgba(39,174,96,0.35);
+        transition: all 0.25s;
+    }
+    .btn-home-big:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 28px rgba(39,174,96,0.45);
+    }
+    .btn-profile {
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+        padding: 14px; background: transparent;
+        border: 1.5px solid var(--border); color: var(--text-2);
+        border-radius: var(--radius-md);
+        font-size: 15px; font-weight: 700; transition: all 0.2s;
+    }
+    .btn-profile:hover {
+        border-color: var(--primary); color: var(--primary);
+        background: var(--primary-ghost);
+    }
 
-        .success-subtitle {
-            font-size: 15px; color: var(--text-2); line-height: 1.8;
-            margin-bottom: 32px;
-            animation: fadeUp 0.5s 0.4s ease both;
-        }
+    /* Responsive */
+    @media (max-width: 480px) {
+        .booking-code { font-size: 26px; letter-spacing: 2px; padding: 12px 20px; }
+        .success-title { font-size: 22px; }
+    }
+</style>
+{% endblock %}
 
-        @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(14px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
+{% block content %}
+<div class="success-layout">
+    <div class="success-wrapper">
 
-        /* Booking Code Card */
-        .code-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-xl);
-            padding: 28px;
-            box-shadow: var(--shadow-md);
-            margin-bottom: 28px;
-            animation: fadeUp 0.5s 0.5s ease both;
-        }
-
-        .code-label {
-            font-size: 13px; font-weight: 700; color: var(--text-muted);
-            text-transform: uppercase; letter-spacing: 1.5px;
-            margin-bottom: 12px;
-        }
-
-        .booking-code {
-            font-size: 36px; font-weight: 900;
-            color: var(--primary); letter-spacing: 4px;
-            font-family: 'Cairo', monospace;
-            background: var(--primary-ghost);
-            padding: 14px 28px;
-            border-radius: var(--radius-md);
-            border: 2px dashed rgba(39,174,96,0.3);
-            display: inline-block;
-            margin-bottom: 14px;
-        }
-
-        .code-note {
-            font-size: 13px; color: var(--text-2); font-weight: 600;
-            display: flex; align-items: center; justify-content: center; gap: 6px;
-        }
-
-        /* Screenshot prompt */
-        .screenshot-hint {
-            background: rgba(243, 156, 18, 0.08);
-            border: 1px solid rgba(243, 156, 18, 0.3);
-            border-radius: var(--radius-md);
-            padding: 12px 16px;
-            font-size: 13px; color: var(--text-2); font-weight: 600;
-            display: flex; align-items: center; gap: 8px;
-            margin-bottom: 24px;
-            animation: fadeUp 0.5s 0.55s ease both;
-        }
-
-        /* Action buttons */
-        .action-group {
-            display: flex; flex-direction: column; gap: 12px;
-            animation: fadeUp 0.5s 0.65s ease both;
-        }
-
-        .btn-home-big {
-            display: flex; align-items: center; justify-content: center; gap: 10px;
-            padding: 16px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white; border-radius: var(--radius-md);
-            font-size: 16px; font-weight: 900;
-            box-shadow: 0 6px 20px rgba(39,174,96,0.35);
-            transition: all 0.25s;
-        }
-        .btn-home-big:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(39,174,96,0.45); }
-
-        .btn-profile {
-            display: flex; align-items: center; justify-content: center; gap: 10px;
-            padding: 14px;
-            background: transparent;
-            border: 1.5px solid var(--border);
-            color: var(--text-2);
-            border-radius: var(--radius-md);
-            font-size: 15px; font-weight: 700;
-            transition: all 0.2s;
-        }
-        .btn-profile:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-ghost); }
-
-        /* ============================================================
-           RESPONSIVE
-           ============================================================ */
-        @media (max-width: 768px) {
-            :root { --sidebar-width: 0px; }
-            .sidebar { width: 260px; transform: translateX(100%); }
-            .sidebar.open { transform: translateX(0); }
-            .navbar { right: 0; }
-            .main-content { margin-right: 0; }
-        }
-    </style>
-</head>
-<body>
-
-    <!-- SIDEBAR -->
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-logo">
-            <div class="logo-icon">⚽</div>
-            <div class="logo-text">ملاعب<span>ك</span></div>
+        <!-- Animated Icon -->
+        <div class="success-icon-wrap">
+            <div class="success-circle">✅</div>
         </div>
-        <nav class="sidebar-nav">
-            <div class="nav-section-title">القائمة</div>
-            <a href="{% url 'home' %}" class="nav-item"><span class="nav-icon">🏠</span> الرئيسية</a>
-            <a href="{% url 'home' %}" class="nav-item"><span class="nav-icon">🏟️</span> الملاعب</a>
-            {% if user.is_authenticated %}
-                <div class="nav-section-title" style="margin-top:10px;">حسابي</div>
-                <a href="{% url 'user_profile' %}" class="nav-item"><span class="nav-icon">👤</span> ملفي الشخصي</a>
-                <a href="{% url 'logout' %}" class="nav-item"><span class="nav-icon">🚪</span> تسجيل الخروج</a>
-            {% endif %}
-        </nav>
-        <div class="sidebar-footer">
-            <button class="theme-toggle-btn" onclick="toggleTheme()">
-                <span id="themeLabel">🌙 الوضع الليلي</span>
-                <div class="toggle-track"><div class="toggle-thumb"></div></div>
-            </button>
+
+        <h1 class="success-title">{% trans "تم استلام طلبك!" %}</h1>
+        <p class="success-subtitle">
+            {% trans "شكراً لك. تم تسجيل عملية الدفع وجاري مراجعة الحجز من قبل إدارة الملعب." %}<br>
+            {% trans "ستتلقى تأكيداً قريباً عبر الواتساب." %}
+        </p>
+
+        <!-- Booking Details Card (NEW) -->
+        <div class="details-card">
+            <div class="details-card-title">📋 {% trans "تفاصيل الحجز" %}</div>
+
+            <div class="detail-row">
+                <span class="detail-label">🏟️ {% trans "الملعب" %}</span>
+                <span class="detail-value">{{ booking.pitch.name }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">📅 {% trans "التاريخ" %}</span>
+                <span class="detail-value">{{ booking.date|date:"d/m/Y" }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">⏰ {% trans "الساعة" %}</span>
+                <span class="detail-value">{{ booking.time }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">💳 {% trans "نوع الدفع" %}</span>
+                <span class="detail-value">{{ booking.get_payment_type_display }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">💰 {% trans "المبلغ" %}</span>
+                <span class="detail-value price-value">{{ booking.price }} {% trans "ج.م" %}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">📌 {% trans "الحالة" %}</span>
+                <span class="detail-value">
+                    <span class="badge-status">⏳ {% trans "في انتظار التأكيد" %}</span>
+                </span>
+            </div>
         </div>
-    </aside>
 
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+        <!-- Booking Code Card -->
+        <div class="code-card">
+            <div class="code-label">📋 {% trans "كود الحجز الخاص بك" %}</div>
+            <div class="booking-code">{{ booking.booking_code }}</div>
+            <div class="code-note">⏳ {% trans "في انتظار تأكيد الإدارة" %}</div>
+        </div>
 
-    <!-- NAVBAR -->
-    <header class="navbar" id="navbar">
-        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
-        <nav class="navbar-breadcrumb">
-            <a href="{% url 'home' %}">الرئيسية</a>
-            <span>›</span>
-            <span style="color:var(--text-2);">تم الحجز ✅</span>
-        </nav>
-        <div class="navbar-actions">
+        <!-- Screenshot Hint -->
+        <div class="screenshot-hint">
+            📸 {% trans "يرجى تصوير هذه الشاشة وإظهار الكود للملعب عند الحضور" %}
+        </div>
+
+        <!-- Actions -->
+        <div class="action-group">
+            <a href="{% url 'home' %}" class="btn-home-big">
+                🏠 {% trans "العودة للرئيسية" %}
+            </a>
             {% if user.is_authenticated %}
-                <a href="{% url 'user_profile' %}" class="btn btn-ghost">👤 {{ user.username }}</a>
+            <a href="{% url 'user_profile' %}" class="btn-profile">
+                📋 {% trans "عرض حجوزاتي" %}
+            </a>
             {% endif %}
         </div>
-    </header>
 
-    <!-- MAIN -->
-    <main class="main-content" id="mainContent">
-        <div class="success-wrapper">
-
-            <!-- Animated Icon -->
-            <div class="success-icon-wrap">
-                <div class="success-circle">✅</div>
-            </div>
-
-            <h1 class="success-title">تم استلام طلبك!</h1>
-            <p class="success-subtitle">
-                شكراً لك. تم تسجيل عملية الدفع وجاري مراجعة الحجز من قبل إدارة الملعب.<br>
-                ستتلقى تأكيداً قريباً عبر الواتساب.
-            </p>
-
-            <!-- Booking Code Card -->
-            <div class="code-card">
-                <div class="code-label">📋 كود الحجز الخاص بك</div>
-                <div class="booking-code">{{ booking.booking_code }}</div>
-                <div class="code-note">⏳ في انتظار تأكيد الإدارة</div>
-            </div>
-
-            <!-- Screenshot Hint -->
-            <div class="screenshot-hint">
-                📸 يرجى تصوير هذه الشاشة وإظهار الكود للملعب عند الحضور
-            </div>
-
-            <!-- Actions -->
-            <div class="action-group">
-                <a href="{% url 'home' %}" class="btn-home-big">
-                    🏠 العودة للرئيسية
-                </a>
-                {% if user.is_authenticated %}
-                <a href="{% url 'user_profile' %}" class="btn-profile">
-                    📋 عرض حجوزاتي
-                </a>
-                {% endif %}
-            </div>
-        </div>
-    </main>
-
-    <script>
-        /* Theme */
-        (function(){
-            const s = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', s);
-            const el = document.getElementById('themeLabel');
-            if(el) el.textContent = s==='dark' ? '☀️ الوضع النهاري' : '🌙 الوضع الليلي';
-        })();
-        function toggleTheme(){
-            const c = document.documentElement.getAttribute('data-theme');
-            const n = c==='dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', n);
-            localStorage.setItem('theme', n);
-            document.getElementById('themeLabel').textContent = n==='dark' ? '☀️ الوضع النهاري' : '🌙 الوضع الليلي';
-        }
-
-        /* Sidebar */
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        const navbar  = document.getElementById('navbar');
-        const main    = document.getElementById('mainContent');
-
-        function applyInitialSidebar(){
-            if(window.innerWidth <= 768){
-                sidebar.classList.add('hidden'); navbar.classList.add('sidebar-hidden'); main.classList.add('sidebar-hidden');
-            } else { sidebar.classList.remove('hidden'); }
-        }
-        applyInitialSidebar();
-        window.addEventListener('resize', applyInitialSidebar);
-
-        function toggleSidebar(){
-            if(window.innerWidth <= 768){
-                sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
-            } else {
-                sidebar.classList.toggle('hidden');
-                navbar.classList.toggle('sidebar-hidden');
-                main.classList.toggle('sidebar-hidden');
-            }
-        }
-        function openSidebar(){ sidebar.classList.add('open'); overlay.classList.add('visible'); }
-        function closeSidebar(){ sidebar.classList.remove('open'); overlay.classList.remove('visible'); }
-    </script>
-</body>
-</html>
+    </div>
+</div>
+{% endblock %}
