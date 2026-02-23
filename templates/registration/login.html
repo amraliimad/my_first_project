@@ -1,407 +1,383 @@
-{% load i18n %}
+{% extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html dir="rtl" lang="ar" data-theme="light">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل الدخول - ملاعبك</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+{% load i18n %}
 
-    <style>
-        /* ============================================================
-           1. CSS VARIABLES
-           ============================================================ */
-        :root {
-            --primary:       #27ae60;
-            --primary-light: #2ecc71;
-            --primary-dark:  #1e8449;
-            --primary-ghost: rgba(39, 174, 96, 0.12);
-            --danger:        #e74c3c;
-            --danger-ghost:  rgba(231, 76, 60, 0.08);
-            --bg:            #f0f4f2;
-            --surface:       #ffffff;
-            --surface-2:     #f7faf8;
-            --border:        #e2e8e4;
-            --text:          #1a2e23;
-            --text-2:        #4a6358;
-            --text-muted:    #8fa89c;
-            --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
-            --shadow-md: 0 8px 28px rgba(0,0,0,0.09);
-            --shadow-lg: 0 20px 56px rgba(0,0,0,0.13);
-            --radius-sm: 8px;
-            --radius-md: 14px;
-            --radius-lg: 20px;
-            --radius-xl: 28px;
-        }
+{% block title %}{% trans "تسجيل الدخول" %} — Mal3ab Online{% endblock %}
 
-        [data-theme="dark"] {
-            --bg:        #0f1a14;
-            --surface:   #182318;
-            --surface-2: #1e2e1e;
-            --border:    #2a3d2a;
-            --text:      #e8f5e9;
-            --text-2:    #a5c8aa;
-            --text-muted:#5a7d5a;
-            --shadow-md: 0 8px 28px rgba(0,0,0,0.4);
-            --shadow-lg: 0 20px 56px rgba(0,0,0,0.5);
-        }
+{% block extra_css %}
+<style>
+    /* ============================================================
+       LOGIN PAGE — Full-Screen Auth Layout
+       Hides base sidebar/navbar for a focused login experience
+       ============================================================ */
 
-        /* ============================================================
-           2. BASE & LAYOUT
-           ============================================================ */
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    /* ── 1. HIDE BASE LAYOUT ELEMENTS ── */
+    .sidebar,
+    .sidebar-overlay,
+    .navbar,
+    .toast-container { display: none !important; }
 
-        body {
-            font-family: 'Cairo', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            display: flex;
-            transition: background 0.3s, color 0.3s;
-            /* Subtle pitch-line pattern */
-            background-image:
-                radial-gradient(circle at 20% 80%, rgba(39,174,96,0.06) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(39,174,96,0.04) 0%, transparent 50%);
-        }
+    .main-content {
+        margin-right: 0 !important;
+        padding-top: 0 !important;
+    }
 
-        a { text-decoration: none; color: inherit; }
-        button { font-family: 'Cairo', sans-serif; cursor: pointer; }
+    /* ── 2. AUTH SHELL (Split-Screen) ── */
+    .auth-shell {
+        display: flex;
+        min-height: 100vh;
+    }
 
-        /* ============================================================
-           3. LEFT PANEL (decorative — hidden on mobile)
-           ============================================================ */
-        .auth-panel-left {
-            flex: 1;
-            background: linear-gradient(145deg, #1a2e23 0%, #27ae60 55%, #2ecc71 100%);
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            padding: 60px 48px;
-            position: relative; overflow: hidden;
-        }
+    /* ── 3. LEFT PANEL (Branding) ── */
+    .auth-panel-left {
+        flex: 1;
+        background: linear-gradient(145deg, #1a2e23 0%, #27ae60 55%, #2ecc71 100%);
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        padding: 60px 48px;
+        position: relative; overflow: hidden;
+    }
+    .auth-panel-left::before {
+        content: '';
+        position: absolute;
+        width: 400px; height: 400px;
+        border: 60px solid rgba(255,255,255,0.05);
+        border-radius: 50%;
+        bottom: -120px; left: -100px;
+    }
+    .auth-panel-left::after {
+        content: '';
+        position: absolute;
+        width: 260px; height: 260px;
+        border: 40px solid rgba(255,255,255,0.06);
+        border-radius: 50%;
+        top: -60px; right: -60px;
+    }
 
-        /* Decorative circles */
-        .auth-panel-left::before {
-            content: '';
-            position: absolute; width: 400px; height: 400px;
-            border: 60px solid rgba(255,255,255,0.05);
-            border-radius: 50%; bottom: -120px; left: -100px;
-        }
+    /* Floating Ball */
+    .panel-ball {
+        font-size: 80px;
+        margin-bottom: 28px;
+        animation: floatBall 4s ease-in-out infinite;
+        position: relative; z-index: 1;
+    }
+    @keyframes floatBall {
+        0%, 100% { transform: translateY(0); }
+        50%       { transform: translateY(-14px); }
+    }
 
-        .auth-panel-left::after {
-            content: '';
-            position: absolute; width: 260px; height: 260px;
-            border: 40px solid rgba(255,255,255,0.06);
-            border-radius: 50%; top: -60px; right: -60px;
-        }
+    /* Tagline */
+    .panel-tagline {
+        color: white;
+        text-align: center;
+        position: relative; z-index: 1;
+    }
+    .panel-tagline h2 {
+        font-size: 32px; font-weight: 900;
+        margin-bottom: 14px; line-height: 1.3;
+    }
+    .panel-tagline p {
+        font-size: 15px; opacity: 0.85;
+        line-height: 1.8; font-weight: 500;
+    }
 
-        .panel-ball {
-            font-size: 80px;
-            margin-bottom: 28px;
-            animation: floatBall 4s ease-in-out infinite;
-            position: relative; z-index: 1;
-        }
+    /* Feature List */
+    .panel-features {
+        list-style: none;
+        margin-top: 32px; width: 100%;
+        position: relative; z-index: 1;
+        max-width: 340px;
+    }
+    .panel-features li {
+        display: flex; align-items: center; gap: 12px;
+        color: rgba(255,255,255,0.9);
+        font-size: 14px; font-weight: 600;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .panel-features li:last-child { border-bottom: none; }
+    .panel-features li .feat-icon {
+        width: 34px; height: 34px;
+        background: rgba(255,255,255,0.15);
+        border-radius: var(--radius-sm);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 16px; flex-shrink: 0;
+    }
 
-        @keyframes floatBall {
-            0%, 100% { transform: translateY(0); }
-            50%       { transform: translateY(-14px); }
-        }
+    /* ── 4. RIGHT PANEL (Form) ── */
+    .auth-panel-right {
+        width: 100%; max-width: 480px;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        padding: 48px 40px;
+        position: relative;
+        background: var(--bg);
+        background-image:
+            radial-gradient(circle at 20% 80%, rgba(39,174,96,0.06) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(39,174,96,0.04) 0%, transparent 50%);
+    }
 
-        .panel-tagline {
-            color: white;
-            text-align: center;
-            position: relative; z-index: 1;
-        }
+    /* Theme Toggle Button */
+    .theme-btn {
+        position: absolute; top: 20px; left: 20px;
+        background: var(--surface-2); border: 1px solid var(--border);
+        border-radius: 50px; padding: 7px 14px;
+        font-size: 13px; font-weight: 700; color: var(--text-2);
+        display: flex; align-items: center; gap: 6px;
+        transition: all 0.2s; cursor: pointer;
+        font-family: 'Cairo', sans-serif;
+    }
+    .theme-btn:hover { border-color: var(--primary); color: var(--primary); }
 
-        .panel-tagline h2 {
-            font-size: 32px; font-weight: 900;
-            margin-bottom: 14px; line-height: 1.3;
-        }
+    /* Home Link */
+    .home-link {
+        position: absolute; top: 20px; right: 20px;
+        background: var(--surface-2); border: 1px solid var(--border);
+        border-radius: 50px; padding: 7px 14px;
+        font-size: 13px; font-weight: 700; color: var(--text-2);
+        display: flex; align-items: center; gap: 6px;
+        transition: all 0.2s;
+    }
+    .home-link:hover { border-color: var(--primary); color: var(--primary); }
 
-        .panel-tagline p {
-            font-size: 15px; opacity: 0.85; line-height: 1.8; font-weight: 500;
-        }
+    /* ── 5. AUTH CARD ── */
+    .auth-card {
+        width: 100%; max-width: 400px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        padding: 36px 32px;
+        box-shadow: var(--shadow-lg);
+        animation: slideUp 0.5s cubic-bezier(0.34,1.2,0.64,1) both;
+    }
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(24px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
 
-        /* Feature list */
-        .panel-features {
-            list-style: none;
-            margin-top: 32px; width: 100%;
-            position: relative; z-index: 1;
-        }
+    /* Logo in Card */
+    .card-logo {
+        display: flex; align-items: center; gap: 10px;
+        margin-bottom: 24px;
+    }
+    .card-logo-icon {
+        width: 44px; height: 44px;
+        border-radius: var(--radius-md);
+        box-shadow: 0 4px 12px rgba(39,174,96,0.35);
+        object-fit: cover;
+    }
+    .card-logo-text {
+        font-size: 20px; font-weight: 900; color: var(--text);
+    }
+    .card-logo-text span { color: var(--primary); }
 
-        .panel-features li {
-            display: flex; align-items: center; gap: 12px;
-            color: rgba(255,255,255,0.9);
-            font-size: 14px; font-weight: 600;
-            padding: 10px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
+    /* Heading */
+    .card-heading {
+        font-size: 24px; font-weight: 900;
+        color: var(--text); margin-bottom: 4px;
+    }
+    .card-subhead {
+        font-size: 14px; color: var(--text-muted);
+        font-weight: 600; margin-bottom: 28px;
+    }
 
-        .panel-features li:last-child { border-bottom: none; }
-        .panel-features li .feat-icon {
-            width: 34px; height: 34px;
-            background: rgba(255,255,255,0.15);
-            border-radius: var(--radius-sm);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 16px; flex-shrink: 0;
-        }
+    /* ── 6. FORM STYLES ── */
+    .auth-form p {
+        text-align: right; margin-bottom: 18px;
+    }
+    .auth-form label {
+        display: block;
+        font-size: 13px; font-weight: 700;
+        color: var(--text-2); margin-bottom: 7px;
+    }
+    .auth-form input[type="text"],
+    .auth-form input[type="password"],
+    .auth-form input[type="email"] {
+        width: 100%;
+        padding: 13px 16px;
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius-md);
+        background: var(--surface-2); color: var(--text);
+        font-family: 'Cairo', sans-serif; font-size: 15px;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .auth-form input[type="text"]:focus,
+    .auth-form input[type="password"]:focus,
+    .auth-form input[type="email"]:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px var(--primary-ghost);
+        background: var(--surface);
+    }
 
-        /* ============================================================
-           4. RIGHT PANEL (form area)
-           ============================================================ */
+    /* Error Styles */
+    ul.errorlist {
+        list-style: none; padding: 0; margin-bottom: 6px;
+    }
+    ul.errorlist li {
+        background: rgba(231,76,60,0.08);
+        color: var(--danger);
+        font-size: 12px; font-weight: 700;
+        padding: 6px 10px; border-radius: var(--radius-sm);
+        border-right: 3px solid var(--danger);
+        margin-bottom: 4px;
+    }
+    .non-field-errors {
+        background: rgba(231,76,60,0.08);
+        border: 1px solid rgba(231,76,60,0.2);
+        border-right: 4px solid var(--danger);
+        border-radius: var(--radius-md);
+        padding: 12px 16px; margin-bottom: 20px;
+        color: var(--danger); font-size: 14px; font-weight: 700;
+    }
+
+    /* Submit Button */
+    .btn-submit {
+        width: 100%; padding: 15px;
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: white; border: none;
+        border-radius: var(--radius-md);
+        font-size: 16px; font-weight: 900;
+        margin-top: 8px; cursor: pointer;
+        font-family: 'Cairo', sans-serif;
+        box-shadow: 0 6px 20px rgba(39,174,96,0.35);
+        transition: all 0.25s;
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 28px rgba(39,174,96,0.45);
+    }
+    .btn-submit:active { transform: translateY(0); }
+
+    /* ── 7. FOOTER ── */
+    .auth-footer {
+        margin-top: 24px; padding-top: 20px;
+        border-top: 1px solid var(--border);
+        text-align: center;
+        font-size: 14px; color: var(--text-muted); font-weight: 600;
+    }
+    .auth-footer a {
+        color: var(--primary); font-weight: 800;
+    }
+    .auth-footer a:hover { text-decoration: underline; }
+
+    /* ── 8. RESPONSIVE ── */
+    @media (max-width: 900px) {
+        .auth-panel-left { display: none; }
         .auth-panel-right {
-            width: 100%;
-            max-width: 480px;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            padding: 48px 40px;
-            position: relative;
+            max-width: 100%;
+            padding: 40px 24px;
         }
+    }
+    @media (max-width: 480px) {
+        .auth-panel-right { padding: 32px 16px; }
+        .auth-card { padding: 28px 20px; }
+        .card-heading { font-size: 20px; }
+    }
+</style>
+{% endblock %}
 
-        /* Theme toggle (top right) */
-        .theme-btn {
-            position: absolute; top: 20px; left: 20px;
-            background: var(--surface-2); border: 1px solid var(--border);
-            border-radius: 50px; padding: 7px 14px;
-            font-size: 13px; font-weight: 700; color: var(--text-2);
-            display: flex; align-items: center; gap: 6px;
-            transition: all 0.2s;
-        }
+{% block content %}
+<div class="auth-shell">
 
-        .theme-btn:hover { border-color: var(--primary); color: var(--primary); }
-
-        /* ============================================================
-           5. FORM CARD
-           ============================================================ */
-        .auth-card {
-            width: 100%; max-width: 400px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-xl);
-            padding: 36px 32px;
-            box-shadow: var(--shadow-lg);
-            animation: slideUp 0.5s cubic-bezier(0.34,1.2,0.64,1) both;
-        }
-
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(24px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Logo inside card */
-        .card-logo {
-            display: flex; align-items: center; gap: 10px;
-            margin-bottom: 24px;
-        }
-
-        .card-logo-icon {
-            width: 44px; height: 44px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            border-radius: var(--radius-md);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 22px;
-            box-shadow: 0 4px 12px rgba(39,174,96,0.35);
-        }
-
-        .card-logo-text { font-size: 20px; font-weight: 900; color: var(--text); }
-        .card-logo-text span { color: var(--primary); }
-
-        .card-heading  { font-size: 24px; font-weight: 900; color: var(--text); margin-bottom: 4px; }
-        .card-subhead  { font-size: 14px; color: var(--text-muted); font-weight: 600; margin-bottom: 28px; }
-
-        /* ── Django form.as_p styling ── */
-        form p {
-            text-align: right;
-            margin-bottom: 18px;
-        }
-
-        form label {
-            display: block;
-            font-size: 13px; font-weight: 700;
-            color: var(--text-2); margin-bottom: 7px;
-        }
-
-        form input[type="text"],
-        form input[type="password"],
-        form input[type="email"] {
-            width: 100%;
-            padding: 13px 16px;
-            border: 1.5px solid var(--border);
-            border-radius: var(--radius-md);
-            background: var(--surface-2); color: var(--text);
-            font-family: 'Cairo', sans-serif; font-size: 15px;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-
-        form input[type="text"]:focus,
-        form input[type="password"]:focus,
-        form input[type="email"]:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px var(--primary-ghost);
-            background: var(--surface);
-        }
-
-        /* Error list */
-        ul.errorlist {
-            list-style: none; padding: 0;
-            margin-bottom: 6px;
-        }
-
-        ul.errorlist li {
-            background: var(--danger-ghost);
-            color: var(--danger);
-            font-size: 12px; font-weight: 700;
-            padding: 6px 10px; border-radius: var(--radius-sm);
-            border-right: 3px solid var(--danger);
-            margin-bottom: 4px;
-        }
-
-        /* Non-field errors */
-        .non-field-errors {
-            background: var(--danger-ghost);
-            border: 1px solid rgba(231,76,60,0.2);
-            border-right: 4px solid var(--danger);
-            border-radius: var(--radius-md);
-            padding: 12px 16px; margin-bottom: 20px;
-            color: var(--danger); font-size: 14px; font-weight: 700;
-        }
-
-        /* Submit button */
-        .btn-submit {
-            width: 100%; padding: 15px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white; border: none;
-            border-radius: var(--radius-md);
-            font-size: 16px; font-weight: 900;
-            margin-top: 8px; cursor: pointer;
-            box-shadow: 0 6px 20px rgba(39,174,96,0.35);
-            transition: all 0.25s;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-        }
-
-        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(39,174,96,0.45); }
-        .btn-submit:active { transform: translateY(0); }
-
-        /* Footer links */
-        .auth-footer {
-            margin-top: 24px; padding-top: 20px;
-            border-top: 1px solid var(--border);
-            text-align: center;
-            font-size: 14px; color: var(--text-muted); font-weight: 600;
-        }
-
-        .auth-footer a { color: var(--primary); font-weight: 800; }
-        .auth-footer a:hover { text-decoration: underline; }
-
-        /* ============================================================
-           6. RESPONSIVE
-           ============================================================ */
-        @media (max-width: 900px) {
-            .auth-panel-left { display: none; }
-            .auth-panel-right { max-width: 100%; padding: 40px 24px; }
-        }
-
-        @media (max-width: 480px) {
-            .auth-panel-right { padding: 32px 16px; }
-            .auth-card { padding: 28px 20px; }
-        }
-    </style>
-</head>
-<body>
-
-    <!-- LEFT DECORATIVE PANEL -->
+    <!-- ══════════════════════════════════════════════
+         LEFT PANEL — Branding & Features
+         ══════════════════════════════════════════════ -->
     <div class="auth-panel-left">
         <div class="panel-ball">⚽</div>
         <div class="panel-tagline">
-            <h2>مرحباً بعودتك!</h2>
-            <p>سجّل دخولك واحجز ملعبك المفضل في ثوانٍ معدودة.</p>
+            <h2>{% trans "مرحباً بعودتك!" %}</h2>
+            <p>{% trans "سجّل دخولك واحجز ملعبك المفضل في ثوانٍ معدودة." %}</p>
         </div>
 
         <ul class="panel-features">
             <li>
                 <div class="feat-icon">🏟️</div>
-                أكثر من 500 ملعب في مصر
+                {% trans "أكثر من 500 ملعب في مصر" %}
             </li>
             <li>
                 <div class="feat-icon">💳</div>
-                دفع آمن بطرق متعددة
+                {% trans "دفع آمن بطرق متعددة" %}
             </li>
             <li>
                 <div class="feat-icon">⭐</div>
-                تقييمات حقيقية من اللاعبين
+                {% trans "تقييمات حقيقية من اللاعبين" %}
             </li>
             <li>
                 <div class="feat-icon">📱</div>
-                حجز فوري من هاتفك
+                {% trans "حجز فوري من هاتفك" %}
             </li>
         </ul>
     </div>
 
-    <!-- RIGHT FORM PANEL -->
+    <!-- ══════════════════════════════════════════════
+         RIGHT PANEL — Login Form
+         ══════════════════════════════════════════════ -->
     <div class="auth-panel-right">
 
-        <!-- Dark Mode Toggle -->
-        <button class="theme-btn" onclick="toggleTheme()">
-            <span id="themeIcon">🌙</span>
-            <span id="themeLabel">ليلي</span>
+        <!-- Theme Toggle -->
+        <button class="theme-btn" onclick="toggleTheme(); updateLoginThemeBtn();">
+            <span id="loginThemeIcon">🌙</span>
+            <span id="loginThemeLabel">{% trans "ليلي" %}</span>
         </button>
 
+        <!-- Home Link -->
+        <a href="{% url 'home' %}" class="home-link">
+            🏠 {% trans "الرئيسية" %}
+        </a>
+
+        <!-- Auth Card -->
         <div class="auth-card">
 
             <!-- Logo -->
             <div class="card-logo">
-                <div class="card-logo-icon">⚽</div>
-                <div class="card-logo-text">ملاعب<span>ك</span></div>
+                <img src="{% static 'img/logo.png' %}" alt="Mal3ab Online" class="card-logo-icon">
+                <div class="card-logo-text">Mal3ab<span>Online</span></div>
             </div>
 
-            <h1 class="card-heading">تسجيل الدخول</h1>
-            <p class="card-subhead">أدخل بياناتك للوصول إلى حسابك</p>
+            <h1 class="card-heading">{% trans "تسجيل الدخول" %}</h1>
+            <p class="card-subhead">{% trans "أدخل بياناتك للوصول إلى حسابك" %}</p>
 
-            <form method="post">
+            <!-- Login Form -->
+            <form method="post" class="auth-form">
                 {% csrf_token %}
-
-                {# Django form.as_p - renders all fields automatically #}
                 {{ form.as_p }}
-
                 <button type="submit" class="btn-submit">
-                    🔑 دخول للمنصة
+                    🔑 {% trans "دخول للمنصة" %}
                 </button>
             </form>
 
+            <!-- Footer -->
             <div class="auth-footer">
-                ليس لديك حساب؟
-                <a href="{% url 'signup' %}">إنشاء حساب جديد</a>
+                {% trans "ليس لديك حساب؟" %}
+                <a href="{% url 'signup' %}">{% trans "إنشاء حساب جديد" %}</a>
             </div>
 
         </div>
     </div>
 
-    <script>
-        /* ── Theme ── */
-        (function () {
-            const s = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', s);
-            updateThemeBtn(s);
-        })();
+</div>
+{% endblock %}
 
-        function toggleTheme() {
-            const c = document.documentElement.getAttribute('data-theme');
-            const n = c === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', n);
-            localStorage.setItem('theme', n);
-            updateThemeBtn(n);
+{% block extra_js %}
+<script>
+    /* ── Login Page Theme Button Sync ── */
+    function updateLoginThemeBtn() {
+        var theme = document.documentElement.getAttribute('data-theme') || 'light';
+        var icon  = document.getElementById('loginThemeIcon');
+        var label = document.getElementById('loginThemeLabel');
+        if (!icon || !label) return;
+        if (theme === 'dark') {
+            icon.textContent  = '☀️';
+            label.textContent = '{% trans "نهاري" %}';
+        } else {
+            icon.textContent  = '🌙';
+            label.textContent = '{% trans "ليلي" %}';
         }
+    }
 
-        function updateThemeBtn(theme) {
-            const icon  = document.getElementById('themeIcon');
-            const label = document.getElementById('themeLabel');
-            if (!icon || !label) return;
-            if (theme === 'dark') { icon.textContent = '☀️'; label.textContent = 'نهاري'; }
-            else                  { icon.textContent = '🌙'; label.textContent = 'ليلي';  }
-        }
-    </script>
-</body>
-</html>
+    /* Run on page load to sync state */
+    updateLoginThemeBtn();
+</script>
+{% endblock %}

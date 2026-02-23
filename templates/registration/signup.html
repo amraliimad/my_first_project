@@ -1,383 +1,377 @@
+{% extends 'base.html' %}
 {% load static %}
 {% load i18n %}
-<!DOCTYPE html>
-<html dir="rtl" lang="ar" data-theme="light">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إنشاء حساب جديد - ملاعبك</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-    <style>
-        /* ============================================================
-           1. CSS VARIABLES
-           ============================================================ */
-        :root {
-            --primary:       #27ae60;
-            --primary-light: #2ecc71;
-            --primary-dark:  #1e8449;
-            --primary-ghost: rgba(39, 174, 96, 0.12);
-            --danger:        #e74c3c;
-            --danger-ghost:  rgba(231, 76, 60, 0.08);
-            --bg:            #f0f4f2;
-            --surface:       #ffffff;
-            --surface-2:     #f7faf8;
-            --border:        #e2e8e4;
-            --text:          #1a2e23;
-            --text-2:        #4a6358;
-            --text-muted:    #8fa89c;
-            --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
-            --shadow-md: 0 8px 28px rgba(0,0,0,0.09);
-            --shadow-lg: 0 20px 56px rgba(0,0,0,0.13);
-            --radius-sm: 8px;
-            --radius-md: 14px;
-            --radius-lg: 20px;
-            --radius-xl: 28px;
-        }
+{% block title %}{% trans "إنشاء حساب جديد" %} — Mal3ab Online{% endblock %}
 
-        [data-theme="dark"] {
-            --bg:        #0f1a14;
-            --surface:   #182318;
-            --surface-2: #1e2e1e;
-            --border:    #2a3d2a;
-            --text:      #e8f5e9;
-            --text-2:    #a5c8aa;
-            --text-muted:#5a7d5a;
-            --shadow-md: 0 8px 28px rgba(0,0,0,0.4);
-            --shadow-lg: 0 20px 56px rgba(0,0,0,0.5);
-        }
+{% block extra_css %}
+<style>
+    /* ============================================================
+       SIGNUP PAGE — Full-Screen Auth Layout
+       Hides base sidebar/navbar for a focused signup experience
+       ============================================================ */
 
-        /* ============================================================
-           2. BASE
-           ============================================================ */
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    /* ── 1. HIDE BASE LAYOUT ELEMENTS ── */
+    .sidebar,
+    .sidebar-overlay,
+    .navbar,
+    .toast-container { display: none !important; }
 
-        body {
-            font-family: 'Cairo', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            display: flex;
-            transition: background 0.3s, color 0.3s;
-            background-image:
-                radial-gradient(circle at 20% 80%, rgba(39,174,96,0.06) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(39,174,96,0.04) 0%, transparent 50%);
-        }
+    .main-content {
+        margin-right: 0 !important;
+        padding-top: 0 !important;
+    }
 
-        a { text-decoration: none; color: inherit; }
-        button { font-family: 'Cairo', sans-serif; cursor: pointer; }
+    /* ── 2. AUTH SHELL (Split-Screen) ── */
+    .auth-shell {
+        display: flex;
+        min-height: 100vh;
+    }
 
-        /* ============================================================
-           3. LEFT PANEL
-           ============================================================ */
-        .auth-panel-left {
-            flex: 1;
-            /* Slightly different gradient angle from login for variety */
-            background: linear-gradient(160deg, #1e8449 0%, #27ae60 45%, #16a085 100%);
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            padding: 60px 48px;
-            position: relative; overflow: hidden;
-        }
+    /* ── 3. LEFT PANEL (Branding) ── */
+    .auth-panel-left {
+        flex: 1;
+        background: linear-gradient(160deg, #1e8449 0%, #27ae60 45%, #16a085 100%);
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        padding: 60px 48px;
+        position: relative; overflow: hidden;
+    }
+    .auth-panel-left::before {
+        content: '';
+        position: absolute;
+        width: 350px; height: 350px;
+        background: rgba(255,255,255,0.04);
+        border-radius: 40% 60% 55% 45% / 55% 45% 60% 40%;
+        bottom: -80px; left: -60px;
+    }
+    .auth-panel-left::after {
+        content: '';
+        position: absolute;
+        width: 220px; height: 220px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 60% 40% 35% 65% / 40% 60% 45% 55%;
+        top: -40px; right: -40px;
+    }
 
-        .auth-panel-left::before {
-            content: '';
-            position: absolute; width: 350px; height: 350px;
-            background: rgba(255,255,255,0.04);
-            border-radius: 40% 60% 55% 45% / 55% 45% 60% 40%;
-            bottom: -80px; left: -60px;
-        }
+    /* Floating Graphic */
+    .panel-graphic {
+        font-size: 72px; margin-bottom: 28px;
+        position: relative; z-index: 1;
+        animation: floatBall 5s ease-in-out infinite;
+    }
+    @keyframes floatBall {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        50%       { transform: translateY(-12px) rotate(8deg); }
+    }
 
-        .auth-panel-left::after {
-            content: '';
-            position: absolute; width: 220px; height: 220px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 60% 40% 35% 65% / 40% 60% 45% 55%;
-            top: -40px; right: -40px;
-        }
+    /* Tagline */
+    .panel-tagline {
+        color: white; text-align: center;
+        position: relative; z-index: 1;
+    }
+    .panel-tagline h2 {
+        font-size: 30px; font-weight: 900;
+        margin-bottom: 12px; line-height: 1.3;
+    }
+    .panel-tagline p {
+        font-size: 14px; opacity: 0.85;
+        line-height: 1.8; font-weight: 500;
+    }
 
-        .panel-graphic {
-            font-size: 72px; margin-bottom: 28px;
-            position: relative; z-index: 1;
-            animation: floatBall 5s ease-in-out infinite;
-        }
+    /* Signup Steps */
+    .signup-steps {
+        list-style: none; margin-top: 32px; width: 100%;
+        position: relative; z-index: 1;
+        max-width: 340px;
+    }
+    .signup-steps li {
+        display: flex; align-items: flex-start; gap: 14px;
+        color: rgba(255,255,255,0.92);
+        font-size: 14px; font-weight: 600;
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .signup-steps li:last-child { border-bottom: none; }
+    .step-circle {
+        width: 30px; height: 30px; flex-shrink: 0;
+        background: rgba(255,255,255,0.2);
+        border: 1.5px solid rgba(255,255,255,0.35);
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 13px; font-weight: 900;
+    }
+    .step-text { padding-top: 4px; }
 
-        @keyframes floatBall {
-            0%, 100% { transform: translateY(0) rotate(0deg); }
-            50%       { transform: translateY(-12px) rotate(8deg); }
-        }
+    /* ── 4. RIGHT PANEL (Form) ── */
+    .auth-panel-right {
+        width: 100%; max-width: 520px;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        padding: 48px 40px;
+        position: relative;
+        overflow-y: auto;
+        background: var(--bg);
+        background-image:
+            radial-gradient(circle at 20% 80%, rgba(39,174,96,0.06) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(39,174,96,0.04) 0%, transparent 50%);
+    }
 
-        .panel-tagline {
-            color: white; text-align: center;
-            position: relative; z-index: 1;
-        }
+    /* Theme Toggle Button */
+    .theme-btn {
+        position: absolute; top: 20px; left: 20px;
+        background: var(--surface-2); border: 1px solid var(--border);
+        border-radius: 50px; padding: 7px 14px;
+        font-size: 13px; font-weight: 700; color: var(--text-2);
+        display: flex; align-items: center; gap: 6px;
+        transition: all 0.2s; cursor: pointer;
+        font-family: 'Cairo', sans-serif;
+    }
+    .theme-btn:hover { border-color: var(--primary); color: var(--primary); }
 
-        .panel-tagline h2 { font-size: 30px; font-weight: 900; margin-bottom: 12px; line-height: 1.3; }
-        .panel-tagline p  { font-size: 14px; opacity: 0.85; line-height: 1.8; font-weight: 500; }
+    /* Home Link */
+    .home-link {
+        position: absolute; top: 20px; right: 20px;
+        background: var(--surface-2); border: 1px solid var(--border);
+        border-radius: 50px; padding: 7px 14px;
+        font-size: 13px; font-weight: 700; color: var(--text-2);
+        display: flex; align-items: center; gap: 6px;
+        transition: all 0.2s;
+    }
+    .home-link:hover { border-color: var(--primary); color: var(--primary); }
 
-        /* Steps list */
-        .signup-steps {
-            list-style: none; margin-top: 32px; width: 100%;
-            position: relative; z-index: 1;
-        }
+    /* ── 5. AUTH CARD ── */
+    .auth-card {
+        width: 100%; max-width: 440px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        padding: 36px 32px;
+        box-shadow: var(--shadow-lg);
+        animation: slideUp 0.5s cubic-bezier(0.34,1.2,0.64,1) both;
+    }
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(24px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
 
-        .signup-steps li {
-            display: flex; align-items: flex-start; gap: 14px;
-            color: rgba(255,255,255,0.92); font-size: 14px; font-weight: 600;
-            padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
+    /* Logo in Card */
+    .card-logo {
+        display: flex; align-items: center; gap: 10px;
+        margin-bottom: 24px;
+    }
+    .card-logo-icon {
+        width: 44px; height: 44px;
+        border-radius: var(--radius-md);
+        box-shadow: 0 4px 12px rgba(39,174,96,0.35);
+        object-fit: cover;
+    }
+    .card-logo-text {
+        font-size: 20px; font-weight: 900; color: var(--text);
+    }
+    .card-logo-text span { color: var(--primary); }
 
-        .signup-steps li:last-child { border-bottom: none; }
+    /* Heading */
+    .card-heading {
+        font-size: 22px; font-weight: 900;
+        color: var(--text); margin-bottom: 4px;
+    }
+    .card-subhead {
+        font-size: 13px; color: var(--text-muted);
+        font-weight: 600; margin-bottom: 24px;
+    }
 
-        .step-circle {
-            width: 30px; height: 30px; flex-shrink: 0;
-            background: rgba(255,255,255,0.2);
-            border: 1.5px solid rgba(255,255,255,0.35);
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 13px; font-weight: 900;
-        }
+    /* ── 6. FORM STYLES ── */
+    .signup-form p {
+        text-align: right; margin-bottom: 16px;
+    }
+    .signup-form label {
+        display: block;
+        font-size: 12px; font-weight: 800;
+        color: var(--text-2); margin-bottom: 7px;
+        text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .signup-form input[type="text"],
+    .signup-form input[type="password"],
+    .signup-form input[type="email"] {
+        width: 100%;
+        padding: 13px 16px;
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius-md);
+        background: var(--surface-2); color: var(--text);
+        font-family: 'Cairo', sans-serif; font-size: 15px;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .signup-form input[type="text"]:focus,
+    .signup-form input[type="password"]:focus,
+    .signup-form input[type="email"]:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px var(--primary-ghost);
+        background: var(--surface);
+    }
 
-        .step-text { padding-top: 4px; }
+    /* Help Text */
+    .helptext {
+        display: block; font-size: 11px;
+        color: var(--text-muted); margin-top: 5px;
+        line-height: 1.5; font-weight: 600;
+    }
 
-        /* ============================================================
-           4. RIGHT FORM PANEL
-           ============================================================ */
+    /* Error Styles */
+    ul.errorlist {
+        list-style: none; padding: 0; margin: 6px 0;
+    }
+    ul.errorlist li {
+        background: rgba(231,76,60,0.08);
+        color: var(--danger);
+        font-size: 12px; font-weight: 700;
+        padding: 6px 10px; border-radius: var(--radius-sm);
+        border-right: 3px solid var(--danger);
+        margin-bottom: 4px;
+    }
+    .error-container {
+        background: rgba(231,76,60,0.08);
+        border: 1px solid rgba(231,76,60,0.2);
+        border-right: 4px solid var(--danger);
+        border-radius: var(--radius-md);
+        padding: 12px 16px; margin-bottom: 18px;
+        color: var(--danger); font-size: 13px; font-weight: 700;
+    }
+
+    /* Field Error Inline */
+    .field-error {
+        color: var(--danger); font-size: 12px;
+        font-weight: 700; display: block; margin-top: 4px;
+    }
+
+    /* Submit Button */
+    .btn-submit {
+        width: 100%; padding: 15px;
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: white; border: none;
+        border-radius: var(--radius-md);
+        font-size: 16px; font-weight: 900;
+        margin-top: 8px; cursor: pointer;
+        font-family: 'Cairo', sans-serif;
+        box-shadow: 0 6px 20px rgba(39,174,96,0.35);
+        transition: all 0.25s;
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 28px rgba(39,174,96,0.45);
+    }
+    .btn-submit:active { transform: translateY(0); }
+
+    /* ── 7. FOOTER ── */
+    .auth-footer {
+        margin-top: 22px; padding-top: 18px;
+        border-top: 1px solid var(--border);
+        text-align: center;
+        font-size: 14px; color: var(--text-muted); font-weight: 600;
+    }
+    .auth-footer a {
+        color: var(--primary); font-weight: 800;
+    }
+    .auth-footer a:hover { text-decoration: underline; }
+
+    /* Privacy Note */
+    .privacy-note {
+        text-align: center; font-size: 11px;
+        color: var(--text-muted); margin-top: 14px;
+        font-weight: 600; line-height: 1.6;
+    }
+
+    /* ── 8. RESPONSIVE ── */
+    @media (max-width: 900px) {
+        .auth-panel-left { display: none; }
         .auth-panel-right {
-            width: 100%; max-width: 520px;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            padding: 48px 40px;
-            position: relative;
-            overflow-y: auto;
+            max-width: 100%;
+            padding: 40px 24px;
         }
+    }
+    @media (max-width: 480px) {
+        .auth-panel-right { padding: 32px 16px; }
+        .auth-card { padding: 28px 20px; }
+        .card-heading { font-size: 18px; }
+    }
+</style>
+{% endblock %}
 
-        .theme-btn {
-            position: absolute; top: 20px; left: 20px;
-            background: var(--surface-2); border: 1px solid var(--border);
-            border-radius: 50px; padding: 7px 14px;
-            font-size: 13px; font-weight: 700; color: var(--text-2);
-            display: flex; align-items: center; gap: 6px; transition: all 0.2s;
-        }
+{% block content %}
+<div class="auth-shell">
 
-        .theme-btn:hover { border-color: var(--primary); color: var(--primary); }
-
-        /* ============================================================
-           5. FORM CARD
-           ============================================================ */
-        .auth-card {
-            width: 100%; max-width: 440px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-xl);
-            padding: 36px 32px;
-            box-shadow: var(--shadow-lg);
-            animation: slideUp 0.5s cubic-bezier(0.34,1.2,0.64,1) both;
-        }
-
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(24px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-
-        .card-logo {
-            display: flex; align-items: center; gap: 10px;
-            margin-bottom: 24px;
-        }
-
-        .card-logo-icon {
-            width: 44px; height: 44px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            border-radius: var(--radius-md);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 22px; box-shadow: 0 4px 12px rgba(39,174,96,0.35);
-        }
-
-        .card-logo-text { font-size: 20px; font-weight: 900; color: var(--text); }
-        .card-logo-text span { color: var(--primary); }
-
-        .card-heading { font-size: 22px; font-weight: 900; color: var(--text); margin-bottom: 4px; }
-        .card-subhead  { font-size: 13px; color: var(--text-muted); font-weight: 600; margin-bottom: 24px; }
-
-        /* ── Django form field loop styling ── */
-        .form-field { margin-bottom: 16px; }
-
-        form p {
-            text-align: right;
-            margin-bottom: 16px;
-        }
-
-        form label {
-            display: block;
-            font-size: 12px; font-weight: 800;
-            color: var(--text-2); margin-bottom: 7px;
-            text-transform: uppercase; letter-spacing: 0.5px;
-        }
-
-        form input[type="text"],
-        form input[type="password"],
-        form input[type="email"] {
-            width: 100%;
-            padding: 13px 16px;
-            border: 1.5px solid var(--border);
-            border-radius: var(--radius-md);
-            background: var(--surface-2); color: var(--text);
-            font-family: 'Cairo', sans-serif; font-size: 15px;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-
-        form input[type="text"]:focus,
-        form input[type="password"]:focus,
-        form input[type="email"]:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px var(--primary-ghost);
-            background: var(--surface);
-        }
-
-        /* Help text */
-        .helptext {
-            display: block; font-size: 11px;
-            color: var(--text-muted); margin-top: 5px;
-            line-height: 1.5; font-weight: 600;
-        }
-
-        /* Error list */
-        ul.errorlist {
-            list-style: none; padding: 0;
-            margin: 6px 0;
-        }
-
-        ul.errorlist li {
-            background: var(--danger-ghost);
-            color: var(--danger); font-size: 12px; font-weight: 700;
-            padding: 6px 10px; border-radius: var(--radius-sm);
-            border-right: 3px solid var(--danger); margin-bottom: 4px;
-        }
-
-        /* Non-field errors */
-        .error-container {
-            background: var(--danger-ghost);
-            border: 1px solid rgba(231,76,60,0.2);
-            border-right: 4px solid var(--danger);
-            border-radius: var(--radius-md);
-            padding: 12px 16px; margin-bottom: 18px;
-            color: var(--danger); font-size: 13px; font-weight: 700;
-        }
-
-        /* Divider */
-        .fields-divider {
-            height: 1px; background: var(--border);
-            margin: 18px 0;
-        }
-
-        /* Submit button */
-        .btn-submit {
-            width: 100%; padding: 15px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white; border: none; border-radius: var(--radius-md);
-            font-size: 16px; font-weight: 900; margin-top: 8px;
-            box-shadow: 0 6px 20px rgba(39,174,96,0.35);
-            transition: all 0.25s;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-        }
-
-        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(39,174,96,0.45); }
-        .btn-submit:active { transform: translateY(0); }
-
-        /* Footer */
-        .auth-footer {
-            margin-top: 22px; padding-top: 18px;
-            border-top: 1px solid var(--border);
-            text-align: center;
-            font-size: 14px; color: var(--text-muted); font-weight: 600;
-        }
-
-        .auth-footer a { color: var(--primary); font-weight: 800; }
-        .auth-footer a:hover { text-decoration: underline; }
-
-        /* Privacy note */
-        .privacy-note {
-            text-align: center; font-size: 11px;
-            color: var(--text-muted); margin-top: 14px; font-weight: 600; line-height: 1.6;
-        }
-
-        /* ============================================================
-           6. RESPONSIVE
-           ============================================================ */
-        @media (max-width: 900px) {
-            .auth-panel-left { display: none; }
-            .auth-panel-right { max-width: 100%; padding: 40px 24px; }
-        }
-
-        @media (max-width: 480px) {
-            .auth-panel-right { padding: 32px 16px; }
-            .auth-card { padding: 28px 20px; }
-        }
-    </style>
-</head>
-<body>
-
-    <!-- LEFT PANEL -->
+    <!-- ══════════════════════════════════════════════
+         LEFT PANEL — Branding & Steps
+         ══════════════════════════════════════════════ -->
     <div class="auth-panel-left">
         <div class="panel-graphic">🏟️</div>
         <div class="panel-tagline">
-            <h2>انضم إلينا اليوم!</h2>
-            <p>أنشئ حسابك واحجز ملعبك المفضل في دقيقة واحدة.</p>
+            <h2>{% trans "انضم إلينا اليوم!" %}</h2>
+            <p>{% trans "أنشئ حسابك واحجز ملعبك المفضل في دقيقة واحدة." %}</p>
         </div>
 
         <ul class="signup-steps">
             <li>
                 <div class="step-circle">1</div>
-                <div class="step-text">أنشئ حسابك المجاني الآن</div>
+                <div class="step-text">{% trans "أنشئ حسابك المجاني الآن" %}</div>
             </li>
             <li>
                 <div class="step-circle">2</div>
-                <div class="step-text">ابحث عن ملعبك القريب</div>
+                <div class="step-text">{% trans "ابحث عن ملعبك القريب" %}</div>
             </li>
             <li>
                 <div class="step-circle">3</div>
-                <div class="step-text">اختر الوقت المناسب وادفع</div>
+                <div class="step-text">{% trans "اختر الوقت المناسب وادفع" %}</div>
             </li>
             <li>
                 <div class="step-circle">✓</div>
-                <div class="step-text">استلم كود الحجز والعب!</div>
+                <div class="step-text">{% trans "استلم كود الحجز والعب!" %}</div>
             </li>
         </ul>
     </div>
 
-    <!-- RIGHT FORM PANEL -->
+    <!-- ══════════════════════════════════════════════
+         RIGHT PANEL — Signup Form
+         ══════════════════════════════════════════════ -->
     <div class="auth-panel-right">
 
-        <button class="theme-btn" onclick="toggleTheme()">
-            <span id="themeIcon">🌙</span>
-            <span id="themeLabel">ليلي</span>
+        <!-- Theme Toggle -->
+        <button class="theme-btn" onclick="toggleTheme(); updateSignupThemeBtn();">
+            <span id="signupThemeIcon">🌙</span>
+            <span id="signupThemeLabel">{% trans "ليلي" %}</span>
         </button>
 
+        <!-- Home Link -->
+        <a href="{% url 'home' %}" class="home-link">
+            🏠 {% trans "الرئيسية" %}
+        </a>
+
+        <!-- Auth Card -->
         <div class="auth-card">
 
             <!-- Logo -->
             <div class="card-logo">
-                <div class="card-logo-icon">⚽</div>
-                <div class="card-logo-text">ملاعب<span>ك</span></div>
+                <img src="{% static 'img/logo.png' %}" alt="Mal3ab Online" class="card-logo-icon">
+                <div class="card-logo-text">Mal3ab<span>Online</span></div>
             </div>
 
-            <h1 class="card-heading">إنشاء حساب جديد</h1>
-            <p class="card-subhead">انضم وابدأ تجربتك مع أفضل ملاعب مصر</p>
+            <h1 class="card-heading">{% trans "إنشاء حساب جديد" %}</h1>
+            <p class="card-subhead">{% trans "انضم وابدأ تجربتك مع أفضل ملاعب مصر" %}</p>
 
-            <form method="post">
+            <!-- Signup Form -->
+            <form method="post" class="signup-form">
                 {% csrf_token %}
 
-                {# Non-field errors #}
+                <!-- Non-field Errors -->
                 {% if form.errors %}
                 <div class="error-container">
                     {{ form.non_field_errors }}
                 </div>
                 {% endif %}
 
-                {# Field loop - preserves Django helptext and per-field errors #}
+                <!-- Form Fields -->
                 {% for field in form %}
                 <p>
                     {{ field.label_tag }}
@@ -386,51 +380,51 @@
                         <span class="helptext">{{ field.help_text }}</span>
                     {% endif %}
                     {% for error in field.errors %}
-                        <span style="color:var(--danger); font-size:12px; font-weight:700; display:block; margin-top:4px;">⚠ {{ error }}</span>
+                        <span class="field-error">⚠ {{ error }}</span>
                     {% endfor %}
                 </p>
                 {% endfor %}
 
                 <button type="submit" class="btn-submit">
-                    🚀 إنشاء الحساب
+                    🚀 {% trans "إنشاء الحساب" %}
                 </button>
             </form>
 
+            <!-- Footer -->
             <div class="auth-footer">
-                لديك حساب بالفعل؟
-                <a href="{% url 'login' %}">سجّل دخولك الآن</a>
+                {% trans "لديك حساب بالفعل؟" %}
+                <a href="{% url 'login' %}">{% trans "سجّل دخولك الآن" %}</a>
             </div>
 
+            <!-- Privacy Note -->
             <p class="privacy-note">
-                🔒 بياناتك محمية ولن تُشارك مع أي طرف خارجي
+                🔒 {% trans "بياناتك محمية ولن تُشارك مع أي طرف خارجي" %}
             </p>
 
         </div>
     </div>
 
-    <script>
-        /* Theme */
-        (function(){
-            const s = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', s);
-            updateThemeBtn(s);
-        })();
+</div>
+{% endblock %}
 
-        function toggleTheme(){
-            const c = document.documentElement.getAttribute('data-theme');
-            const n = c === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', n);
-            localStorage.setItem('theme', n);
-            updateThemeBtn(n);
+{% block extra_js %}
+<script>
+    /* ── Signup Page Theme Button Sync ── */
+    function updateSignupThemeBtn() {
+        var theme = document.documentElement.getAttribute('data-theme') || 'light';
+        var icon  = document.getElementById('signupThemeIcon');
+        var label = document.getElementById('signupThemeLabel');
+        if (!icon || !label) return;
+        if (theme === 'dark') {
+            icon.textContent  = '☀️';
+            label.textContent = '{% trans "نهاري" %}';
+        } else {
+            icon.textContent  = '🌙';
+            label.textContent = '{% trans "ليلي" %}';
         }
+    }
 
-        function updateThemeBtn(theme){
-            const icon  = document.getElementById('themeIcon');
-            const label = document.getElementById('themeLabel');
-            if(!icon || !label) return;
-            if(theme === 'dark'){ icon.textContent = '☀️'; label.textContent = 'نهاري'; }
-            else                { icon.textContent = '🌙'; label.textContent = 'ليلي';  }
-        }
-    </script>
-</body>
-</html>
+    /* Run on page load to sync state */
+    updateSignupThemeBtn();
+</script>
+{% endblock %}

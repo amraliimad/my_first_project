@@ -7,38 +7,35 @@ from django.db.models import Avg, Q
 from django.core.paginator import Paginator
 from django.utils import timezone
 from datetime import datetime, timedelta
-from math import radians, cos, sin, asin, sqrt 
+from math import radians, cos, sin, asin, sqrt
 from .models import Pitch, Booking, Payment, Review, PitchPricing
 from .forms import PaymentForm
+
 
 # ---------------------------------------------------------
 # دالة مساعدة لحساب المسافة (Haversine Formula)
 # ---------------------------------------------------------
 def haversine(lon1, lat1, lon2, lat2):
-    """
-    تحسب المسافة بين نقطتين جغرافيتين بالكيلومتر
-    """
     lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
-    dlon = lon2 - lon1 
-    dlat = lat2 - lat1 
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
     a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-    c = 2 * asin(sqrt(a)) 
-    r = 6371 # نصف قطر الأرض بالكيلومتر
+    c = 2 * asin(sqrt(a))
+    r = 6371
     return c * r
 
+
 # ---------------------------------------------------------
-# الصفحة الرئيسية (بحث + مسافة + تنظيف تلقائي للحجوزات)
+# الصفحة الرئيسية
 # ---------------------------------------------------------
 def home(request):
-    # 1. تنظيف الحجوزات المعلقة القديمة
-    # أي حجز لسه "Pending" وعدى عليه 30 دقيقة بيتلغي أوتوماتيك
+    # تنظيف الحجوزات المعلقة القديمة
     time_threshold = timezone.now() - timedelta(minutes=30)
     Booking.objects.filter(status='Pending', created_at__lt=time_threshold).update(status='Cancelled')
 
-    # 2. جلب قائمة الملاعب
-    pitches_list = Pitch.objects.all()
+    pitches_list  = Pitch.objects.all()
+    pitches_count = Pitch.objects.count()
 
-    # 3. منطق البحث عن "أقرب ملعب لي"
     user_lat = request.GET.get('lat')
     user_lng = request.GET.get('lng')
 
@@ -52,23 +49,19 @@ def home(request):
                     dist = haversine(user_lng, user_lat, pitch.longitude, pitch.latitude)
                     pitch.distance = round(dist, 1)
                 else:
-                    pitch.distance = 99999 # الملاعب اللي ملهاش موقع تظهر في الآخر
+                    pitch.distance = 99999
                 pitches_with_distance.append(pitch)
-            # ترتيب الملاعب من الأقرب للأبعد
             pitches_list = sorted(pitches_with_distance, key=lambda x: x.distance)
         except ValueError:
             pass
     else:
-        # الترتيب الافتراضي: الأحدث أولاً
         pitches_list = pitches_list.order_by('-id')
 
-    # 4. تطبيق الفلاتر (منطقة - حجم - أرضية - سعر)
     location_query = request.GET.get('location')
-    size_query = request.GET.get('size')
-    floor_query = request.GET.get('floor_type')
-    max_price = request.GET.get('price')
+    size_query     = request.GET.get('size')
+    floor_query    = request.GET.get('floor_type')
+    max_price      = request.GET.get('price')
 
-    # ملاحظة: لو الترتيب حولها لقائمة (List)، الفلترة بتختلف عن الـ QuerySet
     if isinstance(pitches_list, list):
         if location_query and location_query != 'all':
             pitches_list = [p for p in pitches_list if p.location == location_query]
@@ -79,37 +72,39 @@ def home(request):
         if max_price:
             pitches_list = [p for p in pitches_list if p.price_per_hour <= float(max_price)]
     else:
-        if location_query and location_query != 'all': pitches_list = pitches_list.filter(location=location_query)
-        if size_query and size_query != 'all': pitches_list = pitches_list.filter(size=size_query)
-        if floor_query and floor_query != 'all': pitches_list = pitches_list.filter(floor_type=floor_query)
-        if max_price: pitches_list = pitches_list.filter(price_per_hour__lte=max_price)
+        if location_query and location_query != 'all':
+            pitches_list = pitches_list.filter(location=location_query)
+        if size_query and size_query != 'all':
+            pitches_list = pitches_list.filter(size=size_query)
+        if floor_query and floor_query != 'all':
+            pitches_list = pitches_list.filter(floor_type=floor_query)
+        if max_price:
+            pitches_list = pitches_list.filter(price_per_hour__lte=max_price)
 
-    # 5. تقسيم الصفحات (Pagination)
-    locations = Pitch.objects.values_list('location', flat=True).distinct()
-    paginator = Paginator(pitches_list, 6) # 6 ملاعب في الصفحة
+    paginator   = Paginator(pitches_list, 6)
     page_number = request.GET.get('page')
-    pitches = paginator.get_page(page_number)
+    pitches     = paginator.get_page(page_number)
 
     return render(request, 'home.html', {
-        'pitches': pitches,
-        'locations': locations,
+        'pitches_count': Pitch.objects.count(),  # ← أضف السطر ده
+        'pitches':           pitches,
+        'pitches_count':     pitches_count,
         'selected_location': location_query,
-        'selected_size': size_query,
-        'selected_floor': floor_query,
-        'selected_price': max_price,
+        'selected_size':     size_query,
+        'selected_floor':    floor_query,
+        'selected_price':    max_price,
         'is_nearest_search': bool(user_lat),
     })
 
 
+# ---------------------------------------------------------
+# تفاصيل الملعب
+# ---------------------------------------------------------
 def pitch_detail(request, pitch_id):
     pitch = get_object_or_404(Pitch, id=pitch_id)
-    
-    # ---------------------------------------------------
-    # 1. معالجة إضافة التقييم (Review)
-    # ---------------------------------------------------
+
     if request.method == 'POST' and 'rating' in request.POST:
         if request.user.is_authenticated:
-            # التحقق من عدم التكرار
             if not Review.objects.filter(pitch=pitch, user=request.user).exists():
                 Review.objects.create(
                     pitch=pitch, user=request.user,
@@ -123,198 +118,146 @@ def pitch_detail(request, pitch_id):
         else:
             messages.error(request, "يجب تسجيل الدخول للتقييم.")
 
-    # ---------------------------------------------------
-    # 2. تجهيز البيانات الأساسية
-    # ---------------------------------------------------
     average_rating = pitch.reviews.aggregate(Avg('rating'))['rating__avg'] or 0
-    reviews = pitch.reviews.all()
-    
-    # تحديد التاريخ المختار
+    reviews        = pitch.reviews.all()
+
     date_str = request.GET.get('date')
     try:
         selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
     except (ValueError, TypeError):
         selected_date = datetime.now().date()
 
-    # ---------------------------------------------------
-    # 3. التحضير للجدول (Optimization Step)
-    # ---------------------------------------------------
-    
-    # أ) جلب الحجوزات مرة واحدة
-    active_bookings = Booking.objects.filter(
-        pitch=pitch, date=selected_date
-    ).exclude(status='Cancelled')
-    # خريطة الساعات المحجوزة: {18: 'Confirmed', ...}
+    active_bookings  = Booking.objects.filter(pitch=pitch, date=selected_date).exclude(status='Cancelled')
     hours_status_map = {int(b.time.split(':')[0]): b.status for b in active_bookings}
 
-    # ب) جلب قواعد الأسعار الخاصة مرة واحدة (بدلاً من 24 مرة)
-    # نجلب القواعد التي تنطبق على هذا التاريخ أو القواعد العامة
-    pricing_rules = PitchPricing.objects.filter(
-        pitch=pitch
-    ).filter(
+    pricing_rules      = PitchPricing.objects.filter(pitch=pitch).filter(
         Q(specific_date=selected_date) | Q(specific_date__isnull=True)
-    ).order_by('price') # نرتب بالأرخص عشان لو في تداخل ناخد السعر الأقل
-    
-    # تحويل القواعد لقائمة في الذاكرة لتسريع البحث
+    ).order_by('price')
     pricing_rules_list = list(pricing_rules)
 
     hours_schedule = []
-    current_hour = datetime.now().hour
-    is_today = (selected_date == datetime.now().date())
+    current_hour   = datetime.now().hour
+    is_today       = (selected_date == datetime.now().date())
 
-    # ---------------------------------------------------
-    # 4. بناء جدول الـ 24 ساعة
-    # ---------------------------------------------------
-    for i in range(24): 
-        # الحالة (متاح/محجوز/قيد الانتظار)
-        status = hours_status_map.get(i)
-        
-        # هل الوقت مضى؟
+    for i in range(24):
+        status  = hours_status_map.get(i)
         is_past = is_today and i <= current_hour
-        
-        # تنسيق العرض (12 ساعة)
-        if i == 0: formatted_time = "12:00 ص"
-        elif i < 12: formatted_time = f"{i}:00 ص"
-        elif i == 12: formatted_time = "12:00 م"
-        else: formatted_time = f"{i-12}:00 م"
 
-        # حساب السعر (من الذاكرة بدلاً من الداتابيز)
-        hour_price = pitch.price_per_hour # السعر الافتراضي
-        
-        # نبحث في القواعد التي جلبناها سابقاً
+        if i == 0:      formatted_time = "12:00 ص"
+        elif i < 12:    formatted_time = f"{i}:00 ص"
+        elif i == 12:   formatted_time = "12:00 م"
+        else:           formatted_time = f"{i-12}:00 م"
+
+        hour_price = pitch.price_per_hour
         for rule in pricing_rules_list:
             if rule.start_hour <= i < rule.end_hour:
                 hour_price = rule.price
-                break # وجدنا سعر خاص، نعتمد الأرخص (لأننا رتبناهم) ونوقف البحث
+                break
 
         hours_schedule.append({
             'hour_display': formatted_time,
-            'hour_value': i,
-            'status': status,      
-            'is_past': is_past,
-            'price': hour_price
+            'hour_value':   i,
+            'status':       status,
+            'is_past':      is_past,
+            'price':        hour_price,
         })
 
-    # ---------------------------------------------------
-    # 5. شريط الأيام والملاعب المقترحة
-    # ---------------------------------------------------
     days_list = []
-    today = datetime.now().date()
+    today     = datetime.now().date()
     for i in range(14):
         day_date = today + timedelta(days=i)
         days_list.append({
             'full_date': day_date.strftime('%Y-%m-%d'),
-            'day_name': day_date.strftime('%A'), # اسم اليوم (السبت، الأحد...)
-            'display': day_date.strftime('%d/%m')
+            'day_name':  day_date.strftime('%A'),
+            'display':   day_date.strftime('%d/%m'),
         })
 
     related_pitches = Pitch.objects.filter(location=pitch.location).exclude(id=pitch.id)[:3]
 
     return render(request, 'pitch_detail.html', {
-        'pitch': pitch,
-        'days_list': days_list,
-        'selected_date': selected_date.strftime('%Y-%m-%d'),
-        'hours_schedule': hours_schedule,
-        'reviews': reviews,
-        'average_rating': round(average_rating, 1),
-        'review_count': reviews.count(),
-        'related_pitches': related_pitches
+        'pitch':           pitch,
+        'days_list':       days_list,
+        'selected_date':   selected_date.strftime('%Y-%m-%d'),
+        'hours_schedule':  hours_schedule,
+        'reviews':         reviews,
+        'average_rating':  round(average_rating, 1),
+        'review_count':    reviews.count(),
+        'related_pitches': related_pitches,
     })
 
+
 # ---------------------------------------------------------
-# تأكيد الحجز (VIP - حد يومي - أسعار متغيرة - عربون)
-# ---------------------------------------------------------
-# ---------------------------------------------------------
-# تأكيد الحجز (VIP - حد يومي - أسعار متغيرة - عربون)
+# تأكيد الحجز
 # ---------------------------------------------------------
 @login_required(login_url='login')
 def booking_confirm(request, pitch_id, hour):
-    pitch = get_object_or_404(Pitch, id=pitch_id)
-    
-    # 1. إعداد التاريخ والوقت
+    pitch    = get_object_or_404(Pitch, id=pitch_id)
     date_str = request.GET.get('date')
+
     try:
         selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
     except (ValueError, TypeError):
         selected_date = datetime.now().date()
-    
+
     hour_int = int(hour)
     time_str = f"{hour_int:02d}:00"
 
-    # 2. حماية من الحجز المكرر (Race Condition) - فحص مبدئي
     is_taken = Booking.objects.filter(
-        pitch=pitch, date=selected_date, time=time_str, status__in=['Confirmed', 'Pending']
+        pitch=pitch, date=selected_date,
+        time=time_str, status__in=['Confirmed', 'Pending']
     ).exists()
 
     if is_taken:
-        messages.error(request, "عذراً، هذا الموعد تم حجزه للتو من قبل شخص آخر!")
+        messages.error(request, "عذراً، هذا الموعد تم حجزه للتو!")
         return redirect('pitch_detail', pitch_id=pitch.id)
 
-    # 3. التحقق من الحد الأقصى للحجوزات اليومية (4 مرات) - فحص عند الدخول للصفحة
     today_bookings_count = Booking.objects.filter(
-        user=request.user, 
-        date=selected_date
+        user=request.user, date=selected_date
     ).exclude(status='Cancelled').count()
 
     if today_bookings_count >= 4:
         messages.error(request, "عذراً، لقد وصلت للحد الأقصى (4 ساعات) في اليوم.")
         return redirect('pitch_detail', pitch_id=pitch.id)
 
-    # 4. حساب السعر النهائي للساعة دي
-    final_price = pitch.price_per_hour
+    final_price   = pitch.price_per_hour
     special_price = PitchPricing.objects.filter(
         pitch=pitch, start_hour__lte=hour_int, end_hour__gt=hour_int
     ).filter(Q(specific_date=selected_date) | Q(specific_date__isnull=True)).order_by('price').first()
-    
-    if special_price: final_price = special_price.price
 
-    # 5. التحقق هل المستخدم VIP؟ (أكتر من 10 حجوزات مؤكدة)
+    if special_price:
+        final_price = special_price.price
+
     is_vip = Booking.objects.filter(user=request.user, status='Confirmed').count() >= 10
 
-    # 6. معالجة الطلب (POST)
     if request.method == 'POST':
-        # --- !!! الحماية القصوى (Double Check) !!! ---
-        # نتحقق مرة أخرى في اللحظة دي بالذات قبل الحفظ مباشرة
-        # ده بيمنع التحايل لو المستخدم فاتح كذا تاب
         real_time_count = Booking.objects.filter(
-            user=request.user, 
-            date=selected_date
+            user=request.user, date=selected_date
         ).exclude(status='Cancelled').count()
 
         if real_time_count >= 4:
-            messages.error(request, "تنبيه: لا يمكن إتمام العملية، لديك 4 حجوزات بالفعل لهذا اليوم.")
+            messages.error(request, "تنبيه: لديك 4 حجوزات بالفعل لهذا اليوم.")
             return redirect('pitch_detail', pitch_id=pitch.id)
-        # ---------------------------------------------
 
-        form = PaymentForm(request.POST)
         payment_type_choice = request.POST.get('payment_type', 'Full')
 
-        # حماية: الدفع في الملعب للـ VIP فقط
         if payment_type_choice == 'PayAtPitch' and not is_vip:
             messages.error(request, "خيار الدفع في الملعب متاح فقط للعملاء المميزين.")
             return redirect(request.path)
 
+        form = PaymentForm(request.POST)
         if form.is_valid():
-            # إنشاء الحجز
             booking = Booking.objects.create(
-                pitch=pitch,
-                user=request.user, 
-                date=selected_date,
-                time=time_str,
-                status='Pending', # لازم مراجعة
-                payment_type=payment_type_choice
+                pitch=pitch, user=request.user,
+                date=selected_date, time=time_str,
+                status='Pending', payment_type=payment_type_choice
             )
-            
-            # حفظ بيانات الدفع
-            payment = form.save(commit=False)
-            payment.booking = booking
-            # تخزين طريقة الدفع (فودافون/انستا)
-            method_from_post = request.POST.get('pay', 'Cash')
-            method_map = {'voda': 'Vodafone', 'insta': 'Instapay', 'cash': 'Cash', 'fawry': 'Fawry'}
+            payment                = form.save(commit=False)
+            payment.booking        = booking
+            method_from_post       = request.POST.get('pay', 'Cash')
+            method_map             = {'voda': 'Vodafone', 'insta': 'Instapay', 'cash': 'Cash', 'fawry': 'Fawry'}
             payment.payment_method = method_map.get(method_from_post, 'Cash')
             payment.save()
 
-            # حفظ الكود في الجلسة
             request.session['last_booking_code'] = booking.booking_code
             messages.success(request, "تم تسجيل الطلب! سيتم الإلغاء تلقائياً إذا لم يؤكد خلال 30 دقيقة.")
             return redirect('booking_success')
@@ -322,14 +265,13 @@ def booking_confirm(request, pitch_id, hour):
         form = PaymentForm()
 
     return render(request, 'booking_confirm.html', {
-        'pitch': pitch,
-        'hour': time_str,
-        'date': selected_date,
-        'form': form,
-        'price': final_price, # السعر للعرض
-        'is_vip': is_vip      # حالة الـ VIP
+        'pitch':  pitch,
+        'hour':   time_str,
+        'date':   selected_date,
+        'form':   form,
+        'price':  final_price,
+        'is_vip': is_vip,
     })
-
 
 
 # ---------------------------------------------------------
@@ -338,27 +280,37 @@ def booking_confirm(request, pitch_id, hour):
 @login_required
 def booking_success(request):
     booking_code = request.session.get('last_booking_code')
-    booking = None
+    booking      = None
     if booking_code:
         booking = Booking.objects.filter(booking_code=booking_code).first()
-    return render(request, 'booking_success.html', {'booking_code': booking_code, 'booking': booking})
+    return render(request, 'booking_success.html', {
+        'booking_code': booking_code,
+        'booking':      booking,
+    })
 
 
 # ---------------------------------------------------------
-# الملف الشخصي (مقسم) وإلغاء الحجز
+# الملف الشخصي
 # ---------------------------------------------------------
 @login_required
 def user_profile(request):
-    today = datetime.now().date()
-    # تقسيم الحجوزات
+    today    = timezone.now().date()
     upcoming = Booking.objects.filter(user=request.user, date__gte=today).order_by('date', 'time')
-    past = Booking.objects.filter(user=request.user, date__lt=today).order_by('-date', '-time')
-    return render(request, 'user_profile.html', {'upcoming_bookings': upcoming, 'past_bookings': past})
+    past     = Booking.objects.filter(user=request.user, date__lt=today).order_by('-date', '-time')
 
+    return render(request, 'user_profile.html', {
+        'upcoming_bookings': upcoming,
+        'past_bookings':     past,
+        'user':              request.user,
+    })
+
+
+# ---------------------------------------------------------
+# إلغاء الحجز
+# ---------------------------------------------------------
 @login_required
 def cancel_booking(request, booking_id):
     booking = get_object_or_404(Booking, id=booking_id, user=request.user)
-    # لا يمكن إلغاء حجز قديم أو ملغي
     if booking.status != 'Cancelled':
         booking.status = 'Cancelled'
         booking.save()
@@ -367,10 +319,11 @@ def cancel_booking(request, booking_id):
 
 
 # ---------------------------------------------------------
-# تسجيل الدخول وإنشاء الحساب
+# تسجيل حساب جديد
 # ---------------------------------------------------------
 def signup(request):
-    if request.user.is_authenticated: return redirect('home')
+    if request.user.is_authenticated:
+        return redirect('home')
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
         if form.is_valid():
@@ -378,43 +331,13 @@ def signup(request):
             login(request, user)
             messages.success(request, "تم إنشاء الحساب!")
             return redirect('home')
-    else: form = UserCreationForm()
-    return render(request, "registration/signup.html", {'form': form})
+    else:
+        form = UserCreationForm()
+    return render(request, 'registration/signup.html', {'form': form})
+
+
+# ---------------------------------------------------------
+# من نحن
+# ---------------------------------------------------------
 def about_us(request):
     return render(request, 'about_us.html')
-# 1. تأكد إن السطور دي موجودة في أول الملف (فوق خالص)
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
-from django.utils import timezone  # ده مهم جداً عشان التوقيت
-from .models import Booking
-
-# ... (باقي الدوال زي home و pitch_detail سيبهم زي ما هما) ...
-
-# 2. استبدل دالة user_profile بالكود ده:
-@login_required
-def user_profile(request):
-    # بنجيب تاريخ النهاردة بناءً على توقيت الدولة اللي في الإعدادات
-    today = timezone.now().date()
-    
-    # الحجوزات القادمة: أي حجز تاريخه النهاردة أو في المستقبل
-    # بنرتبها: التاريخ الأقرب، ثم الساعة الأقرب
-    upcoming = Booking.objects.filter(
-        user=request.user, 
-        date__gte=today
-    ).order_by('date', 'time')
-
-    # الحجوزات السابقة: أي حجز تاريخه قبل النهاردة
-    # بنرتبها: الأحدث (عشان نشوف آخر حاجة لعبناها الأول)
-    past = Booking.objects.filter(
-        user=request.user, 
-        date__lt=today
-    ).order_by('-date', '-time')
-
-    context = {
-        'upcoming_bookings': upcoming, # ده الاسم اللي استخدمناه في HTML الجديد
-        'past_bookings': past,
-        'user': request.user
-    }
-    
-    return render(request, 'user_profile.html', context)
-

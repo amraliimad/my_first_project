@@ -1,553 +1,386 @@
-{% load i18n %}
+{% extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html dir="rtl" lang="ar" data-theme="light">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>الملف الشخصي - ملاعبك</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+{% load i18n %}
 
-    <style>
-        /* ============================================================
-           1. CSS VARIABLES
-           ============================================================ */
-        :root {
-            --primary:       #27ae60;
-            --primary-light: #2ecc71;
-            --primary-dark:  #1e8449;
-            --primary-ghost: rgba(39, 174, 96, 0.12);
-            --accent:        #f39c12;
-            --danger:        #e74c3c;
-            --danger-ghost:  rgba(231,76,60,0.1);
-            --bg:            #f0f4f2;
-            --surface:       #ffffff;
-            --surface-2:     #f7faf8;
-            --border:        #e2e8e4;
-            --text:          #1a2e23;
-            --text-2:        #4a6358;
-            --text-muted:    #8fa89c;
-            --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
-            --shadow-md: 0 6px 24px rgba(0,0,0,0.09);
-            --shadow-lg: 0 16px 48px rgba(0,0,0,0.12);
-            --sidebar-width: 260px;
-            --navbar-height: 64px;
-            --radius-sm: 8px;
-            --radius-md: 14px;
-            --radius-lg: 20px;
-            --radius-xl: 28px;
-        }
-        [data-theme="dark"] {
-            --bg:        #0f1a14;
-            --surface:   #182318;
-            --surface-2: #1e2e1e;
-            --border:    #2a3d2a;
-            --text:      #e8f5e9;
-            --text-2:    #a5c8aa;
-            --text-muted:#5a7d5a;
-            --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
-            --shadow-md: 0 6px 24px rgba(0,0,0,0.4);
-            --shadow-lg: 0 16px 48px rgba(0,0,0,0.5);
-        }
+{% block title %}{% trans "الملف الشخصي" %} — Mal3ab Online{% endblock %}
+{% block profile_active %}active{% endblock %}
 
-        /* ============================================================
-           2. BASE
-           ============================================================ */
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; transition: background 0.3s, color 0.3s; }
-        a { text-decoration: none; color: inherit; }
-        button { font-family: 'Cairo', sans-serif; cursor: pointer; }
+{% block breadcrumb %}
+    <a href="{% url 'home' %}">{% trans "الرئيسية" %}</a>
+    <span>›</span>
+    <span style="color:var(--text-2);">{% trans "الملف الشخصي" %}</span>
+{% endblock %}
 
-        /* ============================================================
-           3. SIDEBAR (shared)
-           ============================================================ */
-        .sidebar { position: fixed; top: 0; right: 0; width: var(--sidebar-width); height: 100vh; background: var(--surface); border-left: 1px solid var(--border); box-shadow: var(--shadow-lg); z-index: 1000; display: flex; flex-direction: column; transition: transform 0.35s cubic-bezier(0.4,0,0.2,1); }
-        .sidebar.hidden { transform: translateX(100%); }
-        .sidebar-logo { padding: 24px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); }
-        .logo-icon { width: 44px; height: 44px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 4px 12px rgba(39,174,96,0.35); flex-shrink: 0; }
-        .logo-text { font-size: 20px; font-weight: 800; color: var(--text); }
-        .logo-text span { color: var(--primary); }
-        .sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
-        .nav-section-title { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: var(--text-muted); padding: 8px 10px 6px; text-transform: uppercase; }
-        .nav-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; color: var(--text-2); transition: all 0.2s; margin-bottom: 2px; }
-        .nav-item:hover, .nav-item.active { background: var(--primary-ghost); color: var(--primary); }
-        .nav-icon { font-size: 18px; flex-shrink: 0; }
-        .sidebar-footer { padding: 16px 12px; border-top: 1px solid var(--border); }
-        .theme-toggle-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--border); color: var(--text-2); font-size: 14px; font-weight: 600; transition: all 0.2s; }
-        .theme-toggle-btn:hover { border-color: var(--primary); color: var(--primary); }
-        .toggle-track { width: 40px; height: 22px; background: var(--border); border-radius: 11px; position: relative; transition: background 0.3s; }
-        [data-theme="dark"] .toggle-track { background: var(--primary); }
-        .toggle-thumb { position: absolute; top: 3px; right: 3px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
-        [data-theme="dark"] .toggle-thumb { transform: translateX(-18px); }
+{% block extra_css %}
+<style>
+    /* ============================================================
+       USER PROFILE — Page-Specific Styles
+       ============================================================ */
 
-        /* ============================================================
-           4. OVERLAY & NAVBAR
-           ============================================================ */
-        .sidebar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
-        .sidebar-overlay.visible { opacity: 1; pointer-events: all; }
-        .navbar { position: fixed; top: 0; left: 0; right: var(--sidebar-width); height: var(--navbar-height); background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 24px; gap: 12px; z-index: 900; box-shadow: var(--shadow-sm); transition: right 0.35s cubic-bezier(0.4,0,0.2,1); }
-        .navbar.sidebar-hidden { right: 0; }
-        .menu-btn { width: 40px; height: 40px; border-radius: var(--radius-sm); background: transparent; border: 1px solid var(--border); color: var(--text-2); font-size: 18px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-        .menu-btn:hover { background: var(--primary-ghost); color: var(--primary); border-color: var(--primary); }
-        .navbar-breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-muted); }
-        .navbar-breadcrumb a { color: var(--primary); font-weight: 600; }
-        .navbar-actions { margin-right: auto; display: flex; align-items: center; gap: 10px; }
-        .btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 700; border: none; transition: all 0.2s; }
-        .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-2); }
-        .btn-ghost:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-ghost); }
+    .page-container {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 32px 24px 60px;
+    }
 
-        /* ============================================================
-           5. MAIN LAYOUT
-           ============================================================ */
-        .main-content { margin-right: var(--sidebar-width); padding-top: var(--navbar-height); min-height: 100vh; transition: margin-right 0.35s cubic-bezier(0.4,0,0.2,1); }
-        .main-content.sidebar-hidden { margin-right: 0; }
-        .page-container { max-width: 960px; margin: 0 auto; padding: 32px 24px 60px; }
+    /* ── 1. PROFILE HERO ── */
+    .profile-hero {
+        background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 60%, var(--primary-light) 100%);
+        border-radius: var(--radius-xl);
+        padding: 32px;
+        display: flex; align-items: center; gap: 24px;
+        margin-bottom: 28px;
+        box-shadow: 0 10px 32px rgba(39,174,96,0.3);
+        position: relative; overflow: hidden;
+    }
+    .profile-hero::before {
+        content: '';
+        position: absolute;
+        width: 240px; height: 240px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 50%;
+        top: -60px; left: -60px;
+    }
+    .profile-hero::after {
+        content: '';
+        position: absolute;
+        width: 160px; height: 160px;
+        background: rgba(255,255,255,0.04);
+        border-radius: 50%;
+        bottom: -40px; right: -40px;
+    }
+    .profile-avatar {
+        width: 80px; height: 80px;
+        background: rgba(255,255,255,0.2);
+        border: 3px solid rgba(255,255,255,0.4);
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 36px; flex-shrink: 0;
+        position: relative; z-index: 1;
+    }
+    .profile-info {
+        color: white;
+        position: relative; z-index: 1;
+    }
+    .profile-name {
+        font-size: 24px; font-weight: 900; margin-bottom: 4px;
+    }
+    .profile-meta {
+        font-size: 13px; opacity: 0.85;
+        font-weight: 600; line-height: 1.8;
+    }
+    .profile-stats {
+        margin-right: auto;
+        display: flex; gap: 16px; flex-wrap: wrap;
+        position: relative; z-index: 1;
+    }
+    .stat-bubble {
+        background: rgba(255,255,255,0.15);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: var(--radius-md);
+        padding: 10px 18px;
+        text-align: center; color: white;
+    }
+    .stat-num {
+        font-size: 22px; font-weight: 900; display: block;
+    }
+    .stat-label {
+        font-size: 11px; opacity: 0.8; font-weight: 700;
+    }
 
-        /* ============================================================
-           6. PROFILE HERO CARD
-           ============================================================ */
-        .profile-hero {
-            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 60%, var(--primary-light) 100%);
-            border-radius: var(--radius-xl);
-            padding: 32px;
-            display: flex;
-            align-items: center;
-            gap: 24px;
-            margin-bottom: 28px;
-            box-shadow: 0 10px 32px rgba(39,174,96,0.3);
-            position: relative;
-            overflow: hidden;
-        }
+    /* ── 2. SECTION BLOCKS ── */
+    .section-block {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        padding: 28px;
+        margin-bottom: 24px;
+        box-shadow: var(--shadow-sm);
+    }
+    .section-heading {
+        font-size: 17px; font-weight: 800; color: var(--text);
+        display: flex; align-items: center; gap: 10px;
+        margin-bottom: 20px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--border);
+    }
+    .section-heading::before {
+        content: '';
+        width: 4px; height: 20px;
+        background: var(--primary);
+        border-radius: 4px;
+    }
+    .section-heading.archive::before {
+        background: var(--text-muted);
+    }
 
-        /* Decorative background circle */
-        .profile-hero::before {
-            content: '';
-            position: absolute;
-            width: 240px; height: 240px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 50%;
-            top: -60px; left: -60px;
-        }
+    /* ── 3. BOOKING TABLES ── */
+    .table-wrap { overflow-x: auto; }
+    table {
+        width: 100%; border-collapse: collapse; font-size: 14px;
+    }
+    th {
+        background: var(--surface-2);
+        color: var(--text-muted);
+        font-size: 12px; font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        padding: 12px 16px;
+        text-align: right;
+        border-bottom: 1px solid var(--border);
+    }
+    td {
+        padding: 14px 16px;
+        text-align: right;
+        border-bottom: 1px solid var(--border);
+        color: var(--text-2);
+        font-weight: 600;
+        vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface-2); }
 
-        .profile-avatar {
-            width: 80px; height: 80px;
-            background: rgba(255,255,255,0.2);
-            border: 3px solid rgba(255,255,255,0.4);
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 36px; flex-shrink: 0;
-        }
+    .booking-code-cell {
+        font-family: 'Cairo', monospace;
+        font-weight: 800; color: #2980b9; font-size: 13px;
+    }
 
-        .profile-info { color: white; }
-        .profile-name { font-size: 24px; font-weight: 900; margin-bottom: 4px; }
-        .profile-meta { font-size: 13px; opacity: 0.85; font-weight: 600; line-height: 1.8; }
+    /* ── 4. STATUS BADGES ── */
+    .badge {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 5px 12px; border-radius: 50px;
+        font-size: 12px; font-weight: 800;
+        white-space: nowrap;
+    }
+    .badge-success {
+        background: rgba(39,174,96,0.12); color: var(--primary);
+        border: 1px solid rgba(39,174,96,0.2);
+    }
+    .badge-warning {
+        background: rgba(243,156,18,0.12); color: #c87f0a;
+        border: 1px solid rgba(243,156,18,0.2);
+    }
+    .badge-danger {
+        background: var(--danger-ghost); color: var(--danger);
+        border: 1px solid rgba(231,76,60,0.2);
+    }
 
-        /* Stats row */
-        .profile-stats {
-            margin-right: auto;
-            display: flex; gap: 16px; flex-wrap: wrap;
-        }
+    /* ── 5. CANCEL BUTTON ── */
+    .btn-cancel {
+        display: inline-flex; align-items: center; gap: 4px;
+        color: var(--danger); font-size: 12px; font-weight: 700;
+        border: 1.5px solid var(--danger);
+        padding: 5px 12px;
+        border-radius: var(--radius-sm);
+        transition: all 0.2s;
+        background: transparent;
+    }
+    .btn-cancel:hover {
+        background: var(--danger); color: white;
+    }
 
-        .stat-bubble {
-            background: rgba(255,255,255,0.15);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: var(--radius-md);
-            padding: 10px 18px; text-align: center; color: white;
-        }
+    /* ── 6. EMPTY STATE ── */
+    .empty-state {
+        text-align: center; padding: 40px 20px;
+        color: var(--text-muted);
+    }
+    .empty-state .empty-icon {
+        font-size: 42px; margin-bottom: 12px; opacity: 0.5;
+    }
+    .empty-state p {
+        font-size: 15px; font-weight: 600; margin-bottom: 16px;
+    }
+    .empty-link {
+        color: var(--primary); font-weight: 800;
+    }
+    .empty-link:hover { text-decoration: underline; }
 
-        .stat-num  { font-size: 22px; font-weight: 900; display: block; }
-        .stat-label{ font-size: 11px; opacity: 0.8; font-weight: 700; }
+    /* ── 7. ENTRANCE ANIMATION ── */
+    .fade-up {
+        opacity: 0; transform: translateY(16px);
+        animation: fadeUp 0.5s ease forwards;
+    }
+    .fade-up:nth-child(1){ animation-delay:0.05s; }
+    .fade-up:nth-child(2){ animation-delay:0.12s; }
+    .fade-up:nth-child(3){ animation-delay:0.19s; }
+    @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
 
-        /* ============================================================
-           7. SECTION BLOCKS
-           ============================================================ */
-        .section-block {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-xl);
-            padding: 28px;
-            margin-bottom: 24px;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .section-heading {
-            font-size: 17px; font-weight: 800; color: var(--text);
-            display: flex; align-items: center; gap: 10px;
-            margin-bottom: 20px; padding-bottom: 14px;
-            border-bottom: 1px solid var(--border);
-        }
-        .section-heading::before { content: ''; width: 4px; height: 20px; background: var(--primary); border-radius: 4px; }
-        .section-heading.archive::before { background: var(--text-muted); }
-
-        /* ============================================================
-           8. BOOKINGS TABLE (desktop)
-           ============================================================ */
-        .table-wrap { overflow-x: auto; }
-
-        table {
-            width: 100%; border-collapse: collapse;
-            font-size: 14px;
-        }
-
-        th {
+    /* ── 8. RESPONSIVE — Mobile Card Mode ── */
+    @media (max-width: 640px) {
+        .booking-table thead { display: none; }
+        .booking-table tbody tr {
+            display: block;
             background: var(--surface-2);
-            color: var(--text-muted);
-            font-size: 12px; font-weight: 700;
-            letter-spacing: 0.5px; text-transform: uppercase;
-            padding: 12px 16px; text-align: right;
-            border-bottom: 1px solid var(--border);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            margin-bottom: 12px;
         }
-
-        td {
-            padding: 14px 16px; text-align: right;
-            border-bottom: 1px solid var(--border);
-            color: var(--text-2); font-weight: 600;
-            vertical-align: middle;
+        .booking-table tbody tr:hover {
+            background: var(--primary-ghost);
         }
-
-        tr:last-child td { border-bottom: none; }
-        tr:hover td { background: var(--surface-2); }
-
-        /* Booking code style */
-        .booking-code-cell {
-            font-family: 'Cairo', monospace;
-            font-weight: 800; color: #2980b9;
+        .booking-table td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border: none;
             font-size: 13px;
         }
-
-        /* Status Badges */
-        .badge {
-            display: inline-flex; align-items: center; gap: 5px;
-            padding: 5px 12px; border-radius: 50px;
-            font-size: 12px; font-weight: 800; white-space: nowrap;
-        }
-        .badge-success { background: rgba(39,174,96,0.12); color: var(--primary); border: 1px solid rgba(39,174,96,0.2); }
-        .badge-warning { background: rgba(243,156,18,0.12); color: #c87f0a; border: 1px solid rgba(243,156,18,0.2); }
-        .badge-danger  { background: var(--danger-ghost); color: var(--danger); border: 1px solid rgba(231,76,60,0.2); }
-
-        /* Cancel button */
-        .btn-cancel {
-            display: inline-flex; align-items: center; gap: 4px;
-            color: var(--danger); font-size: 12px; font-weight: 700;
-            border: 1.5px solid var(--danger); padding: 5px 12px;
-            border-radius: var(--radius-sm); transition: all 0.2s;
-            background: transparent;
-        }
-        .btn-cancel:hover { background: var(--danger); color: white; }
-
-        /* ============================================================
-           9. MOBILE CARD VIEW (responsive table)
-           ============================================================ */
-        @media (max-width: 640px) {
-            /* Hide table headers on mobile */
-            .booking-table thead { display: none; }
-
-            /* Turn each row into a card */
-            .booking-table tbody tr {
-                display: block;
-                background: var(--surface-2);
-                border: 1px solid var(--border);
-                border-radius: var(--radius-md);
-                padding: 16px;
-                margin-bottom: 12px;
-            }
-
-            .booking-table tbody tr:hover { background: var(--primary-ghost); }
-
-            /* Each cell becomes a labeled row */
-            .booking-table td {
-                display: flex; justify-content: space-between; align-items: center;
-                padding: 6px 0; border: none;
-                font-size: 13px;
-            }
-
-            .booking-table td::before {
-                content: attr(data-label);
-                font-size: 11px; font-weight: 800;
-                color: var(--text-muted); text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }
-        }
-
-        /* ============================================================
-           10. EMPTY STATE
-           ============================================================ */
-        .empty-state {
-            text-align: center; padding: 40px 20px;
+        .booking-table td::before {
+            content: attr(data-label);
+            font-size: 11px; font-weight: 800;
             color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
+    }
 
-        .empty-state .empty-icon { font-size: 42px; margin-bottom: 12px; opacity: 0.5; }
-        .empty-state p { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
-        .empty-link { color: var(--primary); font-weight: 800; }
-        .empty-link:hover { text-decoration: underline; }
-
-        /* ============================================================
-           11. TOAST
-           ============================================================ */
-        .toast-container { position: fixed; bottom: 24px; left: 24px; z-index: 2000; display: flex; flex-direction: column-reverse; gap: 10px; }
-        .toast { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px 18px; box-shadow: var(--shadow-lg); font-size: 14px; font-weight: 600; color: var(--text); min-width: 260px; max-width: 360px; animation: slideInToast 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards; }
-        .toast.success { border-right: 4px solid var(--primary); }
-        .toast.error   { border-right: 4px solid var(--danger);  }
-        .toast-close { margin-right: auto; background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; }
-        @keyframes slideInToast { from { opacity:0; transform:translateY(20px) scale(0.9); } to { opacity:1; transform:translateY(0) scale(1); } }
-
-        /* ============================================================
-           RESPONSIVE LAYOUT
-           ============================================================ */
-        @media (max-width: 768px) {
-            :root { --sidebar-width: 0px; }
-            .sidebar { width: 260px; transform: translateX(100%); }
-            .sidebar.open { transform: translateX(0); }
-            .navbar { right: 0; }
-            .main-content { margin-right: 0; }
-            .profile-hero { flex-direction: column; text-align: center; }
-            .profile-stats { margin-right: 0; justify-content: center; }
+    @media (max-width: 768px) {
+        .profile-hero {
+            flex-direction: column;
+            text-align: center;
         }
+        .profile-stats {
+            margin-right: 0;
+            justify-content: center;
+        }
+        .page-container { padding: 24px 14px 40px; }
+        .section-block { padding: 20px; }
+    }
+</style>
+{% endblock %}
 
-        /* Page entrance */
-        .fade-up { opacity: 0; transform: translateY(16px); animation: fadeUp 0.5s ease forwards; }
-        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
-        .fade-up:nth-child(1){ animation-delay:0.05s; }
-        .fade-up:nth-child(2){ animation-delay:0.12s; }
-        .fade-up:nth-child(3){ animation-delay:0.19s; }
-    </style>
-</head>
-<body>
+{% block content %}
+<div class="page-container">
 
-    <!-- SIDEBAR -->
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-logo">
-            <div class="logo-icon">⚽</div>
-            <div class="logo-text">ملاعب<span>ك</span></div>
+    <!-- ══════════════════════════════════════════════
+         PROFILE HERO
+         ══════════════════════════════════════════════ -->
+    <div class="profile-hero fade-up">
+        <div class="profile-avatar">👤</div>
+        <div class="profile-info">
+            <div class="profile-name">{{ user.username }}</div>
+            <div class="profile-meta">
+                📅 {% trans "تاريخ الانضمام" %}: {{ user.date_joined|date:"d/m/Y" }}<br>
+                📧 {% trans "البريد" %}: {{ user.email|default:"غير مسجل" }}
+            </div>
         </div>
-        <nav class="sidebar-nav">
-            <div class="nav-section-title">القائمة</div>
-            <a href="{% url 'home' %}" class="nav-item"><span class="nav-icon">🏠</span> الرئيسية</a>
-            <a href="{% url 'home' %}" class="nav-item"><span class="nav-icon">🏟️</span> الملاعب</a>
-            <div class="nav-section-title" style="margin-top:10px;">حسابي</div>
-            <a href="{% url 'user_profile' %}" class="nav-item active"><span class="nav-icon">👤</span> ملفي الشخصي</a>
-            <!-- 1. فورم مخفي عشان يبعت طلب POST -->
-            <form id="logout-form" action="{% url 'logout' %}" method="POST" style="display: none;">
-                {% csrf_token %}
-            </form>
-
-            <!-- 2. الزر بيشغل الفورم ده بالجافاسكريبت لما تدوس عليه -->
-            <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" style="color: #e74c3c;">
-             🚪</span> تسجيل الخروج</a>
-                    </nav>
-                    <div class="sidebar-footer">
-                        <button class="theme-toggle-btn" onclick="toggleTheme()">
-                            <span id="themeLabel">🌙 الوضع الليلي</span>
-                            <div class="toggle-track"><div class="toggle-thumb"></div></div>
-                        </button>
-                    </div>
-                </aside>          
-            </a>
-            
-
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
-
-    <!-- NAVBAR -->
-    <header class="navbar" id="navbar">
-        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
-        <nav class="navbar-breadcrumb">
-            <a href="{% url 'home' %}">الرئيسية</a>
-            <span>›</span>
-            <span style="color:var(--text-2);">الملف الشخصي</span>
-        </nav>
-        <div class="navbar-actions">
-            <a href="{% url 'logout' %}" class="btn btn-ghost">🚪 خروج</a>
+        <div class="profile-stats">
+            <div class="stat-bubble">
+                <span class="stat-num">{{ upcoming_bookings|length }}</span>
+                <span class="stat-label">{% trans "حجز قادم" %}</span>
+            </div>
+            <div class="stat-bubble">
+                <span class="stat-num">{{ past_bookings|length }}</span>
+                <span class="stat-label">{% trans "حجز سابق" %}</span>
+            </div>
         </div>
-    </header>
+    </div>
 
-    <!-- MAIN CONTENT -->
-    <main class="main-content" id="mainContent">
-        <div class="page-container">
+    <!-- ══════════════════════════════════════════════
+         UPCOMING BOOKINGS
+         ══════════════════════════════════════════════ -->
+    <div class="section-block fade-up">
+        <h2 class="section-heading">📅 {% trans "حجوزاتك القادمة" %}</h2>
 
-            <!-- ── PROFILE HERO ── -->
-            <div class="profile-hero fade-up">
-                <div class="profile-avatar">👤</div>
-                <div class="profile-info">
-                    <div class="profile-name">{{ user.username }}</div>
-                    <div class="profile-meta">
-                        📅 تاريخ الانضمام: {{ user.date_joined|date:"d/m/Y" }}<br>
-                        📧 البريد: {{ user.email|default:"غير مسجل" }}
-                    </div>
-                </div>
-                <div class="profile-stats">
-                    <div class="stat-bubble">
-                        <span class="stat-num">{{ upcoming_bookings|length }}</span>
-                        <span class="stat-label">حجز قادم</span>
-                    </div>
-                    <div class="stat-bubble">
-                        <span class="stat-num">{{ past_bookings|length }}</span>
-                        <span class="stat-label">حجز سابق</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ── UPCOMING BOOKINGS ── -->
-            <div class="section-block fade-up">
-                <h2 class="section-heading">📅 حجوزاتك القادمة</h2>
-
-                {% if upcoming_bookings %}
-                <div class="table-wrap">
-                    <table class="booking-table">
-                        <thead>
-                            <tr>
-                                <th>الكود</th>
-                                <th>الملعب</th>
-                                <th>التاريخ</th>
-                                <th>الساعة</th>
-                                <th>الحالة</th>
-                                <th>إجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for booking in upcoming_bookings %}
-                            <tr>
-                                <td data-label="الكود">
-                                    <span class="booking-code-cell">#{{ booking.booking_code }}</span>
-                                </td>
-                                <td data-label="الملعب">{{ booking.pitch.name }}</td>
-                                <td data-label="التاريخ">{{ booking.date|date:"d/m/Y" }}</td>
-                                <td data-label="الساعة">{{ booking.time }}</td>
-                                <td data-label="الحالة">
-                                    {% if booking.status == 'Confirmed' %}
-                                        <span class="badge badge-success">✅ مؤكد</span>
-                                    {% elif booking.status == 'Pending' %}
-                                        <span class="badge badge-warning">⏳ قيد المراجعة</span>
-                                    {% else %}
-                                        <span class="badge badge-danger">❌ ملغي</span>
-                                    {% endif %}
-                                </td>
-                                <td data-label="إجراءات">
-                                    {% if booking.status != 'Cancelled' %}
-                                        <a href="{% url 'cancel_booking' booking.id %}"
-                                           class="btn-cancel"
-                                           onclick="return confirm('هل أنت متأكد من إلغاء هذا الحجز؟')">
-                                           🗑️ إلغاء
-                                        </a>
-                                    {% else %}
-                                        <span style="color:var(--text-muted); font-size:13px;">—</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-
-                {% else %}
-                <div class="empty-state">
-                    <div class="empty-icon">📭</div>
-                    <p>لا توجد حجوزات قادمة.</p>
-                    <a href="{% url 'home' %}" class="empty-link">احجز ملعب الآن! ⚽</a>
-                </div>
-                {% endif %}
-            </div>
-
-            <!-- ── PAST BOOKINGS (Archive) ── -->
-            <div class="section-block fade-up">
-                <h2 class="section-heading archive">📜 الأرشيف (حجوزات سابقة)</h2>
-
-                {% if past_bookings %}
-                <div class="table-wrap">
-                    <table class="booking-table" style="opacity: 0.85;">
-                        <thead>
-                            <tr>
-                                <th>الملعب</th>
-                                <th>التاريخ</th>
-                                <th>الحالة</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for booking in past_bookings %}
-                            <tr>
-                                <td data-label="الملعب">{{ booking.pitch.name }}</td>
-                                <td data-label="التاريخ">{{ booking.date|date:"d/m/Y" }}</td>
-                                <td data-label="الحالة">
-                                    {% if booking.status == 'Confirmed' %}
-                                        <span class="badge badge-success">✅ تم بنجاح</span>
-                                    {% else %}
-                                        <span class="badge badge-danger">{{ booking.get_status_display }}</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <div class="empty-state">
-                    <div class="empty-icon">🗂️</div>
-                    <p>الأرشيف فارغ حتى الآن.</p>
-                </div>
-                {% endif %}
-            </div>
-
-        </div><!-- /page-container -->
-    </main>
-
-    <!-- Toast Notifications -->
-    <div class="toast-container" id="toastContainer">
-        {% if messages %}
-            {% for message in messages %}
-            <div class="toast {{ message.tags }}" id="toast-{{ forloop.counter }}">
-                <span>{% if message.tags == 'success' %}✅{% elif message.tags == 'error' %}❌{% else %}ℹ️{% endif %}</span>
-                <span>{{ message }}</span>
-                <button class="toast-close" onclick="dismissToast('toast-{{ forloop.counter }}')">✕</button>
-            </div>
-            {% endfor %}
+        {% if upcoming_bookings %}
+        <div class="table-wrap">
+            <table class="booking-table">
+                <thead>
+                    <tr>
+                        <th>{% trans "الكود" %}</th>
+                        <th>{% trans "الملعب" %}</th>
+                        <th>{% trans "التاريخ" %}</th>
+                        <th>{% trans "الساعة" %}</th>
+                        <th>{% trans "الحالة" %}</th>
+                        <th>{% trans "إجراءات" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for booking in upcoming_bookings %}
+                    <tr>
+                        <td data-label="{% trans 'الكود' %}">
+                            <span class="booking-code-cell">#{{ booking.booking_code }}</span>
+                        </td>
+                        <td data-label="{% trans 'الملعب' %}">{{ booking.pitch.name }}</td>
+                        <td data-label="{% trans 'التاريخ' %}">{{ booking.date|date:"d/m/Y" }}</td>
+                        <td data-label="{% trans 'الساعة' %}">{{ booking.time }}</td>
+                        <td data-label="{% trans 'الحالة' %}">
+                            {% if booking.status == 'Confirmed' %}
+                                <span class="badge badge-success">✅ {% trans "مؤكد" %}</span>
+                            {% elif booking.status == 'Pending' %}
+                                <span class="badge badge-warning">⏳ {% trans "قيد المراجعة" %}</span>
+                            {% else %}
+                                <span class="badge badge-danger">❌ {% trans "ملغي" %}</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="{% trans 'إجراءات' %}">
+                            {% if booking.status != 'Cancelled' %}
+                                <a href="{% url 'cancel_booking' booking.id %}"
+                                   class="btn-cancel"
+                                   onclick="return confirm('{% trans "هل أنت متأكد من إلغاء هذا الحجز؟" %}')">
+                                    🗑️ {% trans "إلغاء" %}
+                                </a>
+                            {% else %}
+                                <span style="color:var(--text-muted); font-size:13px;">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <p>{% trans "لا توجد حجوزات قادمة." %}</p>
+            <a href="{% url 'home' %}" class="empty-link">{% trans "احجز ملعب الآن!" %} ⚽</a>
+        </div>
         {% endif %}
     </div>
 
-    <script>
-        /* Theme */
-        (function(){
-            const s = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', s);
-            const el = document.getElementById('themeLabel');
-            if(el) el.textContent = s==='dark' ? '☀️ الوضع النهاري' : '🌙 الوضع الليلي';
-        })();
-        function toggleTheme(){
-            const c = document.documentElement.getAttribute('data-theme');
-            const n = c==='dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', n);
-            localStorage.setItem('theme', n);
-            document.getElementById('themeLabel').textContent = n==='dark' ? '☀️ الوضع النهاري' : '🌙 الوضع الليلي';
-        }
+    <!-- ══════════════════════════════════════════════
+         PAST BOOKINGS (ARCHIVE)
+         ══════════════════════════════════════════════ -->
+    <div class="section-block fade-up">
+        <h2 class="section-heading archive">📜 {% trans "الأرشيف (حجوزات سابقة)" %}</h2>
 
-        /* Sidebar */
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        const navbar  = document.getElementById('navbar');
-        const main    = document.getElementById('mainContent');
-        function applyInitialSidebar(){
-            if(window.innerWidth <= 768){ sidebar.classList.add('hidden'); navbar.classList.add('sidebar-hidden'); main.classList.add('sidebar-hidden'); }
-            else { sidebar.classList.remove('hidden'); }
-        }
-        applyInitialSidebar();
-        window.addEventListener('resize', applyInitialSidebar);
-        function toggleSidebar(){
-            if(window.innerWidth <= 768){ sidebar.classList.contains('open') ? closeSidebar() : openSidebar(); }
-            else { sidebar.classList.toggle('hidden'); navbar.classList.toggle('sidebar-hidden'); main.classList.toggle('sidebar-hidden'); }
-        }
-        function openSidebar(){ sidebar.classList.add('open'); overlay.classList.add('visible'); }
-        function closeSidebar(){ sidebar.classList.remove('open'); overlay.classList.remove('visible'); }
+        {% if past_bookings %}
+        <div class="table-wrap">
+            <table class="booking-table" style="opacity:0.85;">
+                <thead>
+                    <tr>
+                        <th>{% trans "الملعب" %}</th>
+                        <th>{% trans "التاريخ" %}</th>
+                        <th>{% trans "الحالة" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for booking in past_bookings %}
+                    <tr>
+                        <td data-label="{% trans 'الملعب' %}">{{ booking.pitch.name }}</td>
+                        <td data-label="{% trans 'التاريخ' %}">{{ booking.date|date:"d/m/Y" }}</td>
+                        <td data-label="{% trans 'الحالة' %}">
+                            {% if booking.status == 'Confirmed' %}
+                                <span class="badge badge-success">✅ {% trans "تم بنجاح" %}</span>
+                            {% else %}
+                                <span class="badge badge-danger">{{ booking.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">🗂️</div>
+            <p>{% trans "الأرشيف فارغ حتى الآن." %}</p>
+        </div>
+        {% endif %}
+    </div>
 
-        /* Toast */
-        document.querySelectorAll('.toast').forEach(t => setTimeout(() => dismissToast(t.id), 5000));
-        function dismissToast(id){
-            const el = document.getElementById(id);
-            if(!el) return;
-            el.style.opacity = '0'; el.style.transform = 'translateY(10px)';
-            el.style.transition = '0.3s'; setTimeout(() => el.remove(), 300);
-        }
-    </script>
-</body>
-</html>
+</div>
+{% endblock %}
