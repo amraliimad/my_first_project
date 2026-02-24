@@ -10,9 +10,8 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # 2. جلب الأسرار من البيئة
-SECRET_KEY = os.getenv("SECRET_KEY")
-DEBUG = os.getenv("DEBUG") == "True"
-
+SECRET_KEY = 'django-insecure-change-me-later-to-something-very-long-12345'
+DEBUG = True
 
 # 3. الروابط المسموح بها
 # أضف رابط موقعك على PythonAnywhere هنا بجانب الـ localhost
