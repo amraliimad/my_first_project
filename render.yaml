@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: mal3ab-online
+    env: python
+    plan: free
+    buildCommand: "bash build.sh"
+    startCommand: "gunicorn my_first_project.wsgi:application"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0

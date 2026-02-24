@@ -105,18 +105,22 @@ def pitch_detail(request, pitch_id):
 
     if request.method == 'POST' and 'rating' in request.POST:
         if request.user.is_authenticated:
-            if not Review.objects.filter(pitch=pitch, user=request.user).exists():
-                Review.objects.create(
-                    pitch=pitch, user=request.user,
-                    rating=request.POST.get('rating'),
-                    comment=request.POST.get('comment')
-                )
+            # التأكد أن المستخدم لعب بالفعل في هذا الملعب (حجز مؤكد وتاريخ مضى)
+            has_played = Booking.objects.filter(
+                user=request.user, 
+                pitch=pitch, 
+                status='Confirmed', 
+                date__lte=datetime.now().date()
+            ).exists()
+
+            if not has_played:
+                messages.error(request, "لا يمكنك تقييم الملعب إلا بعد اللعب فيه!")
+            elif not Review.objects.filter(pitch=pitch, user=request.user).exists():
+                Review.objects.create(...)
                 messages.success(request, "تم نشر تقييمك!")
             else:
                 messages.warning(request, "لقد قمت بتقييم هذا الملعب مسبقاً.")
             return redirect('pitch_detail', pitch_id=pitch.id)
-        else:
-            messages.error(request, "يجب تسجيل الدخول للتقييم.")
 
     average_rating = pitch.reviews.aggregate(Avg('rating'))['rating__avg'] or 0
     reviews        = pitch.reviews.all()
