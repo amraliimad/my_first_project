@@ -144,20 +144,47 @@ def pitch_detail(request, pitch_id):
     is_today       = (selected_date == datetime.now().date())
 
     for i in range(24):
+        # ----------------------------------------------------
+        # 1. إضافة جديدة: التحقق من مواعيد الفتح والغلق
+        # ----------------------------------------------------
+        is_open = False
+        if pitch.opening_hour < pitch.closing_hour:
+            # الوضع الطبيعي (مثلاً بيفتح 8 الصبح ويقفل 11 بالليل)
+            if pitch.opening_hour <= i < pitch.closing_hour:
+                is_open = True
+        elif pitch.opening_hour > pitch.closing_hour:
+            # لو الملعب بيطبق لليوم التاني (مثلاً يفتح 6 مساءً ويقفل 3 الفجر)
+            if i >= pitch.opening_hour or i < pitch.closing_hour:
+                is_open = True
+        else:
+            # لو ساعة الفتح تساوي ساعة الغلق، هنعتبره فاتح 24 ساعة
+            is_open = True
+
+        # لو الساعة دي برة مواعيد العمل، تجاهلها وماتعرضهاش
+        if not is_open:
+            continue
+        # ----------------------------------------------------
+
+        # 2. جلب حالة الحجز (هل هو محجوز ولا متاح)
         status  = hours_status_map.get(i)
+        
+        # 3. التحقق إذا كان الوقت ده عدى خلاص في يومنا الحالي
         is_past = is_today and i <= current_hour
 
+        # 4. تنسيق الوقت بالعربي
         if i == 0:      formatted_time = "12:00 ص"
         elif i < 12:    formatted_time = f"{i}:00 ص"
         elif i == 12:   formatted_time = "12:00 م"
         else:           formatted_time = f"{i-12}:00 م"
 
+        # 5. حساب السعر المتغير (Dynamic Pricing)
         hour_price = pitch.price_per_hour
         for rule in pricing_rules_list:
             if rule.start_hour <= i < rule.end_hour:
                 hour_price = rule.price
                 break
 
+        # 6. إضافة الساعة للقائمة اللي هتتبعت للـ Template
         hours_schedule.append({
             'hour_display': formatted_time,
             'hour_value':   i,
@@ -166,8 +193,12 @@ def pitch_detail(request, pitch_id):
             'price':        hour_price,
         })
 
+    # ----------------------------------------------------
+    # باقي كود الدالة كما هو بدون أي تغيير
+    # ----------------------------------------------------
     days_list = []
     today     = datetime.now().date()
+
     for i in range(14):
         day_date = today + timedelta(days=i)
         days_list.append({
@@ -196,14 +227,32 @@ def pitch_detail(request, pitch_id):
 @login_required(login_url='login')
 def booking_confirm(request, pitch_id, hour):
     pitch    = get_object_or_404(Pitch, id=pitch_id)
-    date_str = request.GET.get('date')
+    hour_int = int(hour)
 
+    # ----------------------------------------------------
+    # 1. الحماية الإضافية: التأكد أن الملعب فاتح في هذا الوقت
+    # ----------------------------------------------------
+    is_open = False
+    if pitch.opening_hour < pitch.closing_hour:
+        if pitch.opening_hour <= hour_int < pitch.closing_hour:
+            is_open = True
+    elif pitch.opening_hour > pitch.closing_hour:
+        if hour_int >= pitch.opening_hour or hour_int < pitch.closing_hour:
+            is_open = True
+    else:
+        is_open = True # إذا كانت ساعات الفتح والغلق متساوية (يُعتبر 24 ساعة)
+
+    if not is_open:
+        messages.error(request, "عذراً، الملعب مغلق في هذا الوقت ولا يمكن الحجز.")
+        return redirect('pitch_detail', pitch_id=pitch.id)
+    # ----------------------------------------------------
+
+    date_str = request.GET.get('date')
     try:
         selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
     except (ValueError, TypeError):
         selected_date = datetime.now().date()
 
-    hour_int = int(hour)
     time_str = f"{hour_int:02d}:00"
 
     is_taken = Booking.objects.filter(
@@ -276,7 +325,6 @@ def booking_confirm(request, pitch_id, hour):
         'price':  final_price,
         'is_vip': is_vip,
     })
-
 
 # ---------------------------------------------------------
 # نجاح الحجز

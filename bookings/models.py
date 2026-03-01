@@ -14,6 +14,10 @@ class Pitch(models.Model):
         ('7x7', 'سباعي (7 ضد 7)'),
         ('11x11', 'قانوني (11 ضد 11)'),
     ]
+            
+    opening_hour    = models.IntegerField(default=8, verbose_name="ساعة الفتح (مثال: 8 يعني 8 صباحاً)")
+    closing_hour    = models.IntegerField(default=24, verbose_name="ساعة الغلق (مثال: 24 يعني 12 بالليل)")
+
 
     FLOOR_CHOICES = [
         ('Artificial', 'نجيل صناعي'),

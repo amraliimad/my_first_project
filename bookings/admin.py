@@ -11,9 +11,10 @@ class PitchPricingInline(admin.TabularInline):
 
 # 2. تخصيص لوحة تحكم الملاعب
 class PitchAdmin(admin.ModelAdmin):
-    list_display = ('name', 'location', 'price_per_hour', 'size', 'phone_number')
+    list_display = ('name', 'location', 'price_per_hour', 'size', 'phone_number', 'opening_hour', 'closing_hour')
     list_filter = ('location', 'floor_type', 'size')
     search_fields = ('name', 'location')
+    list_editable = ('opening_hour', 'closing_hour')
     inlines = [PitchPricingInline] # دي السطر السحري اللي بيدمج الأسعار جوه الملعب
 
 # 3. تخصيص لوحة الحجوزات
