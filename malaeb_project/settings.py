@@ -16,12 +16,13 @@ DEBUG = True
 
 # 3. الروابط المسموح بها
 # أضف رابط موقعك على PythonAnywhere هنا بجانب الـ localhost
-ALLOWED_HOSTS =['mal3abonline.me',
-                'www.mal3abonline.me',
-                '.herokuapp.com'
-                'mal3abonline-50a569f7c025.herokuapp.com',
-                'localhost',
-                '127.0.0.1',]
+ALLOWED_HOSTS = [
+    'mal3abonline-50a569f7c025.herokuapp.com',
+    'mal3abonline.me',
+    'www.mal3abonline.me',
+    'localhost',
+    '127.0.0.1',
+]
 
 # --- Application definition ---
 
