@@ -12,6 +12,4 @@ urlpatterns = [
 
     # Paymob URLs
     path('paymob/pay/<int:booking_id>/', views.paymob_wallet_pay, name='paymob_wallet_pay'),
-    path('paymob/callback/', views.paymob_callback, name='paymob_callback'),
-    path('paymob/response/', views.paymob_response, name='paymob_response'),
 ]
