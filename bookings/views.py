@@ -10,7 +10,13 @@ from datetime import datetime, timedelta
 from math import radians, cos, sin, asin, sqrt
 from .models import Pitch, Booking, Payment, Review, PitchPricing
 from .forms import PaymentForm
-
+import hmac
+import hashlib
+import json
+from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+from .paymob import paymob_auth, create_order, create_payment_key, pay_with_wallet
+from django.conf import settings
 
 # ---------------------------------------------------------
 # دالة مساعدة لحساب المسافة (Haversine Formula)
@@ -304,16 +310,62 @@ def booking_confirm(request, pitch_id, hour):
                 date=selected_date, time=time_str,
                 status='Pending', payment_type=payment_type_choice
             )
-            payment                = form.save(commit=False)
-            payment.booking        = booking
-            method_from_post       = request.POST.get('pay', 'Cash')
-            method_map             = {'voda': 'Vodafone', 'insta': 'Instapay', 'cash': 'Cash', 'fawry': 'Fawry'}
-            payment.payment_method = method_map.get(method_from_post, 'Cash')
-            payment.save()
 
-            request.session['last_booking_code'] = booking.booking_code
-            messages.success(request, "تم تسجيل الطلب! سيتم الإلغاء تلقائياً إذا لم يؤكد خلال 30 دقيقة.")
-            return redirect('booking_success')
+            method_from_post = request.POST.get('pay', 'Cash')
+
+            # لو اختار محفظة إلكترونية → روح Paymob
+            if method_from_post == 'wallet':
+                phone = request.POST.get('wallet_phone', '')
+                if not phone:
+                    messages.error(request, "يرجى إدخال رقم المحفظة!")
+                    booking.delete()
+                    return redirect(request.path + f'?date={selected_date}')
+
+                # حساب المبلغ بالقروش
+                if payment_type_choice == 'Deposit':
+                    amount = 5000  # 50 جنيه
+                else:
+                    amount = int(final_price * 100)
+
+                try:
+                    from .paymob import paymob_auth, create_order, create_payment_key, pay_with_wallet
+
+                    auth_token = paymob_auth()
+                    order_id = create_order(auth_token, amount, booking.booking_code)
+                    payment_key = create_payment_key(auth_token, order_id, amount, request.user, phone)
+                    redirect_url = pay_with_wallet(payment_key, phone)
+
+                    # حفظ بيانات الدفع
+                    Payment.objects.create(
+                        booking=booking,
+                        paymob_order_id=str(order_id),
+                        amount_cents=amount,
+                        payment_method='Vodafone',
+                    )
+
+                    if redirect_url:
+                        return redirect(redirect_url)
+                    else:
+                        messages.error(request, "حدث خطأ في بوابة الدفع. حاول تاني.")
+                        booking.delete()
+                        return redirect('pitch_detail', pitch_id=pitch.id)
+
+                except Exception as e:
+                    messages.error(request, f"خطأ في الدفع: {str(e)}")
+                    booking.delete()
+                    return redirect('pitch_detail', pitch_id=pitch.id)
+
+            # لو اختار طريقة دفع تانية (يدوي زي ما كان)
+            else:
+                payment = form.save(commit=False)
+                payment.booking = booking
+                method_map = {'voda': 'Vodafone', 'insta': 'Instapay', 'cash': 'Cash', 'fawry': 'Fawry'}
+                payment.payment_method = method_map.get(method_from_post, 'Cash')
+                payment.save()
+
+                request.session['last_booking_code'] = booking.booking_code
+                messages.success(request, "تم تسجيل الطلب! سيتم الإلغاء تلقائياً إذا لم يؤكد خلال 30 دقيقة.")
+                return redirect('booking_success')
     else:
         form = PaymentForm()
 
@@ -393,3 +445,123 @@ def signup(request):
 # ---------------------------------------------------------
 def about_us(request):
     return render(request, 'about_us.html')
+
+# ---------------------------------------------------------
+# Paymob: بدء عملية الدفع بالمحفظة
+# ---------------------------------------------------------
+@login_required
+def paymob_wallet_pay(request, booking_id):
+    booking = get_object_or_404(Booking, id=booking_id, user=request.user)
+    phone = request.POST.get('wallet_phone', '')
+
+    if not phone:
+        messages.error(request, "يرجى إدخال رقم المحفظة!")
+        return redirect('booking_confirm', pitch_id=booking.pitch.id, hour=int(booking.time.split(':')[0]))
+
+    # حساب المبلغ بالقروش
+    if booking.payment_type == 'Deposit':
+        amount = 5000  # 50 جنيه = 5000 قرش
+    else:
+        amount = int(booking.pitch.price_per_hour * 100)
+
+    # خطوات Paymob
+    try:
+        auth_token = paymob_auth()
+        order_id = create_order(auth_token, amount, booking.booking_code)
+        payment_key = create_payment_key(auth_token, order_id, amount, request.user, phone)
+        redirect_url = pay_with_wallet(payment_key, phone)
+
+        # حفظ بيانات الدفع
+        payment, created = Payment.objects.get_or_create(booking=booking)
+        payment.paymob_order_id = str(order_id)
+        payment.amount_cents = amount
+        payment.payment_method = 'Vodafone'
+        payment.save()
+
+        if redirect_url:
+            return redirect(redirect_url)
+        else:
+            messages.error(request, "حدث خطأ في بوابة الدفع. حاول تاني.")
+            return redirect('pitch_detail', pitch_id=booking.pitch.id)
+
+    except Exception as e:
+        messages.error(request, f"خطأ في الدفع: {str(e)}")
+        return redirect('pitch_detail', pitch_id=booking.pitch.id)
+
+
+# ---------------------------------------------------------
+# Paymob: Callback بعد الدفع (Paymob يبعت النتيجة هنا)
+# ---------------------------------------------------------
+@csrf_exempt
+def paymob_callback(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            obj = data.get('obj', {})
+            order_id = str(obj.get('order', {}).get('id', ''))
+            success = obj.get('success', False)
+            hmac_received = request.GET.get('hmac', '')
+
+            # التحقق من HMAC
+            hmac_string = (
+                str(obj.get('amount_cents', '')) +
+                str(obj.get('created_at', '')) +
+                str(obj.get('currency', '')) +
+                str(obj.get('error_occured', '')) +
+                str(obj.get('has_parent_transaction', '')) +
+                str(obj.get('id', '')) +
+                str(obj.get('integration_id', '')) +
+                str(obj.get('is_3d_secure', '')) +
+                str(obj.get('is_auth', '')) +
+                str(obj.get('is_capture', '')) +
+                str(obj.get('is_refunded', '')) +
+                str(obj.get('is_standalone_payment', '')) +
+                str(obj.get('is_voided', '')) +
+                str(obj.get('order', {}).get('id', '')) +
+                str(obj.get('owner', '')) +
+                str(obj.get('pending', '')) +
+                str(obj.get('source_data', {}).get('pan', '')) +
+                str(obj.get('source_data', {}).get('sub_type', '')) +
+                str(obj.get('source_data', {}).get('type', '')) +
+                str(obj.get('success', ''))
+            )
+
+            calculated_hmac = hmac.new(
+                settings.PAYMOB_HMAC_SECRET.encode('utf-8'),
+                hmac_string.encode('utf-8'),
+                hashlib.sha512
+            ).hexdigest()
+
+            if calculated_hmac == hmac_received and success:
+                # الدفع نجح! حدّث حالة الحجز
+                payment = Payment.objects.filter(paymob_order_id=order_id).first()
+                if payment:
+                    payment.is_verified = True
+                    payment.transaction_id = str(obj.get('id', ''))
+                    payment.save()
+                    payment.booking.status = 'Confirmed'
+                    payment.booking.save()
+
+            return HttpResponse(status=200)
+
+        except Exception:
+            return HttpResponse(status=500)
+
+    return HttpResponse(status=405)
+
+
+# ---------------------------------------------------------
+# Paymob: صفحة بعد الدفع (المستخدم يرجع هنا)
+# ---------------------------------------------------------
+def paymob_response(request):
+    success = request.GET.get('success', 'false')
+    order_id = request.GET.get('order', '')
+
+    if success == 'true':
+        payment = Payment.objects.filter(paymob_order_id=order_id).first()
+        if payment:
+            request.session['last_booking_code'] = payment.booking.booking_code
+            return redirect('booking_success')
+
+    messages.error(request, "الدفع لم يتم بنجاح. حاول تاني أو اختر طريقة دفع تانية.")
+    return redirect('home')

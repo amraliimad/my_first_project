@@ -176,3 +176,17 @@ if DATABASE_URL:
         conn_max_age=600,
         ssl_require=True,
     )
+
+# Paymob Settings
+PAYMOB_API_KEY = os.environ.get('PAYMOB_API_KEY')
+PAYMOB_INTEGRATION_ID_WALLET = os.environ.get('PAYMOB_INTEGRATION_ID_WALLET')
+PAYMOB_HMAC_SECRET = os.environ.get('PAYMOB_HMAC_SECRET')    
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://amrali011.pythonanywhere.com',
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
+    'https://accept.paymob.com',          # ضيف ده
+    'https://www.mal3abonline.me',         # ضيف ده
+    'https://mal3abonline.me',             # ضيف ده
+]

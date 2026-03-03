@@ -301,7 +301,25 @@
                     <div class="form-section-title">
                         <span class="step-num">3</span> {% trans "اختر وسيلة التحويل" %}
                     </div>
+                                        <!-- محفظة إلكترونية عبر Paymob -->
+                    <label class="option-card">
+                        <input type="radio" name="pay" value="wallet"
+                               onchange="toggleWallet(true)">
+                        <span class="option-icon">📲</span>
+                        <div class="option-text">
+                            <span class="option-title">{% trans "محفظة إلكترونية (فودافون/اتصالات/أورانج)" %}</span>
+                            <span class="option-desc">{% trans "دفع آمن عبر Paymob - هيوصلك إشعار على موبايلك" %}</span>
+                        </div>
+                    </label>
 
+                    <!-- Wallet Phone Input -->
+                    <div id="wallet-box" style="display:none; background:rgba(39,174,96,0.08); border:1px solid rgba(39,174,96,0.3); border-radius:var(--radius-md); padding:16px; margin-top:8px; margin-bottom:10px; animation:fadeIn 0.3s ease;">
+                        <p style="font-size:14px; color:var(--text-2); margin-bottom:12px; font-weight:600;">
+                            {% trans "أدخل رقم المحفظة اللي هتدفع منها:" %}
+                        </p>
+                        <input type="tel" name="wallet_phone" class="form-input"
+                               placeholder="01XXXXXXXXX" style="direction:ltr;">
+                    </div>
                     <!-- Vodafone Cash -->
                     <label class="option-card">
                         <input type="radio" name="pay" value="voda"
@@ -378,6 +396,7 @@
 
     function toggleVodafone(show) {
         document.getElementById('vodafone-box').style.display = show ? 'block' : 'none';
+        document.getElementById('wallet-box').style.display = 'none';
     }
 
     /* ── Form Validation ── */
@@ -405,6 +424,14 @@
                 return;
             }
         }
+        if (payMethod && payMethod.value === 'wallet') {
+            var walletPhone = document.querySelector('input[name="wallet_phone"]').value.trim();
+            if (!walletPhone || walletPhone.length < 11) {
+                e.preventDefault();
+                showBookingError('{% trans "يرجى إدخال رقم المحفظة صحيح (11 رقم)" %} ⚠️');
+                return;
+            }
+        }
     });
 
     function showBookingError(msg) {
@@ -416,5 +443,9 @@
         container.appendChild(toast);
         setTimeout(function(){ toast.remove(); }, 4000);
     }
+    function toggleWallet(show) {
+        document.getElementById('wallet-box').style.display = show ? 'block' : 'none';
+        document.getElementById('vodafone-box').style.display = 'none';
+    }    
 </script>
 {% endblock %}

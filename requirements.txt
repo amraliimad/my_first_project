@@ -11,3 +11,5 @@ tzdata==2025.3
 whitenoise==6.11.0
 dj-database-url
 psycopg2-binary
+pip install requests
+pip freeze > requirements.txt
