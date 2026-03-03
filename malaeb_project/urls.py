@@ -8,10 +8,12 @@ from bookings import views as booking_views
 
 # 1. روابط بدون i18n (تغيير اللغة فقط)
 # 1. روابط بدون i18n (تغيير اللغة + Paymob)
+# 1. روابط بدون i18n
 urlpatterns = [
     path('i18n/', include('django.conf.urls.i18n')),
     path('paymob/callback/', booking_views.paymob_callback, name='paymob_callback'),
     path('paymob/response/', booking_views.paymob_response, name='paymob_response'),
+    path('paymob/check-status/<str:booking_code>/', booking_views.check_payment_status, name='check_payment_status'),
 ]
 
 # 2. باقي الروابط مع دعم اللغات

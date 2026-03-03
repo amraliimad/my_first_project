@@ -12,4 +12,5 @@ urlpatterns = [
 
     # Paymob URLs
     path('paymob/pay/<int:booking_id>/', views.paymob_wallet_pay, name='paymob_wallet_pay'),
+    path('payment-pending/<str:booking_code>/', views.payment_pending, name='payment_pending'),
 ]

@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "في انتظار الدفع" %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pending-layout {
+        display: flex; align-items: center; justify-content: center;
+        min-height: calc(100vh - var(--navbar-height));
+        padding: 24px;
+    }
+    .pending-card {
+        text-align: center; max-width: 480px; width: 100%;
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius-xl); padding: 40px 32px;
+        box-shadow: var(--shadow-md);
+    }
+    .pending-icon {
+        font-size: 64px; margin-bottom: 20px;
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+    .pending-title {
+        font-size: 22px; font-weight: 900; color: var(--text);
+        margin-bottom: 12px;
+    }
+    .pending-desc {
+        font-size: 15px; color: var(--text-muted);
+        line-height: 1.8; margin-bottom: 24px;
+    }
+    .booking-code-box {
+        background: var(--primary-ghost); border: 2px solid var(--primary);
+        border-radius: var(--radius-md); padding: 16px;
+        margin-bottom: 24px;
+    }
+    .booking-code-box .label {
+        font-size: 13px; color: var(--text-muted); font-weight: 700;
+    }
+    .booking-code-box .code {
+        font-size: 28px; font-weight: 900; color: var(--primary);
+        letter-spacing: 3px; margin-top: 4px;
+    }
+    .check-btn {
+        display: inline-block; padding: 14px 32px;
+        background: var(--primary); color: white;
+        border-radius: var(--radius-md); font-weight: 800;
+        font-size: 16px; text-decoration: none;
+        transition: all 0.2s;
+    }
+    .check-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(39,174,96,0.35);
+    }
+    .auto-refresh {
+        font-size: 12px; color: var(--text-muted);
+        margin-top: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pending-layout">
+    <div class="pending-card">
+        <div class="pending-icon">📲</div>
+        <h1 class="pending-title">{% trans "في انتظار تأكيد الدفع" %}</h1>
+        <p class="pending-desc">
+            {% trans "تم إرسال إشعار لموبايلك! افتح تطبيق المحفظة الإلكترونية ووافق على عملية الدفع." %}
+        </p>
+
+        <div class="booking-code-box">
+            <div class="label">{% trans "كود الحجز" %}</div>
+            <div class="code">{{ booking.booking_code }}</div>
+        </div>
+
+        <a href="{% url 'user_profile' %}" class="check-btn">
+            {% trans "تحقق من حالة الحجز" %} 🔄
+        </a>
+
+        <p class="auto-refresh">
+            {% trans "الصفحة بتتحدث تلقائياً كل 10 ثواني" %}
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-check payment status every 10 seconds
+    setTimeout(function() {
+        fetch('/paymob/check-status/{{ booking.booking_code }}/')
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'Confirmed') {
+                    window.location.href = '{% url "booking_success" %}';
+                } else {
+                    location.reload();
+                }
+            })
+            .catch(() => location.reload());
+    }, 10000);
+</script>
+{% endblock %}

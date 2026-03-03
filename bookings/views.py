@@ -17,7 +17,7 @@ from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from .paymob import paymob_auth, create_order, create_payment_key, pay_with_wallet
 from django.conf import settings
-
+from django.http import JsonResponse
 # ---------------------------------------------------------
 # دالة مساعدة لحساب المسافة (Haversine Formula)
 # ---------------------------------------------------------
@@ -344,7 +344,10 @@ def booking_confirm(request, pitch_id, hour):
                     )
 
                     if redirect_url:
-                        return redirect(redirect_url)
+                        # حفظ كود الحجز في الجلسة
+                        request.session['last_booking_code'] = booking.booking_code
+                        # وجّه العميل لصفحة الانتظار بدل Paymob مباشرة
+                        return redirect('payment_pending', booking_code=booking.booking_code)
                     else:
                         messages.error(request, "حدث خطأ في بوابة الدفع. حاول تاني.")
                         booking.delete()
@@ -384,14 +387,30 @@ def booking_confirm(request, pitch_id, hour):
 @login_required
 def booking_success(request):
     booking_code = request.session.get('last_booking_code')
-    booking      = None
+    booking = None
+    payment = None
     if booking_code:
         booking = Booking.objects.filter(booking_code=booking_code).first()
+        if booking:
+            payment = Payment.objects.filter(booking=booking).first()
+
     return render(request, 'booking_success.html', {
         'booking_code': booking_code,
-        'booking':      booking,
+        'booking': booking,
+        'payment': payment,
     })
+# ---------------------------------------------------------
+# صفحة انتظار الدفع
+# ---------------------------------------------------------
+@login_required
+def payment_pending(request, booking_code):
+    booking = get_object_or_404(Booking, booking_code=booking_code, user=request.user)
+    payment = Payment.objects.filter(booking=booking).first()
 
+    return render(request, 'payment_pending.html', {
+        'booking': booking,
+        'payment': payment,
+    })
 
 # ---------------------------------------------------------
 # الملف الشخصي
@@ -565,3 +584,20 @@ def paymob_response(request):
 
     messages.error(request, "الدفع لم يتم بنجاح. حاول تاني أو اختر طريقة دفع تانية.")
     return redirect('home')
+# ---------------------------------------------------------
+# API: التحقق من حالة الدفع (للصفحة المنتظرة)
+# ---------------------------------------------------------
+
+@login_required
+def check_payment_status(request, booking_code):
+    booking = Booking.objects.filter(
+        booking_code=booking_code,
+        user=request.user
+    ).first()
+
+    if booking:
+        return JsonResponse({
+            'status': booking.status,
+            'booking_code': booking.booking_code,
+        })
+    return JsonResponse({'status': 'not_found'}, status=404)
