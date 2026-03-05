@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "جدول حجوزات" %} - {{ pitch.name }}{% endblock %}
+
+{% block content %}
+<style>
+    .schedule-container { max-width: 1000px; margin: 0 auto; padding: 30px 20px; }
+    .schedule-header {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius-lg); padding: 24px;
+        margin-bottom: 20px; box-shadow: var(--shadow-sm);
+    }
+    .schedule-header h1 { font-size: 22px; margin-bottom: 4px; }
+    .schedule-header p { color: var(--text-2); font-size: 14px; }
+
+    /* أيام */
+    .days-bar {
+        display: flex; gap: 8px; overflow-x: auto; padding: 10px 0 16px;
+        margin-bottom: 20px;
+    }
+    .days-bar::-webkit-scrollbar { height: 4px; }
+    .days-bar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .day-chip {
+        flex-shrink: 0; padding: 10px 16px; border-radius: var(--radius-sm);
+        background: var(--surface); border: 1px solid var(--border);
+        font-size: 13px; font-weight: 600; text-align: center;
+        color: var(--text-2); cursor: pointer; transition: all 0.2s;
+        min-width: 70px;
+    }
+    .day-chip:hover { border-color: var(--primary); color: var(--primary); }
+    .day-chip.active {
+        background: var(--primary); color: white;
+        border-color: var(--primary); box-shadow: 0 4px 12px rgba(39,174,96,0.3);
+    }
+    .day-chip small { display: block; font-size: 11px; opacity: 0.8; }
+
+    /* جدول الساعات */
+    .hours-grid {
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 12px; margin-bottom: 30px;
+    }
+    .hour-card {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius-md); padding: 16px;
+        display: flex; align-items: center; justify-content: space-between;
+        transition: all 0.2s; box-shadow: var(--shadow-sm);
+    }
+    .hour-card.booked { border-right: 4px solid var(--danger); background: var(--danger-ghost); }
+    .hour-card.manual { border-right: 4px solid var(--accent); }
+    .hour-card.available { border-right: 4px solid var(--primary); }
+    .hour-time { font-size: 18px; font-weight: 800; color: var(--text); }
+    .hour-status { font-size: 12px; color: var(--text-2); }
+    .hour-actions { display: flex; gap: 6px; }
+
+    /* تفاصيل الحجوزات */
+    .details-section { margin-top: 30px; }
+    .details-section h2 {
+        font-size: 20px; margin-bottom: 16px;
+        padding-bottom: 10px; border-bottom: 2px solid var(--border);
+    }
+    .detail-card {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius-md); padding: 18px;
+        margin-bottom: 12px; box-shadow: var(--shadow-sm);
+    }
+    .detail-row {
+        display: flex; justify-content: space-between;
+        padding: 6px 0; font-size: 14px;
+        border-bottom: 1px solid var(--border);
+    }
+    .detail-row:last-child { border: none; }
+    .detail-label { color: var(--text-2); font-weight: 600; }
+    .detail-value { font-weight: 700; }
+    .paid { color: var(--primary); }
+    .remaining { color: var(--danger); }
+
+    /* Modal للحجز اليدوي */
+    .modal-overlay {
+        display: none; position: fixed; inset: 0;
+        background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+        z-index: 2000; justify-content: center; align-items: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal-box {
+        background: var(--surface); border-radius: var(--radius-lg);
+        padding: 30px; width: 90%; max-width: 420px;
+        box-shadow: var(--shadow-lg);
+    }
+    .modal-box h3 { font-size: 20px; margin-bottom: 16px; }
+    .modal-input {
+        width: 100%; padding: 12px; border: 1px solid var(--border);
+        border-radius: var(--radius-sm); font-family: 'Cairo', sans-serif;
+        font-size: 14px; margin-bottom: 10px; background: var(--surface-2);
+        color: var(--text);
+    }
+    .modal-input:focus { outline: none; border-color: var(--primary); }
+    .modal-btns { display: flex; gap: 10px; margin-top: 16px; }
+    .btn-modal {
+        flex: 1; padding: 12px; border: none; border-radius: var(--radius-sm);
+        font-family: 'Cairo', sans-serif; font-size: 14px;
+        font-weight: 700; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-confirm { background: var(--primary); color: white; }
+    .btn-confirm:hover { background: var(--primary-dark); }
+    .btn-cancel-modal { background: var(--surface-2); color: var(--text-2); border: 1px solid var(--border); }
+
+    .back-link {
+        display: inline-flex; align-items: center; gap: 6px;
+        color: var(--primary); font-weight: 700; font-size: 14px;
+        margin-bottom: 16px;
+    }
+    .back-link:hover { text-decoration: underline; }
+</style>
+
+<div class="schedule-container">
+
+    <a href="{% url 'owner_dashboard' %}" class="back-link">→ {% trans "رجوع للداشبورد" %}</a>
+
+    <!-- الهيدر -->
+    <div class="schedule-header">
+        <h1>📋 {{ pitch.name }}</h1>
+        <p>📍 {{ pitch.get_location_display }} — {% trans "جدول يوم" %} {{ selected_date }}</p>
+    </div>
+
+    <!-- شريط الأيام -->
+    <div class="days-bar">
+        {% for day in days_list %}
+        <a href="?date={{ day.full_date }}"
+           class="day-chip {% if day.full_date == selected_date %}active{% endif %}">
+            {{ day.display }}
+            <small>{{ day.day_name }}</small>
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- جدول الساعات -->
+    <div class="hours-grid">
+        {% for hour in hours_schedule %}
+        <div class="hour-card {% if hour.is_booked %}{% if hour.is_manual %}manual{% else %}booked{% endif %}{% else %}available{% endif %}">
+            <div>
+                <div class="hour-time">{{ hour.hour_display }}</div>
+                <div class="hour-status">
+                    {% if hour.is_booked %}
+                        {% if hour.is_manual %}
+                            📞 {{ hour.booking.customer_name|default:"حجز يدوي" }}
+                        {% else %}
+                            🌐 {{ hour.booking.user.username }}
+                        {% endif %}
+                    {% else %}
+                        ✅ {% trans "متاح" %}
+                    {% endif %}
+                </div>
+            </div>
+            <div class="hour-actions">
+                {% if hour.is_booked and hour.is_manual %}
+                    <form method="post" action="{% url 'owner_unblock_hour' hour.booking.id %}"
+                          onsubmit="return confirm('{% trans "متأكد تفتح الميعاد ده؟" %}')">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-sm" style="background:var(--danger-ghost);color:var(--danger);">
+                            🔓 {% trans "فتح" %}
+                        </button>
+                    </form>
+                {% elif not hour.is_booked %}
+                    <button class="btn-sm btn-green"
+                            onclick="openBlockModal('{{ hour.hour_value }}', '{{ hour.hour_display }}')">
+                        🔒 {% trans "حجز يدوي" %}
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- تفاصيل حجوزات اليوم -->
+    {% if bookings_with_details %}
+    <div class="details-section">
+        <h2>💰 {% trans "تفاصيل الدفع" %}</h2>
+        {% for item in bookings_with_details %}
+        <div class="detail-card">
+            <div class="detail-row">
+                <span class="detail-label">🕐 {% trans "الوقت" %}</span>
+                <span class="detail-value">{{ item.booking.time }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">👤 {% trans "العميل" %}</span>
+                <span class="detail-value">
+                    {% if item.booking.is_manual %}
+                        {{ item.booking.customer_name|default:"—" }}
+                        {% if item.booking.customer_phone %}(📱 {{ item.booking.customer_phone }}){% endif %}
+                    {% else %}
+                        {{ item.booking.user.username }}
+                    {% endif %}
+                </span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">💳 {% trans "نوع الدفع" %}</span>
+                <span class="detail-value">{{ item.booking.get_payment_type_display }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">✅ {% trans "المدفوع أونلاين" %}</span>
+                <span class="detail-value paid">{{ item.paid_online }} {% trans "ج.م" %}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">💵 {% trans "المتبقي (كاش في الملعب)" %}</span>
+                <span class="detail-value remaining">{{ item.remaining }} {% trans "ج.م" %}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Modal الحجز اليدوي -->
+<div class="modal-overlay" id="blockModal">
+    <div class="modal-box">
+        <h3>🔒 {% trans "حجز يدوي" %}</h3>
+        <p style="color:var(--text-2);font-size:14px;margin-bottom:16px;">
+            {% trans "الساعة:" %} <strong id="modalHourDisplay"></strong>
+        </p>
+        <form method="post" action="{% url 'owner_block_hour' pitch.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="date" value="{{ selected_date }}">
+            <input type="hidden" name="hour" id="modalHourValue">
+            <input type="text" name="customer_name" class="modal-input"
+                   placeholder="{% trans 'اسم العميل (اختياري)' %}">
+            <input type="text" name="customer_phone" class="modal-input"
+                   placeholder="{% trans 'رقم التليفون (اختياري)' %}">
+            <div class="modal-btns">
+                <button type="submit" class="btn-modal btn-confirm">✅ {% trans "تأكيد الحجز" %}</button>
+                <button type="button" class="btn-modal btn-cancel-modal" onclick="closeBlockModal()">❌ {% trans "إلغاء" %}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openBlockModal(hourValue, hourDisplay) {
+        document.getElementById('modalHourValue').value = hourValue;
+        document.getElementById('modalHourDisplay').textContent = hourDisplay;
+        document.getElementById('blockModal').classList.add('show');
+    }
+    function closeBlockModal() {
+        document.getElementById('blockModal').classList.remove('show');
+    }
+    // إغلاق بالضغط برا الـ modal
+    document.getElementById('blockModal').addEventListener('click', function(e) {
+        if (e.target === this) closeBlockModal();
+    });
+</script>
+
+{% endblock %}

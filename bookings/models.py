@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 import uuid
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 # ----------------------------------------
@@ -9,6 +10,14 @@ import uuid
 class Pitch(models.Model):
     is_new = models.BooleanField(default=False, verbose_name="ملعب جديد؟")
     is_available = models.BooleanField(default=True, verbose_name="متاح الآن؟")
+        # ── 🆕 ربط صاحب الملعب بحساب مستخدم ──
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='owned_pitches',
+        verbose_name="صاحب الملعب (حساب المستخدم)"
+    )
     SIZE_CHOICES = [
         ('5x5', 'خماسي (5 ضد 5)'),
         ('7x7', 'سباعي (7 ضد 7)'),
@@ -113,12 +122,22 @@ class Booking(models.Model):
     payment_type = models.CharField(max_length=20, choices=PAYMENT_TYPE_CHOICES, default='Full', verbose_name="نوع الدفع")
     created_at   = models.DateTimeField(auto_now_add=True, verbose_name="وقت إنشاء الطلب")
     booking_code = models.CharField(max_length=10, unique=True, editable=False, null=True, verbose_name="كود الحجز")
+        # ── 🆕 فيلدات الحجز اليدوي ──
+    is_manual = models.BooleanField(default=False, verbose_name="حجز يدوي؟")
+    customer_name = models.CharField(max_length=100, blank=True, verbose_name="اسم العميل (للحجز اليدوي)")
+    customer_phone = models.CharField(max_length=15, blank=True, verbose_name="رقم العميل (للحجز اليدوي)")
 
     class Meta:
         verbose_name        = "حجز"
         verbose_name_plural = "الحجوزات"
         ordering            = ['-date', '-time']
-
+        constraints = [
+            models.UniqueConstraint(
+                fields=['pitch', 'date', 'time'],
+                condition=~models.Q(status='Cancelled'),
+                name='unique_active_booking'
+            )
+        ]
     def save(self, *args, **kwargs):
         if not self.booking_code:
             self.booking_code = str(uuid.uuid4()).upper()[:8]
@@ -160,6 +179,16 @@ class Payment(models.Model):
 # جدول التقييمات (Reviews)
 # ----------------------------------------
 class Review(models.Model):
+    pitch      = models.ForeignKey(Pitch, related_name='reviews', on_delete=models.CASCADE, verbose_name="الملعب")
+    user       = models.ForeignKey(User,  on_delete=models.CASCADE, verbose_name="المستخدم")
+    rating     = models.IntegerField(
+        default=5,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        verbose_name="التقييم (من 5)"
+    )
+    comment    = models.TextField(blank=True, null=True, verbose_name="التعليق")
+    created_at = models.DateTimeField(auto_now_add=True)
+
     pitch      = models.ForeignKey(Pitch, related_name='reviews', on_delete=models.CASCADE, verbose_name="الملعب")
     user       = models.ForeignKey(User,  on_delete=models.CASCADE, verbose_name="المستخدم")
     rating     = models.IntegerField(default=5, verbose_name="التقييم (من 5)")

@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # ── الصفحات العامة ──
     path('', views.home, name='home'),
     path('pitch/<int:pitch_id>/', views.pitch_detail, name='pitch_detail'),
     path('confirm/<int:pitch_id>/<int:hour>/', views.booking_confirm, name='booking_confirm'),
@@ -10,7 +11,14 @@ urlpatterns = [
     path('cancel-booking/<int:booking_id>/', views.cancel_booking, name='cancel_booking'),
     path('about-us/', views.about_us, name='about_us'),
 
-    # Paymob URLs
+    # ── Paymob ──
     path('paymob/pay/<int:booking_id>/', views.paymob_wallet_pay, name='paymob_wallet_pay'),
     path('payment-pending/<str:booking_code>/', views.payment_pending, name='payment_pending'),
+
+    # ── 🆕 داشبورد صاحب الملعب ──
+    path('owner/', views.owner_dashboard, name='owner_dashboard'),
+    path('owner/pitch/<int:pitch_id>/schedule/', views.owner_schedule, name='owner_schedule'),
+    path('owner/pitch/<int:pitch_id>/block/', views.owner_block_hour, name='owner_block_hour'),
+    path('owner/unblock/<int:booking_id>/', views.owner_unblock_hour, name='owner_unblock_hour'),
+    path('owner/earnings/', views.owner_earnings, name='owner_earnings'),
 ]

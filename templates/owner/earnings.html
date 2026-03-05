@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "ملخص الأرباح" %}{% endblock %}
+
+{% block content %}
+<style>
+    .earnings-container { max-width: 900px; margin: 0 auto; padding: 30px 20px; }
+    .earnings-header {
+        background: linear-gradient(135deg, #2c3e50, #1a252f);
+        border-radius: var(--radius-lg); padding: 30px; color: white;
+        margin-bottom: 24px;
+    }
+    .earnings-header h1 { font-size: 24px; margin-bottom: 6px; }
+    .earnings-header p { opacity: 0.8; font-size: 14px; }
+
+    .earnings-grid {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px; margin-bottom: 30px;
+    }
+    .earning-card {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius-md); padding: 24px; text-align: center;
+        box-shadow: var(--shadow-sm);
+    }
+    .earning-card .period { font-size: 14px; color: var(--text-2); margin-bottom: 8px; }
+    .earning-card .amount { font-size: 32px; font-weight: 800; color: var(--primary); }
+    .earning-card .count { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+    .pitch-earnings-section h2 {
+        font-size: 20px; margin-bottom: 16px;
+        padding-bottom: 10px; border-bottom: 2px solid var(--border);
+    }
+    .pitch-earning-row {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius-md); padding: 18px;
+        margin-bottom: 10px; display: flex;
+        justify-content: space-between; align-items: center;
+        flex-wrap: wrap; gap: 10px; box-shadow: var(--shadow-sm);
+    }
+    .pitch-earning-info h3 { font-size: 16px; margin-bottom: 2px; }
+    .pitch-earning-info p { font-size: 13px; color: var(--text-2); }
+    .pitch-earning-amount {
+        font-size: 22px; font-weight: 800; color: var(--primary);
+    }
+    .back-link {
+        display: inline-flex; align-items: center; gap: 6px;
+        color: var(--primary); font-weight: 700; font-size: 14px;
+        margin-bottom: 16px;
+    }
+    .back-link:hover { text-decoration: underline; }
+    .note-box {
+        background: rgba(243,156,18,0.1); border: 1px solid rgba(243,156,18,0.3);
+        border-radius: var(--radius-sm); padding: 14px; margin-top: 20px;
+        font-size: 13px; color: var(--text-2);
+    }
+</style>
+
+<div class="earnings-container">
+
+    <a href="{% url 'owner_dashboard' %}" class="back-link">→ {% trans "رجوع للداشبورد" %}</a>
+
+    <div class="earnings-header">
+        <h1>💰 {% trans "ملخص الأرباح" %}</h1>
+        <p>{% trans "الأرباح من العربونات والدفع الأونلاين المؤكدة" %}</p>
+    </div>
+
+    <!-- الأرباح حسب الفترة -->
+    <div class="earnings-grid">
+        <div class="earning-card">
+            <div class="period">📅 {% trans "النهاردة" %}</div>
+            <div class="amount">{{ earnings.today.amount }} <small>{% trans "ج.م" %}</small></div>
+            <div class="count">{{ earnings.today.count }} {% trans "عملية دفع" %}</div>
+        </div>
+        <div class="earning-card">
+            <div class="period">📆 {% trans "آخر 7 أيام" %}</div>
+            <div class="amount">{{ earnings.this_week.amount }} <small>{% trans "ج.م" %}</small></div>
+            <div class="count">{{ earnings.this_week.count }} {% trans "عملية دفع" %}</div>
+        </div>
+        <div class="earning-card">
+            <div class="period">🗓️ {% trans "آخر 30 يوم" %}</div>
+            <div class="amount">{{ earnings.this_month.amount }} <small>{% trans "ج.م" %}</small></div>
+            <div class="count">{{ earnings.this_month.count }} {% trans "عملية دفع" %}</div>
+        </div>
+    </div>
+
+    <!-- تفصيل لكل ملعب -->
+    <div class="pitch-earnings-section">
+        <h2>🏟️ {% trans "تفصيل لكل ملعب (آخر 30 يوم)" %}</h2>
+        {% for item in pitch_earnings %}
+        <div class="pitch-earning-row">
+            <div class="pitch-earning-info">
+                <h3>{{ item.pitch.name }}</h3>
+                <p>📍 {{ item.pitch.get_location_display }} — {{ item.booking_count }} {% trans "حجز مؤكد" %}</p>
+            </div>
+            <div class="pitch-earning-amount">
+                {{ item.monthly_earnings }} {% trans "ج.م" %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="note-box">
+        ⚠️ {% trans "ملحوظة: الأرقام دي بتشمل بس المبالغ المدفوعة أونلاين والمؤكدة. المبالغ الكاش اللي بتتدفع في الملعب مش محسوبة هنا." %}
+    </div>
+
+</div>
+{% endblock %}

@@ -302,6 +302,12 @@
             <!-- Authenticated User Section -->
             {% if user.is_authenticated %}
                 <div class="nav-section-title" style="margin-top:10px;">{% trans "حسابي" %}</div>
+                                <!-- 🆕 رابط داشبورد صاحب الملعب -->
+                {% if user.owned_pitches.exists %}
+                <a href="{% url 'owner_dashboard' %}" class="nav-item {% block owner_active %}{% endblock %}" style="color:var(--accent);">
+                    <span class="nav-icon">⚙️</span> {% trans "لوحة تحكم ملعبي" %}
+                </a>
+                {% endif %}
                 <a href="{% url 'user_profile' %}" class="nav-item {% block profile_active %}{% endblock %}">
                     <span class="nav-icon">👤</span> {% trans "حسابي وحجوزاتي" %}
                 </a>

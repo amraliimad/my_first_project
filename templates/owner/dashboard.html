@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "لوحة تحكم صاحب الملعب" %}{% endblock %}
+
+{% block content %}
+<style>
+    .owner-container { max-width: 1100px; margin: 0 auto; padding: 30px 20px; }
+    .owner-header {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        border-radius: var(--radius-lg); padding: 30px;
+        color: white; margin-bottom: 24px;
+    }
+    .owner-header h1 { font-size: 26px; margin-bottom: 6px; }
+    .owner-header p { opacity: 0.85; font-size: 15px; }
+
+    /* الإحصائيات */
+    .stats-grid {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px; margin-bottom: 30px;
+    }
+    .stat-card {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius-md); padding: 22px; text-align: center;
+        box-shadow: var(--shadow-sm); transition: transform 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+    .stat-icon { font-size: 32px; margin-bottom: 8px; }
+    .stat-number { font-size: 28px; font-weight: 800; color: var(--primary); }
+    .stat-label { font-size: 13px; color: var(--text-2); margin-top: 4px; }
+
+    /* ملاعبي */
+    .pitches-section h2 {
+        font-size: 20px; margin-bottom: 16px;
+        padding-bottom: 10px; border-bottom: 2px solid var(--border);
+    }
+    .pitch-owner-card {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius-md); padding: 20px;
+        margin-bottom: 14px; display: flex; align-items: center;
+        justify-content: space-between; flex-wrap: wrap; gap: 12px;
+        box-shadow: var(--shadow-sm); transition: all 0.2s;
+    }
+    .pitch-owner-card:hover { border-color: var(--primary); box-shadow: var(--shadow-md); }
+    .pitch-info h3 { font-size: 17px; margin-bottom: 4px; }
+    .pitch-info p { font-size: 13px; color: var(--text-2); }
+    .pitch-meta { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--text-muted); }
+    .pitch-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-sm {
+        padding: 8px 16px; border-radius: var(--radius-sm);
+        font-size: 13px; font-weight: 700; border: none;
+        display: inline-flex; align-items: center; gap: 6px;
+        transition: all 0.2s; cursor: pointer;
+    }
+    .btn-green { background: var(--primary-ghost); color: var(--primary); }
+    .btn-green:hover { background: var(--primary); color: white; }
+    .btn-blue { background: rgba(52,152,219,0.1); color: #3498db; }
+    .btn-blue:hover { background: #3498db; color: white; }
+
+    /* حجوزات اليوم */
+    .today-section { margin-top: 30px; }
+    .today-pitch { margin-bottom: 20px; }
+    .today-pitch h3 { font-size: 16px; margin-bottom: 10px; color: var(--text); }
+    .today-bookings-list {
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 10px;
+    }
+    .today-booking-item {
+        background: var(--surface-2); border: 1px solid var(--border);
+        border-radius: var(--radius-sm); padding: 12px;
+        border-right: 4px solid var(--primary);
+    }
+    .today-booking-item .time { font-weight: 800; color: var(--primary); font-size: 16px; }
+    .today-booking-item .name { font-size: 14px; color: var(--text); margin-top: 4px; }
+    .today-booking-item .badge {
+        display: inline-block; padding: 2px 8px; border-radius: 20px;
+        font-size: 11px; font-weight: 700; margin-top: 6px;
+    }
+    .badge-manual { background: rgba(243,156,18,0.15); color: #f39c12; }
+    .badge-online { background: var(--primary-ghost); color: var(--primary); }
+    .empty-state {
+        text-align: center; padding: 40px; color: var(--text-muted);
+        font-size: 15px;
+    }
+    .empty-state span { font-size: 40px; display: block; margin-bottom: 10px; }
+</style>
+
+<div class="owner-container">
+
+    <!-- الهيدر -->
+    <div class="owner-header">
+        <h1>👋 {% trans "أهلاً" %} {{ user.username }}</h1>
+        <p>{% trans "لوحة تحكم ملاعبك — كل حاجة في مكان واحد" %}</p>
+    </div>
+
+    <!-- الإحصائيات -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">🏟️</div>
+            <div class="stat-number">{{ stats.total_pitches }}</div>
+            <div class="stat-label">{% trans "ملاعبي" %}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📅</div>
+            <div class="stat-number">{{ stats.today_bookings }}</div>
+            <div class="stat-label">{% trans "حجوزات النهاردة" %}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">⏳</div>
+            <div class="stat-number">{{ stats.pending_bookings }}</div>
+            <div class="stat-label">{% trans "في انتظار التأكيد" %}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">💰</div>
+            <div class="stat-number">{{ stats.weekly_earnings }} {% trans "ج.م" %}</div>
+            <div class="stat-label">{% trans "أرباح الأسبوع (أونلاين)" %}</div>
+        </div>
+    </div>
+
+    <!-- ملاعبي -->
+    <div class="pitches-section">
+        <h2>🏟️ {% trans "ملاعبي" %}</h2>
+        {% for pitch in pitches %}
+        <div class="pitch-owner-card">
+            <div class="pitch-info">
+                <h3>{{ pitch.name }}</h3>
+                <p>📍 {{ pitch.get_location_display }} — {{ pitch.address }}</p>
+                <div class="pitch-meta">
+                    <span>⚽ {{ pitch.get_size_display }}</span>
+                    <span>•</span>
+                    <span>🕐 {{ pitch.opening_hour }}:00 → {{ pitch.closing_hour }}:00</span>
+                    <span>•</span>
+                    <span>💲 {{ pitch.price_per_hour }} {% trans "ج.م/ساعة" %}</span>
+                </div>
+            </div>
+            <div class="pitch-actions">
+                <a href="{% url 'owner_schedule' pitch.id %}?date={{ today|date:'Y-m-d' }}" class="btn-sm btn-green">
+                    📋 {% trans "جدول الحجوزات" %}
+                </a>
+                <a href="{% url 'owner_earnings' %}" class="btn-sm btn-blue">
+                    💰 {% trans "الأرباح" %}
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- حجوزات اليوم -->
+    <div class="today-section">
+        <h2>📅 {% trans "حجوزات النهاردة" %} ({{ today|date:"d/m/Y" }})</h2>
+        {% for item in today_schedule %}
+        <div class="today-pitch">
+            <h3>{{ item.pitch.name }} ({{ item.count }} {% trans "حجز" %})</h3>
+            {% if item.bookings %}
+            <div class="today-bookings-list">
+                {% for booking in item.bookings %}
+                <div class="today-booking-item">
+                    <div class="time">🕐 {{ booking.time }}</div>
+                    <div class="name">
+                        {% if booking.is_manual %}
+                            👤 {{ booking.customer_name|default:"بدون اسم" }}
+                            {% if booking.customer_phone %}<br>📱 {{ booking.customer_phone }}{% endif %}
+                        {% else %}
+                            👤 {{ booking.user.username }}
+                        {% endif %}
+                    </div>
+                    <span class="badge {% if booking.is_manual %}badge-manual{% else %}badge-online{% endif %}">
+                        {% if booking.is_manual %}📞 {% trans "حجز تليفون" %}{% else %}🌐 {% trans "حجز أونلاين" %}{% endif %}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <span>😴</span>
+                {% trans "مفيش حجوزات النهاردة لهذا الملعب" %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+{% endblock %}

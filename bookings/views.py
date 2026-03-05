@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
 from django.contrib import messages
-from django.db.models import Avg, Q
+from django.db.models import Avg, Q, Sum
 from django.core.paginator import Paginator
 from django.utils import timezone
 from datetime import datetime, timedelta
@@ -18,6 +18,7 @@ from django.views.decorators.csrf import csrf_exempt
 from .paymob import paymob_auth, create_order, create_payment_key, pay_with_wallet
 from django.conf import settings
 from django.http import JsonResponse
+from decimal import Decimal
 # ---------------------------------------------------------
 # دالة مساعدة لحساب المسافة (Haversine Formula)
 # ---------------------------------------------------------
@@ -91,8 +92,8 @@ def home(request):
     page_number = request.GET.get('page')
     pitches     = paginator.get_page(page_number)
 
+    # ✅ الجديد (مرة واحدة بس):
     return render(request, 'home.html', {
-        'pitches_count': Pitch.objects.count(),  # ← أضف السطر ده
         'pitches':           pitches,
         'pitches_count':     pitches_count,
         'selected_location': location_query,
@@ -101,7 +102,6 @@ def home(request):
         'selected_price':    max_price,
         'is_nearest_search': bool(user_lat),
     })
-
 
 # ---------------------------------------------------------
 # تفاصيل الملعب
@@ -120,10 +120,25 @@ def pitch_detail(request, pitch_id):
             ).exists()
 
             if not has_played:
-                messages.error(request, "لا يمكنك تقييم الملعب إلا بعد اللعب فيه!")
+                            messages.error(request, "لا يمكنك تقييم الملعب إلا بعد اللعب فيه!")
+            # ✅ الكود الجديد:
             elif not Review.objects.filter(pitch=pitch, user=request.user).exists():
-                Review.objects.create(...)
-                messages.success(request, "تم نشر تقييمك!")
+                rating = int(request.POST.get('rating', 5))
+                comment = request.POST.get('comment', '')
+                
+                # التأكد إن التقييم بين 1 و 5
+                if rating < 1:
+                    rating = 1
+                elif rating > 5:
+                    rating = 5
+                
+                Review.objects.create(
+                    pitch=pitch,
+                    user=request.user,
+                    rating=rating,
+                    comment=comment,
+                )
+                messages.success(request, "تم نشر تقييمك!") 
             else:
                 messages.warning(request, "لقد قمت بتقييم هذا الملعب مسبقاً.")
             return redirect('pitch_detail', pitch_id=pitch.id)
@@ -601,3 +616,281 @@ def check_payment_status(request, booking_code):
             'booking_code': booking.booking_code,
         })
     return JsonResponse({'status': 'not_found'}, status=404)
+
+# ═══════════════════════════════════════════════════════
+# داشبورد صاحب الملعب
+# ═══════════════════════════════════════════════════════
+
+@login_required
+def owner_dashboard(request):
+    """الصفحة الرئيسية لصاحب الملعب"""
+    pitches = Pitch.objects.filter(owner=request.user)
+
+    if not pitches.exists():
+        messages.error(request, "ليس لديك ملاعب مسجلة في حسابك.")
+        return redirect('home')
+
+    today = timezone.now().date()
+
+    stats = {
+        'total_pitches': pitches.count(),
+        'today_bookings': Booking.objects.filter(
+            pitch__in=pitches, date=today
+        ).exclude(status='Cancelled').count(),
+        'pending_bookings': Booking.objects.filter(
+            pitch__in=pitches, status='Pending'
+        ).count(),
+        'confirmed_bookings': Booking.objects.filter(
+            pitch__in=pitches, status='Confirmed',
+            date__gte=today
+        ).count(),
+    }
+
+    # حساب أرباح الأسبوع
+    weekly_payments = Payment.objects.filter(
+        booking__pitch__in=pitches,
+        booking__status='Confirmed',
+        booking__date__gte=today - timedelta(days=7),
+        is_verified=True
+    )
+    total_cents = weekly_payments.aggregate(total=Sum('amount_cents'))['total'] or 0
+    stats['weekly_earnings'] = Decimal(total_cents) / 100
+
+    # حجوزات اليوم لكل ملعب
+    today_schedule = []
+    for pitch in pitches:
+        pitch_bookings = Booking.objects.filter(
+            pitch=pitch, date=today
+        ).exclude(status='Cancelled').order_by('time')
+        today_schedule.append({
+            'pitch': pitch,
+            'bookings': pitch_bookings,
+            'count': pitch_bookings.count(),
+        })
+
+    return render(request, 'owner/dashboard.html', {
+        'pitches': pitches,
+        'stats': stats,
+        'today': today,
+        'today_schedule': today_schedule,
+    })
+
+
+# ───────────────────────────────────────────
+# 1. جدول الحجوزات (مين جاي النهاردة؟)
+# ───────────────────────────────────────────
+@login_required
+def owner_schedule(request, pitch_id):
+    pitch = get_object_or_404(Pitch, id=pitch_id, owner=request.user)
+
+    date_str = request.GET.get('date')
+    try:
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        selected_date = datetime.now().date()
+
+    bookings = Booking.objects.filter(
+        pitch=pitch, date=selected_date
+    ).exclude(status='Cancelled').order_by('time')
+
+    # تفاصيل الدفع لكل حجز
+    bookings_with_details = []
+    for booking in bookings:
+        payment = Payment.objects.filter(booking=booking).first()
+
+        if booking.payment_type == 'Deposit':
+            paid_online = Decimal('50.00')
+            remaining = pitch.price_per_hour - paid_online
+        elif booking.payment_type == 'Full':
+            paid_online = pitch.price_per_hour
+            remaining = Decimal('0.00')
+        else:
+            paid_online = Decimal('0.00')
+            remaining = pitch.price_per_hour
+
+        bookings_with_details.append({
+            'booking': booking,
+            'payment': payment,
+            'paid_online': paid_online,
+            'remaining': remaining,
+            'is_verified': payment.is_verified if payment else False,
+        })
+
+    # ساعات العمل مع حالة كل ساعة
+    booked_hours = {int(b.time.split(':')[0]): b for b in bookings}
+    hours_schedule = []
+
+    for i in range(24):
+        # التحقق من مواعيد العمل
+        is_open = False
+        if pitch.opening_hour < pitch.closing_hour:
+            if pitch.opening_hour <= i < pitch.closing_hour:
+                is_open = True
+        elif pitch.opening_hour > pitch.closing_hour:
+            if i >= pitch.opening_hour or i < pitch.closing_hour:
+                is_open = True
+        else:
+            is_open = True
+
+        if not is_open:
+            continue
+
+        # تنسيق الوقت
+        if i == 0:
+            formatted_time = "12:00 ص"
+        elif i < 12:
+            formatted_time = f"{i}:00 ص"
+        elif i == 12:
+            formatted_time = "12:00 م"
+        else:
+            formatted_time = f"{i - 12}:00 م"
+
+        booking_obj = booked_hours.get(i)
+        hours_schedule.append({
+            'hour_value': i,
+            'hour_display': formatted_time,
+            'booking': booking_obj,
+            'is_booked': booking_obj is not None,
+            'is_manual': booking_obj.is_manual if booking_obj else False,
+        })
+
+    # أيام للتنقل
+    days_list = []
+    today = datetime.now().date()
+    for i in range(14):
+        day_date = today + timedelta(days=i)
+        days_list.append({
+            'full_date': day_date.strftime('%Y-%m-%d'),
+            'day_name': day_date.strftime('%A'),
+            'display': day_date.strftime('%d/%m'),
+        })
+
+    return render(request, 'owner/schedule.html', {
+        'pitch': pitch,
+        'bookings_with_details': bookings_with_details,
+        'hours_schedule': hours_schedule,
+        'selected_date': selected_date.strftime('%Y-%m-%d'),
+        'days_list': days_list,
+    })
+
+
+# ───────────────────────────────────────────
+# 3. إغلاق ميعاد يدوياً (Manual Block)
+# ───────────────────────────────────────────
+@login_required
+def owner_block_hour(request, pitch_id):
+    pitch = get_object_or_404(Pitch, id=pitch_id, owner=request.user)
+
+    if request.method == 'POST':
+        date_str = request.POST.get('date')
+        hour = request.POST.get('hour')
+        customer_name = request.POST.get('customer_name', '')
+        customer_phone = request.POST.get('customer_phone', '')
+
+        try:
+            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            hour_int = int(hour)
+            time_str = f"{hour_int:02d}:00"
+
+            exists = Booking.objects.filter(
+                pitch=pitch, date=selected_date, time=time_str
+            ).exclude(status='Cancelled').exists()
+
+            if exists:
+                messages.error(request, "الميعاد ده محجوز بالفعل!")
+            else:
+                Booking.objects.create(
+                    pitch=pitch,
+                    user=request.user,
+                    date=selected_date,
+                    time=time_str,
+                    status='Confirmed',
+                    payment_type='PayAtPitch',
+                    is_manual=True,
+                    customer_name=customer_name,
+                    customer_phone=customer_phone,
+                )
+                messages.success(request, f"تم حجز الساعة {time_str} يدوياً ✅")
+
+        except (ValueError, TypeError):
+            messages.error(request, "بيانات غير صحيحة!")
+
+    return redirect(f'/owner/pitch/{pitch.id}/schedule/?date={date_str}')
+
+
+# ───────────────────────────────────────────
+# 4. فتح ميعاد يدوي (Unblock)
+# ───────────────────────────────────────────
+@login_required
+def owner_unblock_hour(request, booking_id):
+    booking = get_object_or_404(
+        Booking, id=booking_id,
+        pitch__owner=request.user,
+        is_manual=True
+    )
+
+    if request.method == 'POST':
+        selected_date = booking.date.strftime('%Y-%m-%d')
+        pitch_id = booking.pitch.id
+        booking.status = 'Cancelled'
+        booking.save()
+        messages.success(request, "تم فتح الميعاد ✅")
+        return redirect(f'/owner/pitch/{pitch_id}/schedule/?date={selected_date}')
+
+    return redirect('owner_dashboard')
+
+
+# ─────────────────────────��─────────────────
+# 5. ملخص الأرباح (Earnings)
+# ───────────────────────────────────────────
+@login_required
+def owner_earnings(request):
+    pitches = Pitch.objects.filter(owner=request.user)
+
+    if not pitches.exists():
+        messages.error(request, "ليس لديك ملاعب مسجلة.")
+        return redirect('home')
+
+    today = timezone.now().date()
+
+    # أرباح لكل فترة
+    periods = {
+        'today': today,
+        'this_week': today - timedelta(days=7),
+        'this_month': today - timedelta(days=30),
+    }
+
+    earnings = {}
+    for period_name, start_date in periods.items():
+        verified = Payment.objects.filter(
+            booking__pitch__in=pitches,
+            booking__status='Confirmed',
+            booking__date__gte=start_date,
+            is_verified=True
+        )
+        total_cents = verified.aggregate(total=Sum('amount_cents'))['total'] or 0
+        earnings[period_name] = {
+            'amount': Decimal(total_cents) / 100,
+            'count': verified.count(),
+        }
+
+    # تفصيل لكل ملعب
+    pitch_earnings = []
+    for pitch in pitches:
+        pitch_payments = Payment.objects.filter(
+            booking__pitch=pitch,
+            booking__status='Confirmed',
+            is_verified=True,
+            booking__date__gte=today - timedelta(days=30),
+        )
+        total = pitch_payments.aggregate(total=Sum('amount_cents'))['total'] or 0
+        pitch_earnings.append({
+            'pitch': pitch,
+            'monthly_earnings': Decimal(total) / 100,
+            'booking_count': pitch_payments.count(),
+        })
+
+    return render(request, 'owner/earnings.html', {
+        'earnings': earnings,
+        'pitch_earnings': pitch_earnings,
+    })

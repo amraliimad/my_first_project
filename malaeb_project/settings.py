@@ -4,18 +4,16 @@ from pathlib import Path
 from dotenv import load_dotenv
 from django.utils.translation import gettext_lazy as _
 
-
-# 1. تحميل الإعدادات من ملف .env
+# ═══════════════════════════════════════════
+# 1. الإعدادات الأساسية
+# ═══════════════════════════════════════════
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# 2. جلب الأسرار من البيئة
-SECRET_KEY = 'django-insecure-change-me-later-to-something-very-long-12345'
-DEBUG = True
+SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-only-change-in-production-!@#$%')
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-# 3. الروابط المسموح بها
-# أضف رابط موقعك على PythonAnywhere هنا بجانب الـ localhost
 ALLOWED_HOSTS = [
     'mal3abonline-50a569f7c025.herokuapp.com',
     'mal3abonline.me',
@@ -24,8 +22,10 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
 ]
 
-# --- Application definition ---
 
+# ═══════════════════════════════════════════
+# 2. التطبيقات
+# ═══════════════════════════════════════════
 INSTALLED_APPS = [
     "bookings",
     "django.contrib.admin",
@@ -36,12 +36,15 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
 ]
 
+
+# ═══════════════════════════════════════════
+# 3. الوسطاء (Middleware) - بدون تكرار!
+# ═══════════════════════════════════════════
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",       # ← مرة واحدة بس!
     "django.contrib.sessions.middleware.SessionMiddleware",
-    'django.middleware.locale.LocaleMiddleware', # ترجمه
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -50,15 +53,16 @@ MIDDLEWARE = [
 ]
 
 
+# ═══════════════════════════════════════════
+# 4. URLs & Templates
+# ═══════════════════════════════════════════
 ROOT_URLCONF = "malaeb_project.urls"
 
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [
-            BASE_DIR / "templates"
-        ],  # التعديل هنا: شلنا bookings وخليناها templates بس
-        "APP_DIRS": True,  # ده هيخلي جانغو يدور جوه bookings أوتوماتيك متقلقش
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.request",
@@ -69,99 +73,12 @@ TEMPLATES = [
     },
 ]
 
-
 WSGI_APPLICATION = "malaeb_project.wsgi.application"
 
-# --- Database ---
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
-
-# --- Internationalization ---
-
-# 1. تعريف اللغات
-LANGUAGE_CODE = 'ar' # اللغة الافتراضية
-LANGUAGES = [
-    ('ar', _('Arabic')),
-    ('en', _('English')),
-]
-TIME_ZONE = "UTC"
-USE_I18N = True
-USE_L10N = True
-USE_TZ = True
-
-# --- Static files ---
-
-STATIC_URL = "static/"
-
-# ضيف الجزء ده ضروري جداً
-STATICFILES_DIRS = [
-    BASE_DIR / "static",
-]
-
-STATIC_ROOT = BASE_DIR / "staticfiles"
-
-# --- Authentication Redirects ---
-
-LOGIN_REDIRECT_URL = "/"
-LOGOUT_REDIRECT_URL = "home"
-
-# --- SECURITY SETTINGS ---
-# الإعدادات دي هتشتغل بس لما DEBUG تكون False (يعني على السيرفر الحقيقي)
-if not DEBUG:
-    SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_BROWSER_XSS_FILTER = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-else:
-    # على جهازك الشخصي، نغلق هذه الإعدادات لتجنب أخطاء المتصفح
-    SECURE_SSL_REDIRECT = False
-    SESSION_COOKIE_SECURE = False
-    CSRF_COOKIE_SECURE = False
-
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-# إعدادات رفع الملفات والصور
-MEDIA_URL = "/media/"
-MEDIA_ROOT = os.path.join(BASE_DIR, "media")
-# السماح لـ Django بقبول الطلبات من رابط موقعك
-CSRF_TRUSTED_ORIGINS = [
-    'https://amrali011.pythonanywhere.com', # للسيرفر
-    'http://127.0.0.1:8000',                 # لجهازك
-    'http://localhost:8000',                 # لجهازك برضه
-]
-
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_SECURE = False
-
-# مكان ملفات الترجمة
-LOCALE_PATHS = [
-    os.path.join(BASE_DIR, 'locale'),
-]
-
-STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-import dj_database_url
-import os
-
-# Database configuration
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-
-# Heroku PostgreSQL integration
-db_from_env = dj_database_url.config(conn_max_age=600, ssl_require=True)
-DATABASES['default'].update(db_from_env)
+# ═══════════════════════════════════════════
+# 5. قاعدة البيانات - مرة واحدة بس!
+# ═══════════════════════════════════════════
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -177,16 +94,72 @@ if DATABASE_URL:
         ssl_require=True,
     )
 
-# Paymob Settings
-PAYMOB_API_KEY = os.environ.get('PAYMOB_API_KEY')
-PAYMOB_INTEGRATION_ID_WALLET = os.environ.get('PAYMOB_INTEGRATION_ID_WALLET')
-PAYMOB_HMAC_SECRET = os.environ.get('PAYMOB_HMAC_SECRET')    
 
+# ═══════════════════════════════════════════
+# 6. اللغات والتوقيت
+# ═══════════════════════════════════════════
+LANGUAGE_CODE = 'ar'
+LANGUAGES = [
+    ('ar', _('Arabic')),
+    ('en', _('English')),
+]
+TIME_ZONE = "Africa/Cairo"      # ← مصر مش UTC!
+USE_I18N = True
+USE_L10N = True
+USE_TZ = True
+LOCALE_PATHS = [BASE_DIR / 'locale']
+
+
+# ═══════════════════════════════════════════
+# 7. الملفات الثابتة والميديا
+# ═══════════════════════════════════════════
+STATIC_URL = "/static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+
+# ═══════════════════════════════════════════
+# 8. تسجيل الدخول والخروج
+# ═══════════════════════════════════════════
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "home"
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# ═══════════════════════════════════════════
+# 9. CSRF - مرة واحدة بس!
+# ═══════════════════════════════════════════
 CSRF_TRUSTED_ORIGINS = [
-    'https://amrali011.pythonanywhere.com',
+    'https://mal3abonline.me',
+    'https://www.mal3abonline.me',
+    'https://mal3abonline-50a569f7c025.herokuapp.com',
+    'https://accept.paymob.com',
     'http://127.0.0.1:8000',
     'http://localhost:8000',
-    'https://accept.paymob.com',          # ضيف ده
-    'https://www.mal3abonline.me',         # ضيف ده
-    'https://mal3abonline.me',             # ضيف ده
 ]
+
+
+# ═══════════════════════════════════════════
+# 10. إعدادات الأمان (Production فقط)
+# ═══════════════════════════════════════════
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+
+# ═══════════════════════════════════════════
+# 11. إعدادات Paymob للدفع الإلكتروني
+# ═══════════════════════════════════════════
+PAYMOB_API_KEY = os.environ.get('PAYMOB_API_KEY')
+PAYMOB_INTEGRATION_ID_WALLET = os.environ.get('PAYMOB_INTEGRATION_ID_WALLET')
+PAYMOB_HMAC_SECRET = os.environ.get('PAYMOB_HMAC_SECRET')
