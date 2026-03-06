@@ -79,12 +79,23 @@ WSGI_APPLICATION = "malaeb_project.wsgi.application"
 # ═══════════════════════════════════════════
 # 5. قاعدة البيانات - مرة واحدة بس!
 # ═══════════════════════════════════════════
+#DATABASES = {
+#   'default': {
+#        'ENGINE': 'django.db.backends.sqlite3',
+#        'NAME': BASE_DIR / 'db.sqlite3',
+#
+#
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     }
 }
+
+# الكود السحري بتاع Heroku
+db_from_env = dj_database_url.config(conn_max_age=600)
+DATABASES['default'].update(db_from_env)
+
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
