@@ -153,17 +153,40 @@
                 </div>
             </div>
             <div class="hour-actions">
-                {% if hour.is_booked and hour.is_manual %}
-                    <form method="post" action="{% url 'owner_unblock_hour' hour.booking.id %}"
-                          onsubmit="return confirm('{% trans "متأكد تفتح الميعاد ده؟" %}')">
-                        {% csrf_token %}
-                        <button type="submit" class="btn-sm" style="background:var(--danger-ghost);color:var(--danger);">
-                            🔓 {% trans "فتح" %}
-                        </button>
-                    </form>
-                {% elif not hour.is_booked %}
-                    <button class="btn-sm btn-green"
-                            onclick="openBlockModal('{{ hour.hour_value }}', '{{ hour.hour_display }}')">
+                {% if hour.is_booked %}
+                    <!-- لو الحجز مؤكد أو يدوي ولسه ملعبوش -->
+                    {% if hour.booking.status == 'Confirmed' or hour.booking.status == 'Pending' %}
+                        <form method="post" action="{% url 'owner_update_booking_status' hour.booking.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="status" value="Played">
+                            <button type="submit" class="btn-sm btn-green" title="حضر ودفع كامل المبلغ">✅ اكتمل</button>
+                        </form>
+                        <form method="post" action="{% url 'owner_update_booking_status' hour.booking.id %}" style="display:inline;" onsubmit="return confirm('هل أنت متأكد أن العميل لم يحضر؟ سيتم تفريغ الملعب.')">
+                            {% csrf_token %}
+                            <input type="hidden" name="status" value="No-Show">
+                            <button type="submit" class="btn-sm" style="background:var(--danger-ghost);color:var(--danger);" title="لم يحضر (إلغاء)">❌ غياب</button>
+                        </form>
+                    
+                    <!-- لو الحجز خلص واتدفع -->
+                    {% elif hour.booking.status == 'Played' %}
+                        <span style="font-size: 12px; color: var(--primary); font-weight: bold; background: var(--primary-ghost); padding: 4px 8px; border-radius: 4px;">✅ تم اللعب</span>
+                    
+                    <!-- لو العميل مجاش -->
+                    {% elif hour.booking.status == 'No-Show' %}
+                        <span style="font-size: 12px; color: var(--danger); font-weight: bold; background: var(--danger-ghost); padding: 4px 8px; border-radius: 4px;">❌ لم يحضر</span>
+                    {% endif %}
+
+                    <!-- زر إلغاء الحجز اليدوي القديم (متاح لو الحجز لسه ملغاش أو اكتمل) -->
+                    {% if hour.is_manual and hour.booking.status not in 'Played,No-Show,Cancelled' %}
+                        <form method="post" action="{% url 'owner_unblock_hour' hour.booking.id %}" onsubmit="return confirm('{% trans "متأكد تفتح الميعاد ده؟" %}')" style="display:inline; margin-right:5px;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-sm" style="background:var(--surface-2);color:var(--text-2); border: 1px solid var(--border);">🔓 فتح</button>
+                        </form>
+                    {% endif %}
+
+                {% else %}
+                    <!-- لو مفيش حجز، يظهر زرار القفل اليدوي -->
+                    <button class="btn-sm btn-green" onclick="openBlockModal('{{ hour.hour_value }}', '{{ hour.hour_display }}')">
                         🔒 {% trans "حجز يدوي" %}
                     </button>
                 {% endif %}

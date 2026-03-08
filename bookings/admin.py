@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Pitch, Booking, Payment, PitchPricing, Review
+from .models import Pitch, Booking, Payment, PitchPricing, Review, UserProfile
 
 
 class PitchPricingInline(admin.TabularInline):
@@ -10,10 +10,10 @@ class PitchPricingInline(admin.TabularInline):
 
 
 class PitchAdmin(admin.ModelAdmin):
-    list_display = ('name', 'owner', 'location', 'price_per_hour', 'size', 'phone_number', 'opening_hour', 'closing_hour')
+    list_display = ('name', 'owner', 'location', 'price_per_hour','commission_percentage','size', 'phone_number', 'opening_hour', 'closing_hour')
     list_filter = ('location', 'floor_type', 'size', 'owner')
     search_fields = ('name', 'location', 'owner__username')
-    list_editable = ('opening_hour', 'closing_hour')
+    list_editable = ('opening_hour', 'closing_hour','commission_percentage')
     inlines = [PitchPricingInline]
 
 
@@ -23,8 +23,13 @@ class BookingAdmin(admin.ModelAdmin):
     search_fields = ('booking_code', 'user__username', 'customer_name')
     list_editable = ('status',)
 
-
 admin.site.register(Pitch, PitchAdmin)
 admin.site.register(Booking, BookingAdmin)
 admin.site.register(Payment)
 admin.site.register(Review)
+
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'phone_number')
+    search_fields = ('user__username', 'phone_number')
+
+admin.site.register(UserProfile, UserProfileAdmin)

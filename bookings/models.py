@@ -2,7 +2,8 @@ from django.db import models
 from django.contrib.auth.models import User
 import uuid
 from django.core.validators import MinValueValidator, MaxValueValidator
-
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 # ----------------------------------------
 # جدول الملاعب (Pitches)
@@ -10,7 +11,6 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 class Pitch(models.Model):
     is_new = models.BooleanField(default=False, verbose_name="ملعب جديد؟")
     is_available = models.BooleanField(default=True, verbose_name="متاح الآن؟")
-        # ── 🆕 ربط صاحب الملعب بحساب مستخدم ──
     owner = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -18,6 +18,13 @@ class Pitch(models.Model):
         related_name='owned_pitches',
         verbose_name="صاحب الملعب (حساب المستخدم)"
     )
+    
+    commission_percentage = models.DecimalField(
+        max_digits=5, decimal_places=2, default=5.00, 
+        verbose_name="نسبة عمولة الموقع (%)",
+        help_text="مثال: 5.00 يعني 5%"
+    )
+
     SIZE_CHOICES = [
         ('5x5', 'خماسي (5 ضد 5)'),
         ('7x7', 'سباعي (7 ضد 7)'),
@@ -26,7 +33,6 @@ class Pitch(models.Model):
             
     opening_hour    = models.IntegerField(default=8, verbose_name="ساعة الفتح (مثال: 8 يعني 8 صباحاً)")
     closing_hour    = models.IntegerField(default=24, verbose_name="ساعة الغلق (مثال: 24 يعني 12 بالليل)")
-
 
     FLOOR_CHOICES = [
         ('Artificial', 'نجيل صناعي'),
@@ -78,7 +84,6 @@ class Pitch(models.Model):
     def __str__(self):
         return f"{self.name} ({self.get_location_display()})"
 
-
 # ----------------------------------------
 # جدول أسعار خاصة
 # ----------------------------------------
@@ -97,7 +102,6 @@ class PitchPricing(models.Model):
         date_info = f"يوم {self.specific_date}" if self.specific_date else "كل الأيام"
         return f"{self.pitch.name} - {date_info} ({self.start_hour}:00 → {self.end_hour}:00) بـ {self.price}"
 
-
 # ----------------------------------------
 # جدول الحجوزات (Bookings)
 # ----------------------------------------
@@ -105,6 +109,8 @@ class Booking(models.Model):
     STATUS_CHOICES = [
         ('Pending',   'قيد المراجعة (انتظار التأكيد)'),
         ('Confirmed', 'تم التأكيد'),
+        ('Played',    'اكتمل (تم اللعب والدفع)'),
+        ('No-Show',   'لم يحضر العميل (إلغاء)'),
         ('Cancelled', 'ملغي / مرفوض'),
     ]
 
@@ -122,10 +128,17 @@ class Booking(models.Model):
     payment_type = models.CharField(max_length=20, choices=PAYMENT_TYPE_CHOICES, default='Full', verbose_name="نوع الدفع")
     created_at   = models.DateTimeField(auto_now_add=True, verbose_name="وقت إنشاء الطلب")
     booking_code = models.CharField(max_length=10, unique=True, editable=False, null=True, verbose_name="كود الحجز")
-        # ── 🆕 فيلدات الحجز اليدوي ──
-    is_manual = models.BooleanField(default=False, verbose_name="حجز يدوي؟")
-    customer_name = models.CharField(max_length=100, blank=True, verbose_name="اسم العميل (للحجز اليدوي)")
-    customer_phone = models.CharField(max_length=15, blank=True, verbose_name="رقم العميل (للحجز اليدوي)")
+    
+    is_manual      = models.BooleanField(default=False, verbose_name="حجز يدوي؟")
+    customer_name  = models.CharField(max_length=100, blank=True, verbose_name="اسم العميل (للحجز اليدوي)")
+    customer_phone = models.CharField(max_length=15,  blank=True, verbose_name="رقم العميل (للحجز اليدوي)")
+
+    # ── 🆕 حقل التسوية المالية ──
+    is_settled = models.BooleanField(
+        default=False,
+        verbose_name="تمت التسوية؟",
+        help_text="يُحدَّث تلقائياً عند تسوية الحساب مع صاحب الملعب"
+    )
 
     class Meta:
         verbose_name        = "حجز"
@@ -134,10 +147,11 @@ class Booking(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['pitch', 'date', 'time'],
-                condition=~models.Q(status='Cancelled'),
+                condition=~models.Q(status__in=['Cancelled', 'No-Show']),
                 name='unique_active_booking'
             )
         ]
+        
     def save(self, *args, **kwargs):
         if not self.booking_code:
             self.booking_code = str(uuid.uuid4()).upper()[:8]
@@ -145,7 +159,6 @@ class Booking(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.pitch.name} ({self.date})"
-
 
 # ----------------------------------------
 # جدول المدفوعات (Payments)
@@ -162,7 +175,6 @@ class Payment(models.Model):
     transaction_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="رقم العملية / التحويل")
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS, default='Cash', verbose_name="طريقة الدفع")
     is_verified    = models.BooleanField(default=False, verbose_name="تم التحقق من الدفع؟")
-    # ضيف الfields دي بعد is_verified
     paymob_order_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="Paymob Order ID")
     amount_cents    = models.IntegerField(default=0, verbose_name="المبلغ بالقروش")
     timestamp      = models.DateTimeField(auto_now_add=True, verbose_name="وقت الدفع")
@@ -173,7 +185,6 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"دفع للكود {self.booking.booking_code} - {self.get_payment_method_display()}"
-
 
 # ----------------------------------------
 # جدول التقييمات (Reviews)
@@ -189,12 +200,6 @@ class Review(models.Model):
     comment    = models.TextField(blank=True, null=True, verbose_name="التعليق")
     created_at = models.DateTimeField(auto_now_add=True)
 
-    pitch      = models.ForeignKey(Pitch, related_name='reviews', on_delete=models.CASCADE, verbose_name="الملعب")
-    user       = models.ForeignKey(User,  on_delete=models.CASCADE, verbose_name="المستخدم")
-    rating     = models.IntegerField(default=5, verbose_name="التقييم (من 5)")
-    comment    = models.TextField(blank=True, null=True, verbose_name="التعليق")
-    created_at = models.DateTimeField(auto_now_add=True)
-
     class Meta:
         verbose_name        = "تقييم"
         verbose_name_plural = "التقييمات"
@@ -203,3 +208,26 @@ class Review(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.pitch.name} ({self.rating}★)"
     
+# ----------------------------------------
+# جدول الملف الشخصي للمستخدم (User Profile)
+# ----------------------------------------
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile', verbose_name="المستخدم")
+    middle_name = models.CharField(max_length=50, blank=True, null=True, verbose_name="الاسم الثاني")
+    phone_number = models.CharField(max_length=15, blank=True, null=True, verbose_name="رقم الموبايل (واتساب)")
+    
+    class Meta:
+        verbose_name = "ملف شخصي"
+        verbose_name_plural = "الملفات الشخصية"
+
+    def __str__(self):
+        return f"بروفايل {self.user.username}"
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    instance.profile.save()

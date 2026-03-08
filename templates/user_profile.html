@@ -13,16 +13,15 @@
 
 {% block extra_css %}
 <style>
+    /* نفس الـ CSS بتاعك بدون أي تغيير لأن تصميمه ممتاز */
     /* ============================================================
        USER PROFILE — Page-Specific Styles
        ============================================================ */
-
     .page-container {
         max-width: 960px;
         margin: 0 auto;
         padding: 32px 24px 60px;
     }
-
     /* ── 1. PROFILE HERO ── */
     .profile-hero {
         background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 60%, var(--primary-light) 100%);
@@ -57,6 +56,7 @@
         display: flex; align-items: center; justify-content: center;
         font-size: 36px; flex-shrink: 0;
         position: relative; z-index: 1;
+        color: white; font-weight: bold;
     }
     .profile-info {
         color: white;
@@ -88,7 +88,6 @@
     .stat-label {
         font-size: 11px; opacity: 0.8; font-weight: 700;
     }
-
     /* ── 2. SECTION BLOCKS ── */
     .section-block {
         background: var(--surface);
@@ -114,7 +113,6 @@
     .section-heading.archive::before {
         background: var(--text-muted);
     }
-
     /* ── 3. BOOKING TABLES ── */
     .table-wrap { overflow-x: auto; }
     table {
@@ -140,12 +138,10 @@
     }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: var(--surface-2); }
-
     .booking-code-cell {
         font-family: 'Cairo', monospace;
         font-weight: 800; color: #2980b9; font-size: 13px;
     }
-
     /* ── 4. STATUS BADGES ── */
     .badge {
         display: inline-flex; align-items: center; gap: 5px;
@@ -165,7 +161,6 @@
         background: var(--danger-ghost); color: var(--danger);
         border: 1px solid rgba(231,76,60,0.2);
     }
-
     /* ── 5. CANCEL BUTTON ── */
     .btn-cancel {
         display: inline-flex; align-items: center; gap: 4px;
@@ -179,7 +174,6 @@
     .btn-cancel:hover {
         background: var(--danger); color: white;
     }
-
     /* ── 6. EMPTY STATE ── */
     .empty-state {
         text-align: center; padding: 40px 20px;
@@ -195,7 +189,6 @@
         color: var(--primary); font-weight: 800;
     }
     .empty-link:hover { text-decoration: underline; }
-
     /* ── 7. ENTRANCE ANIMATION ── */
     .fade-up {
         opacity: 0; transform: translateY(16px);
@@ -205,7 +198,6 @@
     .fade-up:nth-child(2){ animation-delay:0.12s; }
     .fade-up:nth-child(3){ animation-delay:0.19s; }
     @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
-
     /* ── 8. RESPONSIVE — Mobile Card Mode ── */
     @media (max-width: 640px) {
         .booking-table thead { display: none; }
@@ -236,7 +228,6 @@
             letter-spacing: 0.5px;
         }
     }
-
     @media (max-width: 768px) {
         .profile-hero {
             flex-direction: column;
@@ -259,21 +250,58 @@
          PROFILE HERO
          ══════════════════════════════════════════════ -->
     <div class="profile-hero fade-up">
-        <div class="profile-avatar">👤</div>
+        <!-- الصورة الرمزية: لو ليه اسم أول هياخد أول حرف، لو مفيش هياخد أول حرف من اليوزرنيم -->
+        <div class="profile-avatar">
+            {% if user.first_name %}
+                {{ user.first_name|first|upper }}
+            {% else %}
+                {{ user.username|first|upper }}
+            {% endif %}
+        </div>
+
         <div class="profile-info">
-            <div class="profile-name">{{ user.username }}</div>
+            <div class="profile-name">
+                {% if user.first_name %}
+                    {{ user.first_name }} 
+                    {% if user.profile.middle_name %}{{ user.profile.middle_name }}{% endif %} 
+                    {{ user.last_name }}
+                {% else %}
+                    {{ user.username }}
+                {% endif %}
+                
+                {% if is_vip %}
+                <span class="badge bg-warning text-dark ms-2" style="font-size: 0.8rem; vertical-align: middle;">
+                    <i class="fas fa-crown"></i> VIP
+                </span>
+                {% endif %}
+            </div>
+            
             <div class="profile-meta">
                 📅 {% trans "تاريخ الانضمام" %}: {{ user.date_joined|date:"d/m/Y" }}<br>
-                📧 {% trans "البريد" %}: {{ user.email|default:"غير مسجل" }}
+                📧 {% trans "البريد" %}: {{ user.email|default:"غير مسجل" }}<br>
+                📞 {% trans "الموبايل" %}: {{ user.profile.phone_number|default:"غير مسجل" }}
+            </div>
+
+            <!-- أزرار التعديل -->
+            <div class="mt-3">
+                <button type="button" class="btn btn-sm btn-outline-light" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                    <i class="fas fa-edit"></i> تعديل بياناتي
+                </button>
+                <a href="{% url 'password_change' %}" class="btn btn-sm btn-outline-light ms-2">
+                    <i class="fas fa-lock"></i> تغيير كلمة المرور
+                </a>
             </div>
         </div>
+
         <div class="profile-stats">
             <div class="stat-bubble">
-                <span class="stat-num">{{ upcoming_bookings|length }}</span>
+                <!-- تم تصحيح طريقة العد هنا -->
+                <span class="stat-num">{{ upcoming_bookings.count }}</span>
                 <span class="stat-label">{% trans "حجز قادم" %}</span>
             </div>
             <div class="stat-bubble">
-                <span class="stat-num">{{ past_bookings|length }}</span>
+                <!-- وتم تصحيحها هنا أيضاً -->
+                <span class="stat-num">{{ past_bookings.count }}</span>
                 <span class="stat-label">{% trans "حجز سابق" %}</span>
             </div>
         </div>
@@ -284,7 +312,6 @@
          ══════════════════════════════════════════════ -->
     <div class="section-block fade-up">
         <h2 class="section-heading">📅 {% trans "حجوزاتك القادمة" %}</h2>
-
         {% if upcoming_bookings %}
         <div class="table-wrap">
             <table class="booking-table">
@@ -346,7 +373,6 @@
          ══════════════════════════════════════════════ -->
     <div class="section-block fade-up">
         <h2 class="section-heading archive">📜 {% trans "الأرشيف (حجوزات سابقة)" %}</h2>
-
         {% if past_bookings %}
         <div class="table-wrap">
             <table class="booking-table" style="opacity:0.85;">
@@ -380,6 +406,39 @@
             <p>{% trans "الأرشيف فارغ حتى الآن." %}</p>
         </div>
         {% endif %}
+    </div>
+
+    <!-- ══════════════════════════════════════════════
+         Modal تعديل البيانات
+         ══════════════════════════════════════════════ -->
+    <div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content text-dark">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="editProfileModalLabel">تعديل بيانات الحساب</h5>
+                    <button type="button" class="btn-close m-0" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST">
+                    <div class="modal-body text-end" dir="rtl">
+                        {% csrf_token %}
+                        <!-- تظهير الفورم بشكل منظم بـ بوتستراب -->
+                        {% for field in form %}
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.errors %}
+                                    <div class="text-danger small mt-1">{{ field.errors }}</div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-primary" style="background-color: var(--primary-color); border: none;">حفظ التعديلات</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
 </div>

@@ -6,6 +6,7 @@ from django.contrib.auth import views as auth_views
 from django.conf.urls.i18n import i18n_patterns
 from bookings import views as booking_views
 
+
 # 1. روابط بدون i18n (تغيير اللغة فقط)
 # 1. روابط بدون i18n (تغيير اللغة + Paymob)
 # 1. روابط بدون i18n
@@ -23,6 +24,9 @@ urlpatterns += i18n_patterns(
     path('accounts/', include('django.contrib.auth.urls')),
     path('signup/', booking_views.signup, name='signup'),
     path('', include('bookings.urls')),
+    path('password_change/', auth_views.PasswordChangeView.as_view(), name='password_change'),
+    path('password_change/done/', auth_views.PasswordChangeDoneView.as_view(), name='password_change_done'),
+
     prefix_default_language=True,
 )
 

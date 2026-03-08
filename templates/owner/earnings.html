@@ -1,108 +1,749 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}{% trans "ملخص الأرباح" %}{% endblock %}
+{% block title %}داشبورد الأرباح المالية — مَلعبك{% endblock %}
 
 {% block content %}
+
+{# ════════════════════════════════════════════════════════════════ #}
+{#  STYLES                                                          #}
+{# ════════════════════════════════════════════════════════════════ #}
 <style>
-    .earnings-container { max-width: 900px; margin: 0 auto; padding: 30px 20px; }
-    .earnings-header {
-        background: linear-gradient(135deg, #2c3e50, #1a252f);
-        border-radius: var(--radius-lg); padding: 30px; color: white;
-        margin-bottom: 24px;
-    }
-    .earnings-header h1 { font-size: 24px; margin-bottom: 6px; }
-    .earnings-header p { opacity: 0.8; font-size: 14px; }
+  /* ── Root tokens ── */
+  :root {
+    --fin-bg:        #0b0f17;
+    --fin-surface:   #111827;
+    --fin-card:      #161d2e;
+    --fin-border:    rgba(255,255,255,0.07);
+    --fin-border2:   rgba(255,255,255,0.13);
+    --fin-green:     #22c55e;
+    --fin-green-dim: rgba(34,197,94,0.12);
+    --fin-red:       #ef4444;
+    --fin-red-dim:   rgba(239,68,68,0.12);
+    --fin-gold:      #f59e0b;
+    --fin-gold-dim:  rgba(245,158,11,0.12);
+    --fin-blue:      #3b82f6;
+    --fin-blue-dim:  rgba(59,130,246,0.10);
+    --fin-text:      #e2e8f0;
+    --fin-text2:     #94a3b8;
+    --fin-text3:     #64748b;
+    --fin-radius:    14px;
+    --fin-radius-sm: 8px;
+  }
 
-    .earnings-grid {
-        display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 16px; margin-bottom: 30px;
-    }
-    .earning-card {
-        background: var(--surface); border: 1px solid var(--border);
-        border-radius: var(--radius-md); padding: 24px; text-align: center;
-        box-shadow: var(--shadow-sm);
-    }
-    .earning-card .period { font-size: 14px; color: var(--text-2); margin-bottom: 8px; }
-    .earning-card .amount { font-size: 32px; font-weight: 800; color: var(--primary); }
-    .earning-card .count { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+  /* ── Layout wrapper ── */
+  .fin-page {
+    background: var(--fin-bg);
+    min-height: 100vh;
+    padding: 32px 16px 80px;
+    font-family: 'Cairo', 'Segoe UI', sans-serif;
+    direction: rtl;
+    color: var(--fin-text);
+  }
+  .fin-inner { max-width: 1000px; margin: 0 auto; }
 
-    .pitch-earnings-section h2 {
-        font-size: 20px; margin-bottom: 16px;
-        padding-bottom: 10px; border-bottom: 2px solid var(--border);
-    }
-    .pitch-earning-row {
-        background: var(--surface); border: 1px solid var(--border);
-        border-radius: var(--radius-md); padding: 18px;
-        margin-bottom: 10px; display: flex;
-        justify-content: space-between; align-items: center;
-        flex-wrap: wrap; gap: 10px; box-shadow: var(--shadow-sm);
-    }
-    .pitch-earning-info h3 { font-size: 16px; margin-bottom: 2px; }
-    .pitch-earning-info p { font-size: 13px; color: var(--text-2); }
-    .pitch-earning-amount {
-        font-size: 22px; font-weight: 800; color: var(--primary);
-    }
-    .back-link {
-        display: inline-flex; align-items: center; gap: 6px;
-        color: var(--primary); font-weight: 700; font-size: 14px;
-        margin-bottom: 16px;
-    }
-    .back-link:hover { text-decoration: underline; }
-    .note-box {
-        background: rgba(243,156,18,0.1); border: 1px solid rgba(243,156,18,0.3);
-        border-radius: var(--radius-sm); padding: 14px; margin-top: 20px;
-        font-size: 13px; color: var(--text-2);
-    }
+  /* ── Page header ── */
+  .fin-hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0f2027 100%);
+    border: 1px solid var(--fin-border2);
+    border-radius: var(--fin-radius);
+    padding: 28px 32px;
+    margin-bottom: 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .fin-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 60% 80% at 80% 50%, rgba(34,197,94,0.05) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .fin-hero-title { font-size: 22px; font-weight: 800; margin: 0 0 4px; letter-spacing: -0.5px; }
+  .fin-hero-sub   { font-size: 13px; color: var(--fin-text3); margin: 0; }
+  .fin-hero-date  {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--fin-border2);
+    border-radius: var(--fin-radius-sm);
+    padding: 8px 18px;
+    font-size: 13px; color: var(--fin-text2);
+    white-space: nowrap;
+  }
+
+  /* ── Section label ── */
+  .fin-section-label {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--fin-text3);
+    margin-bottom: 14px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--fin-border);
+  }
+  .fin-section-label .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot-green { background: var(--fin-green); box-shadow: 0 0 8px var(--fin-green); }
+  .dot-gold  { background: var(--fin-gold);  box-shadow: 0 0 8px var(--fin-gold); }
+  .dot-blue  { background: var(--fin-blue);  box-shadow: 0 0 8px var(--fin-blue); }
+
+  .fin-section { margin-bottom: 36px; }
+
+  /* ── Stat grid (Section A) ── */
+  .fin-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .fin-stat {
+    background: var(--fin-card);
+    border: 1px solid var(--fin-border);
+    border-radius: var(--fin-radius);
+    padding: 22px 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .fin-stat:hover { border-color: var(--fin-border2); transform: translateY(-2px); }
+  .fin-stat .stat-icon {
+    font-size: 28px; margin-bottom: 8px; display: block; line-height: 1;
+  }
+  .fin-stat .stat-label {
+    font-size: 11px; color: var(--fin-text3); font-weight: 600;
+    letter-spacing: 0.5px; margin-bottom: 6px;
+  }
+  .fin-stat .stat-val {
+    font-size: 30px; font-weight: 900; line-height: 1;
+    letter-spacing: -1px;
+  }
+  .fin-stat .stat-val small {
+    font-size: 14px; font-weight: 600; opacity: 0.7; margin-right: 3px;
+  }
+  .fin-stat .stat-sub {
+    font-size: 12px; color: var(--fin-text3); margin-top: 6px;
+  }
+  .fin-stat.green { border-color: rgba(34,197,94,0.25); }
+  .fin-stat.green .stat-val { color: var(--fin-green); }
+  .fin-stat.gold  { border-color: rgba(245,158,11,0.25); }
+  .fin-stat.gold  .stat-val { color: var(--fin-gold); }
+  .fin-stat.blue  { border-color: rgba(59,130,246,0.25); }
+  .fin-stat.blue  .stat-val { color: var(--fin-blue); }
+  .fin-stat.white .stat-val { color: var(--fin-text); }
+
+  /* glow strip top */
+  .fin-stat.green::after { background: var(--fin-green); }
+  .fin-stat.gold::after  { background: var(--fin-gold); }
+  .fin-stat.blue::after  { background: var(--fin-blue); }
+  .fin-stat.green::after, .fin-stat.gold::after, .fin-stat.blue::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: var(--fin-radius) var(--fin-radius) 0 0;
+  }
+
+  /* ── Today's bookings mini-table ── */
+  .fin-mini-table {
+    background: var(--fin-card);
+    border: 1px solid var(--fin-border);
+    border-radius: var(--fin-radius);
+    overflow: hidden;
+    margin-top: 10px;
+  }
+  .fin-mini-table table {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+  }
+  .fin-mini-table th {
+    background: rgba(255,255,255,0.04);
+    padding: 10px 14px;
+    text-align: right;
+    color: var(--fin-text3);
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.3px;
+    border-bottom: 1px solid var(--fin-border);
+  }
+  .fin-mini-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--fin-border);
+    color: var(--fin-text2);
+    vertical-align: middle;
+  }
+  .fin-mini-table tr:last-child td { border-bottom: none; }
+  .fin-mini-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .status-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 11px; font-weight: 700;
+  }
+  .status-Played    { background: var(--fin-green-dim); color: var(--fin-green); }
+  .status-Confirmed { background: var(--fin-blue-dim);  color: var(--fin-blue); }
+  .status-Pending   { background: var(--fin-gold-dim);  color: var(--fin-gold); }
+
+  /* ── Ledger (Section B) ── */
+  .fin-ledger-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  @media (max-width: 540px) { .fin-ledger-grid { grid-template-columns: 1fr; } }
+
+  .fin-balance-box {
+    border-radius: var(--fin-radius);
+    padding: 26px 24px;
+    text-align: center;
+    border: 1px solid;
+  }
+  .fin-balance-box .bal-label {
+    font-size: 12px; font-weight: 700;
+    letter-spacing: 0.6px; text-transform: uppercase; opacity: 0.8;
+    margin-bottom: 10px;
+  }
+  .fin-balance-box .bal-amount {
+    font-size: 38px; font-weight: 900;
+    letter-spacing: -2px; line-height: 1;
+  }
+  .fin-balance-box .bal-amount small {
+    font-size: 16px; font-weight: 600; opacity: 0.7;
+  }
+  .fin-balance-box .bal-desc {
+    font-size: 12px; margin-top: 10px; opacity: 0.75;
+  }
+  .balance-positive {
+    background: var(--fin-green-dim);
+    border-color: rgba(34,197,94,0.3);
+  }
+  .balance-positive .bal-amount { color: var(--fin-green); }
+  .balance-negative {
+    background: var(--fin-red-dim);
+    border-color: rgba(239,68,68,0.3);
+  }
+  .balance-negative .bal-amount { color: var(--fin-red); }
+
+  /* Settlement button */
+  .settle-btn-wrap {
+    margin-top: 18px; text-align: center;
+  }
+  .btn-settle {
+    background: linear-gradient(135deg, #1a7a4a, #22c55e);
+    color: white;
+    border: none;
+    border-radius: var(--fin-radius-sm);
+    padding: 12px 32px;
+    font-size: 15px; font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    transition: opacity 0.2s, transform 0.15s;
+    box-shadow: 0 4px 18px rgba(34,197,94,0.25);
+  }
+  .btn-settle:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-settle:active { transform: translateY(0); }
+
+  /* Archive table */
+  .fin-archive {
+    background: var(--fin-card);
+    border: 1px solid var(--fin-border);
+    border-radius: var(--fin-radius);
+    margin-top: 18px;
+    overflow: hidden;
+  }
+  .fin-archive-header {
+    padding: 14px 18px;
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid var(--fin-border);
+    font-size: 12px; color: var(--fin-text3);
+    font-weight: 700; letter-spacing: 0.5px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .fin-archive-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 11px 18px;
+    border-bottom: 1px solid var(--fin-border);
+    font-size: 13px; color: var(--fin-text2);
+    transition: background 0.15s;
+  }
+  .fin-archive-row:last-child { border-bottom: none; }
+  .fin-archive-row:hover { background: rgba(255,255,255,0.02); }
+  .archive-code { font-family: monospace; color: var(--fin-text3); font-size: 12px; }
+  .archive-amt  { font-weight: 700; color: var(--fin-green); }
+  .archive-settled-badge {
+    background: var(--fin-green-dim);
+    color: var(--fin-green);
+    padding: 1px 8px; border-radius: 20px;
+    font-size: 11px; font-weight: 700;
+  }
+
+  /* ── Commission accordion (Section C) ── */
+  .fin-accordion {
+    background: var(--fin-card);
+    border: 1px solid var(--fin-border);
+    border-radius: var(--fin-radius);
+    overflow: hidden;
+  }
+  .fin-accordion-toggle {
+    width: 100%;
+    background: none; border: none; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 18px 22px;
+    color: var(--fin-gold);
+    font-family: inherit; font-size: 14px; font-weight: 700;
+    letter-spacing: 0.3px;
+    transition: background 0.15s;
+  }
+  .fin-accordion-toggle:hover { background: rgba(255,255,255,0.03); }
+  .fin-accordion-toggle .toggle-icon {
+    font-size: 18px;
+    transition: transform 0.25s;
+  }
+  .fin-accordion-toggle.open .toggle-icon { transform: rotate(180deg); }
+
+  .fin-accordion-body {
+    display: none;
+    border-top: 1px solid var(--fin-border);
+    padding: 0;
+  }
+  .fin-accordion-body.show { display: block; }
+
+  .commission-table {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+  }
+  .commission-table th {
+    background: rgba(245,158,11,0.06);
+    padding: 10px 14px;
+    text-align: right;
+    color: var(--fin-text3);
+    font-weight: 600; font-size: 11px;
+    letter-spacing: 0.3px;
+    border-bottom: 1px solid var(--fin-border);
+    white-space: nowrap;
+  }
+  .commission-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--fin-border);
+    color: var(--fin-text2);
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  .commission-table tr:last-child td { border-bottom: none; }
+  .commission-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .commission-table .code-cell {
+    font-family: monospace; color: var(--fin-text3); font-size: 12px;
+  }
+  .commission-table .price-cell { color: var(--fin-text); font-weight: 600; }
+  .commission-table .comm-cell  { color: var(--fin-gold); font-weight: 700; }
+  .commission-table .net-cell   { color: var(--fin-green); font-weight: 700; }
+
+  .commission-footer {
+    padding: 14px 18px;
+    background: rgba(245,158,11,0.05);
+    border-top: 1px solid var(--fin-border);
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 10px;
+  }
+  .commission-totals {
+    display: flex; gap: 24px; flex-wrap: wrap; font-size: 13px;
+  }
+  .commission-totals .tot-item span { color: var(--fin-text3); }
+  .commission-totals .tot-item strong { color: var(--fin-gold); margin-right: 4px; }
+
+  /* Export button */
+  .btn-export {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(59,130,246,0.12);
+    border: 1px solid rgba(59,130,246,0.35);
+    color: var(--fin-blue);
+    border-radius: var(--fin-radius-sm);
+    padding: 8px 16px;
+    font-size: 13px; font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+  .btn-export:hover { background: rgba(59,130,246,0.2); color: var(--fin-blue); }
+
+  /* ── Alerts ── */
+  .fin-alert {
+    padding: 12px 18px;
+    border-radius: var(--fin-radius-sm);
+    font-size: 13px; margin-bottom: 16px;
+    border-width: 1px; border-style: solid;
+  }
+  .fin-alert-warning {
+    background: var(--fin-gold-dim); border-color: rgba(245,158,11,0.35);
+    color: var(--fin-gold);
+  }
+  .fin-alert-info {
+    background: var(--fin-blue-dim); border-color: rgba(59,130,246,0.3);
+    color: #7dd3fc;
+  }
+
+  /* ── Back link ── */
+  .fin-back {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--fin-text3); font-size: 13px; font-weight: 600;
+    text-decoration: none; margin-bottom: 20px;
+    transition: color 0.15s;
+  }
+  .fin-back:hover { color: var(--fin-text); }
+
+  /* ── Empty state ── */
+  .fin-empty {
+    text-align: center; padding: 40px 20px;
+    color: var(--fin-text3); font-size: 13px;
+  }
+  .fin-empty .empty-icon { font-size: 36px; display: block; margin-bottom: 10px; }
+
+  /* Superuser notice */
+  .superuser-bar {
+    background: linear-gradient(90deg, rgba(239,68,68,0.1), rgba(239,68,68,0.05));
+    border: 1px solid rgba(239,68,68,0.25);
+    border-radius: var(--fin-radius-sm);
+    padding: 10px 18px;
+    font-size: 12px; color: #fca5a5;
+    margin-bottom: 20px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  @media (max-width: 640px) {
+    .fin-hero { flex-direction: column; }
+    .fin-stat-grid { grid-template-columns: 1fr 1fr; }
+    .fin-mini-table { overflow-x: auto; }
+    .commission-table td, .commission-table th { font-size: 11px; padding: 8px 10px; }
+  }
 </style>
 
-<div class="earnings-container">
+{# ════════════════════════════════════════════════════════════════ #}
+{#  PAGE                                                            #}
+{# ════════════════════════════════════════════════════════════════ #}
+<div class="fin-page">
+<div class="fin-inner">
 
-    <a href="{% url 'owner_dashboard' %}" class="back-link">→ {% trans "رجوع للداشبورد" %}</a>
+  {# Back link #}
+  <a href="{% url 'owner_dashboard' %}" class="fin-back">← رجوع للداشبورد</a>
 
-    <div class="earnings-header">
-        <h1>💰 {% trans "ملخص الأرباح" %}</h1>
-        <p>{% trans "الأرباح من العربونات والدفع الأونلاين المؤكدة" %}</p>
+  {# Superuser notice (shows which owner's data is being viewed) #}
+  {% if is_superuser %}
+  <div class="superuser-bar">
+    🔑 وضع المشرف — أنت تعرض بيانات:
+    <strong>{{ owner.get_full_name|default:owner.username }}</strong>
+    {% if owner != request.user %}(حساب مختلف){% endif %}
+  </div>
+  {% endif %}
+
+  {# Hero header #}
+  <div class="fin-hero">
+    <div>
+      <h1 class="fin-hero-title">💰 داشبورد الأرباح المالية</h1>
+      <p class="fin-hero-sub">
+        {{ owner.get_full_name|default:owner.username }} —
+        {% for pitch in pitches %}{{ pitch.name }}{% if not forloop.last %}، {% endif %}{% endfor %}
+      </p>
+    </div>
+    <div class="fin-hero-date">📅 {{ today|date:"l، j F Y" }}</div>
+  </div>
+
+  {# ══════════════════════════════════════════════════════════════ #}
+  {#  SECTION A ➜ وردية اليوم                                      #}
+  {# ══════════════════════════════════════════════════════════════ #}
+  <div class="fin-section">
+    <div class="fin-section-label">
+      <span class="dot dot-green"></span>
+      القسم الأول — وردية اليوم ({{ today|date:"j F" }})
     </div>
 
-    <!-- الأرباح حسب الفترة -->
-    <div class="earnings-grid">
-        <div class="earning-card">
-            <div class="period">📅 {% trans "النهاردة" %}</div>
-            <div class="amount">{{ earnings.today.amount }} <small>{% trans "ج.م" %}</small></div>
-            <div class="count">{{ earnings.today.count }} {% trans "عملية دفع" %}</div>
-        </div>
-        <div class="earning-card">
-            <div class="period">📆 {% trans "آخر 7 أيام" %}</div>
-            <div class="amount">{{ earnings.this_week.amount }} <small>{% trans "ج.م" %}</small></div>
-            <div class="count">{{ earnings.this_week.count }} {% trans "عملية دفع" %}</div>
-        </div>
-        <div class="earning-card">
-            <div class="period">🗓️ {% trans "آخر 30 يوم" %}</div>
-            <div class="amount">{{ earnings.this_month.amount }} <small>{% trans "ج.م" %}</small></div>
-            <div class="count">{{ earnings.this_month.count }} {% trans "عملية دفع" %}</div>
-        </div>
+    <div class="fin-stat-grid">
+
+      {# إجمالي المبيعات #}
+      <div class="fin-stat white">
+        <span class="stat-icon">🏟️</span>
+        <div class="stat-label">إجمالي مبيعات اليوم</div>
+        <div class="stat-val">{{ today_total_sales|floatformat:0 }}<small>ج.م</small></div>
+        <div class="stat-sub">{{ today_count }} حجز نشط اليوم</div>
+      </div>
+
+      {# فلوس الدرج #}
+      <div class="fin-stat green">
+        <span class="stat-icon">💵</span>
+        <div class="stat-label">فلوس الدرج (الكاش المتوقع)</div>
+        <div class="stat-val">{{ today_cash_drawer|floatformat:0 }}<small>ج.م</small></div>
+        <div class="stat-sub">سعر الملعب — ما دُفع أونلاين</div>
+      </div>
+
+      {# أونلاين محتجز عند المنصة #}
+      <div class="fin-stat blue">
+        <span class="stat-icon">📱</span>
+        <div class="stat-label">أونلاين عند المنصة (اليوم)</div>
+        <div class="stat-val">{{ today_online_holding|floatformat:0 }}<small>ج.م</small></div>
+        <div class="stat-sub">مدفوع إلكترونياً — لم يُسوَّ بعد</div>
+      </div>
+
     </div>
 
-    <!-- تفصيل لكل ملعب -->
-    <div class="pitch-earnings-section">
-        <h2>🏟️ {% trans "تفصيل لكل ملعب (آخر 30 يوم)" %}</h2>
-        {% for item in pitch_earnings %}
-        <div class="pitch-earning-row">
-            <div class="pitch-earning-info">
-                <h3>{{ item.pitch.name }}</h3>
-                <p>📍 {{ item.pitch.get_location_display }} — {{ item.booking_count }} {% trans "حجز مؤكد" %}</p>
+    {# Mini-table: today's bookings breakdown #}
+    {% if today_booking_rows %}
+    <div class="fin-alert fin-alert-info">
+      💡 في منتصف الليل، هذه الأرقام تنتقل تلقائياً إلى "الرصيد المتراكم" بعد تأكيل الحجوزات كـ "Played".
+    </div>
+    <div class="fin-mini-table">
+      <table>
+        <thead>
+          <tr>
+            <th>الكود</th>
+            <th>الملعب</th>
+            <th>الوقت</th>
+            <th>الحالة</th>
+            <th>السعر الكامل</th>
+            <th>مدفوع أونلاين</th>
+            <th>كاش متوقع</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in today_booking_rows %}
+          <tr>
+            <td class="archive-code">{{ row.booking.booking_code }}</td>
+            <td style="color:var(--fin-text)">{{ row.booking.pitch.name }}</td>
+            <td>{{ row.booking.time }}</td>
+            <td>
+              <span class="status-badge status-{{ row.booking.status }}">
+                {{ row.booking.get_status_display }}
+              </span>
+            </td>
+            <td class="price-cell">{{ row.full_price|floatformat:0 }} ج.م</td>
+            <td style="color:var(--fin-blue)">{{ row.paid_online|floatformat:0 }} ج.م</td>
+            <td style="color:var(--fin-green); font-weight:700">{{ row.cash_portion|floatformat:0 }} ج.م</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="fin-empty">
+      <span class="empty-icon">🌙</span>
+      لا توجد حجوزات نشطة لليوم حتى الآن.
+    </div>
+    {% endif %}
+  </div>
+
+  {# ══════════════════════════════════════════════════════════════ #}
+  {#  SECTION B ➜ الرصيد المتراكم                                  #}
+  {# ══════════════════════════════════════════════════════════════ #}
+  <div class="fin-section">
+    <div class="fin-section-label">
+      <span class="dot dot-gold"></span>
+      القسم الثاني — الرصيد المتراكم (غير مُسوَّى)
+    </div>
+
+    {# Alert if nothing to settle #}
+    {% if unsettled_count == 0 %}
+    <div class="fin-alert fin-alert-info">
+      ✅ لا توجد حجوزات مكتملة (Played) غير مُسوَّاة حتى الآن. الرصيد صفر.
+    </div>
+    {% endif %}
+
+    {# Stats row #}
+    <div class="fin-ledger-grid">
+
+      <div class="fin-stat gold">
+        <span class="stat-icon">🏦</span>
+        <div class="stat-label">إجمالي الأونلاين المحصَّل</div>
+        <div class="stat-val">{{ total_online_collected|floatformat:0 }}<small>ج.م</small></div>
+        <div class="stat-sub">{{ unsettled_count }} حجز مكتمل — لم يُسوَّ</div>
+      </div>
+
+      <div class="fin-stat" style="border-color:rgba(239,68,68,0.25)">
+        <span class="stat-icon">📊</span>
+        <div class="stat-label">إجمالي عمولة المنصة</div>
+        <div class="stat-val" style="color:var(--fin-red)">{{ total_commission|floatformat:0 }}<small>ج.م</small></div>
+        <div class="stat-sub">محسوبة على السعر الكامل</div>
+      </div>
+
+    </div>
+
+    {# Net balance (the key number) #}
+    {% if net_settleable >= 0 %}
+    <div class="fin-balance-box balance-positive">
+      <div class="bal-label">✅ صافي المستحق لصاحب الملعب</div>
+      <div class="bal-amount">{{ net_settleable|floatformat:2 }} <small>ج.م</small></div>
+      <div class="bal-desc">المنصة مدينة لك بهذا المبلغ</div>
+    </div>
+    {% else %}
+    <div class="fin-balance-box balance-negative">
+      <div class="bal-label">⚠️ صافي المستحق للمنصة</div>
+      <div class="bal-amount">{{ net_settleable|floatformat:2 }} <small>ج.م</small></div>
+      <div class="bal-desc">أنت مدين للمنصة بهذا المبلغ (العمولة أكبر من المحصَّل)</div>
+    </div>
+    {% endif %}
+
+    {# Settle now button (Superuser only) #}
+    {% if is_superuser and unsettled_count > 0 %}
+    <div class="settle-btn-wrap">
+      <form method="POST" action="{% url 'settle_account' %}"
+            onsubmit="return confirm('هل أنت متأكد من تسوية {{ unsettled_count }} حجز بمبلغ صافي {{ net_settleable|floatformat:2 }} ج.م؟')">
+        {% csrf_token %}
+        <input type="hidden" name="owner_id" value="{{ owner.id }}">
+        <button type="submit" class="btn-settle">
+          ✅ تسوية الحساب الآن ({{ unsettled_count }} حجز)
+        </button>
+      </form>
+      <p style="font-size:12px; color:var(--fin-text3); margin-top:8px;">
+        هذا الزر متاح للمشرفين فقط — سيتم تحديد كل الحجوزات كـ "مُسوَّاة"
+      </p>
+    </div>
+    {% elif not is_superuser and unsettled_count > 0 %}
+    <div class="fin-alert fin-alert-warning" style="margin-top:16px; text-align:center;">
+      🔒 تسوية الحساب متاحة للمشرفين فقط — تواصل مع فريق مَلعبك لتحصيل مستحقاتك.
+    </div>
+    {% endif %}
+
+    {# Past settlements archive #}
+    {% if settled_qs %}
+    <div class="fin-archive" style="margin-top:24px;">
+      <div class="fin-archive-header">
+        <span>📋 أرشيف التسويات السابقة</span>
+        <span style="color:var(--fin-green)">
+          إجمالي مُسوَّى: {{ past_settled_net|floatformat:2 }} ج.م
+        </span>
+      </div>
+      {% for booking in settled_qs %}
+      <div class="fin-archive-row">
+        <div style="display:flex; flex-direction:column; gap:2px;">
+          <span style="color:var(--fin-text); font-size:13px;">
+            {{ booking.pitch.name }} — {{ booking.date|date:"j F Y" }} — {{ booking.time }}
+          </span>
+          <span class="archive-code">{{ booking.booking_code }}</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span class="archive-amt">
+            {% with online=booking.payment_details %}
+              {% if online %}
+                {{ online.amount_cents|floatformat:0 }}
+              {% else %}0{% endif %}
+            {% endwith %} ج.م
+          </span>
+          <span class="archive-settled-badge">✓ مُسوَّى</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </div>
+
+  {# ══════════════════════════════════════════════════════════════ #}
+  {#  SECTION C ➜ تفاصيل العمولة (Accordion)                       #}
+  {# ══════════════════════════════════════════════════════════════ #}
+  <div class="fin-section">
+    <div class="fin-section-label">
+      <span class="dot dot-blue"></span>
+      القسم الثالث — تفاصيل العمولة
+    </div>
+
+    {% if commission_rows %}
+    <div class="fin-accordion">
+
+      {# Toggle button #}
+      <button class="fin-accordion-toggle" id="commToggle" onclick="toggleCommission()">
+        <span>🔍 عرض تفاصيل عمولة الموقع ({{ commission_rows|length }} حجز)</span>
+        <span class="toggle-icon" id="commIcon">▼</span>
+      </button>
+
+      {# Collapsible body #}
+      <div class="fin-accordion-body" id="commBody">
+        <div style="overflow-x:auto;">
+          <table class="commission-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>التاريخ</th>
+                <th>الوقت</th>
+                <th>كود الحجز</th>
+                <th>الملعب</th>
+                <th>السعر الكامل</th>
+                <th>نسبة العمولة</th>
+                <th>مبلغ العمولة</th>
+                <th>الصافي لك</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in commission_rows %}
+              <tr>
+                <td style="color:var(--fin-text3)">{{ forloop.counter }}</td>
+                <td>{{ row.booking.date|date:"d/m/Y" }}</td>
+                <td>{{ row.booking.time }}</td>
+                <td class="code-cell">{{ row.booking.booking_code }}</td>
+                <td style="color:var(--fin-text)">{{ row.booking.pitch.name }}</td>
+                <td class="price-cell">{{ row.full_price|floatformat:2 }} ج.م</td>
+                <td style="color:var(--fin-text3)">{{ row.commission_pct }}%</td>
+                <td class="comm-cell">{{ row.commission_amt }} ج.م</td>
+                <td class="net-cell">{{ row.net_to_owner }} ج.م</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {# Footer with totals + Export button #}
+        <div class="commission-footer">
+          <div class="commission-totals">
+            <div class="tot-item">
+              <span>إجمالي الأسعار:</span>
+              <strong>
+                {% with total=0 %}
+                  {% for row in commission_rows %}{% endfor %}
+                  {{ total_online_collected|floatformat:2 }} ج.م
+                {% endwith %}
+              </strong>
             </div>
-            <div class="pitch-earning-amount">
-                {{ item.monthly_earnings }} {% trans "ج.م" %}
+            <div class="tot-item">
+              <span>إجمالي العمولة:</span>
+              <strong style="color:var(--fin-gold)">{{ total_commission|floatformat:2 }} ج.م</strong>
             </div>
+            <div class="tot-item">
+              <span>صافيك:</span>
+              <strong style="color:var(--fin-green)">{{ net_settleable|floatformat:2 }} ج.م</strong>
+            </div>
+          </div>
+          <a href="{% url 'owner_earnings_export_csv' %}{% if is_superuser and owner.id %}?owner_id={{ owner.id }}{% endif %}"
+             class="btn-export">
+            ⬇️ تصدير Excel / CSV
+          </a>
         </div>
-        {% endfor %}
-    </div>
+      </div>
 
-    <div class="note-box">
-        ⚠️ {% trans "ملحوظة: الأرقام دي بتشمل بس المبالغ المدفوعة أونلاين والمؤكدة. المبالغ الكاش اللي بتتدفع في الملعب مش محسوبة هنا." %}
     </div>
+    {% else %}
+    <div class="fin-empty">
+      <span class="empty-icon">📭</span>
+      لا توجد حجوزات مكتملة وغير مُسوَّاة لعرض تفاصيل العمولة.
+    </div>
+    {% endif %}
 
-</div>
+  </div>
+
+</div>{# /fin-inner #}
+</div>{# /fin-page #}
+
+{# ════════════════════════════════════════════════════════════════ #}
+{#  SCRIPTS                                                         #}
+{# ════════════════════════════════════════════════════════════════ #}
+<script>
+  function toggleCommission() {
+    const body   = document.getElementById('commBody');
+    const toggle = document.getElementById('commToggle');
+    const icon   = document.getElementById('commIcon');
+    const isOpen = body.classList.toggle('show');
+    toggle.classList.toggle('open', isOpen);
+    icon.textContent = isOpen ? '▲' : '▼';
+  }
+</script>
+
 {% endblock %}

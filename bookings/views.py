@@ -19,6 +19,15 @@ from .paymob import paymob_auth, create_order, create_payment_key, pay_with_wall
 from django.conf import settings
 from django.http import JsonResponse
 from decimal import Decimal
+from .forms import ExtendedSignupForm 
+from .forms import PaymentForm, ExtendedSignupForm, UserProfileUpdateForm
+from .models import Pitch, Booking, Payment, Review, PitchPricing, UserProfile
+import csv
+from decimal import Decimal
+from django.http import HttpResponse
+from django.contrib.auth.models import User
+
+
 # ---------------------------------------------------------
 # دالة مساعدة لحساب المسافة (Haversine Formula)
 # ---------------------------------------------------------
@@ -30,8 +39,6 @@ def haversine(lon1, lat1, lon2, lat2):
     c = 2 * asin(sqrt(a))
     r = 6371
     return c * r
-
-
 # ---------------------------------------------------------
 # الصفحة الرئيسية
 # ---------------------------------------------------------
@@ -102,7 +109,6 @@ def home(request):
         'selected_price':    max_price,
         'is_nearest_search': bool(user_lat),
     })
-
 # ---------------------------------------------------------
 # تفاصيل الملعب
 # ---------------------------------------------------------
@@ -227,7 +233,6 @@ def pitch_detail(request, pitch_id):
             'day_name':  day_date.strftime('%A'),
             'display':   day_date.strftime('%d/%m'),
         })
-
     related_pitches = Pitch.objects.filter(location=pitch.location).exclude(id=pitch.id)[:3]
 
     return render(request, 'pitch_detail.html', {
@@ -430,16 +435,51 @@ def payment_pending(request, booking_code):
 # ---------------------------------------------------------
 # الملف الشخصي
 # ---------------------------------------------------------
-@login_required
+@login_required(login_url='login')
 def user_profile(request):
-    today    = timezone.now().date()
-    upcoming = Booking.objects.filter(user=request.user, date__gte=today).order_by('date', 'time')
-    past     = Booking.objects.filter(user=request.user, date__lt=today).order_by('-date', '-time')
+    user = request.user
+    
+    # 1. التأكد إن المستخدم له بروفايل (عشان نتجنب أي خطأ للحسابات القديمة)
+    if hasattr(user, 'profile'):
+        profile = user.profile
+    else:
+        profile = UserProfile.objects.create(user=user)
 
+    # 2. معالجة فورم تعديل البيانات
+    if request.method == 'POST':
+        form = UserProfileUpdateForm(request.POST)
+        if form.is_valid():
+            # حفظ بيانات جدول User
+            user.first_name = form.cleaned_data['first_name']
+            user.last_name = form.cleaned_data['last_name']
+            user.save()
+            
+            # حفظ بيانات جدول UserProfile
+            profile.middle_name = form.cleaned_data['middle_name']
+            profile.phone_number = form.cleaned_data['phone_number']
+            profile.save()
+            
+            messages.success(request, "تم تحديث بياناتك بنجاح! 💾")
+            return redirect('user_profile')
+    else:
+        # تعبئة الفورم ببيانات المستخدم الحالية وقت فتح الصفحة
+        form = UserProfileUpdateForm(initial={
+            'first_name': user.first_name,
+            'middle_name': profile.middle_name,
+            'last_name': user.last_name,
+            'phone_number': profile.phone_number,
+        })
+
+    # 3. جلب الحجوزات بنفس طريقتك القديمة الممتازة
+    today    = timezone.now().date()
+    upcoming = Booking.objects.filter(user=user, date__gte=today).order_by('date', 'time')
+    past     = Booking.objects.filter(user=user, date__lt=today).order_by('-date', '-time')
+    
     return render(request, 'user_profile.html', {
         'upcoming_bookings': upcoming,
         'past_bookings':     past,
-        'user':              request.user,
+        'user':              user,
+        'form':              form,  # ضفنا الفورم هنا عشان تتبعت للـ HTML
     })
 
 
@@ -462,17 +502,20 @@ def cancel_booking(request, booking_id):
 def signup(request):
     if request.user.is_authenticated:
         return redirect('home')
+    
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
+        # التعديل هنا: استخدمنا الفورم الجديدة
+        form = ExtendedSignupForm(request.POST)
         if form.is_valid():
             user = form.save()
             login(request, user)
-            messages.success(request, "تم إنشاء الحساب!")
+            messages.success(request, "تم إنشاء الحساب بنجاح !")
             return redirect('home')
     else:
-        form = UserCreationForm()
+        # التعديل هنا كمان
+        form = ExtendedSignupForm()
+        
     return render(request, 'registration/signup.html', {'form': form})
-
 
 # ---------------------------------------------------------
 # من نحن
@@ -536,49 +579,58 @@ def paymob_callback(request):
             success = obj.get('success', False)
             hmac_received = request.GET.get('hmac', '')
 
-            # التحقق من HMAC
+            # 🛠️ الدالة المنقذة: بتحول الـ Boolean لحروف صغيرة زي ما Paymob عايز بالظبط
+            def bool_to_str(val):
+                if isinstance(val, bool):
+                    return str(val).lower()
+                return str(val)
+
+            # تجميع البيانات بنفس الترتيب الأبجدي الصارم لـ Paymob
             hmac_string = (
-                str(obj.get('amount_cents', '')) +
-                str(obj.get('created_at', '')) +
-                str(obj.get('currency', '')) +
-                str(obj.get('error_occured', '')) +
-                str(obj.get('has_parent_transaction', '')) +
-                str(obj.get('id', '')) +
-                str(obj.get('integration_id', '')) +
-                str(obj.get('is_3d_secure', '')) +
-                str(obj.get('is_auth', '')) +
-                str(obj.get('is_capture', '')) +
-                str(obj.get('is_refunded', '')) +
-                str(obj.get('is_standalone_payment', '')) +
-                str(obj.get('is_voided', '')) +
-                str(obj.get('order', {}).get('id', '')) +
-                str(obj.get('owner', '')) +
-                str(obj.get('pending', '')) +
-                str(obj.get('source_data', {}).get('pan', '')) +
-                str(obj.get('source_data', {}).get('sub_type', '')) +
-                str(obj.get('source_data', {}).get('type', '')) +
-                str(obj.get('success', ''))
+                bool_to_str(obj.get('amount_cents', '')) +
+                bool_to_str(obj.get('created_at', '')) +
+                bool_to_str(obj.get('currency', '')) +
+                bool_to_str(obj.get('error_occured', '')) +
+                bool_to_str(obj.get('has_parent_transaction', '')) +
+                bool_to_str(obj.get('id', '')) +
+                bool_to_str(obj.get('integration_id', '')) +
+                bool_to_str(obj.get('is_3d_secure', '')) +
+                bool_to_str(obj.get('is_auth', '')) +
+                bool_to_str(obj.get('is_capture', '')) +
+                bool_to_str(obj.get('is_refunded', '')) +
+                bool_to_str(obj.get('is_standalone_payment', '')) +
+                bool_to_str(obj.get('is_voided', '')) +
+                bool_to_str(obj.get('order', {}).get('id', '')) +
+                bool_to_str(obj.get('owner', '')) +
+                bool_to_str(obj.get('pending', '')) +
+                bool_to_str(obj.get('source_data', {}).get('pan', '')) +
+                bool_to_str(obj.get('source_data', {}).get('sub_type', '')) +
+                bool_to_str(obj.get('source_data', {}).get('type', '')) +
+                bool_to_str(obj.get('success', ''))
             )
 
+            # التشفير
             calculated_hmac = hmac.new(
                 settings.PAYMOB_HMAC_SECRET.encode('utf-8'),
                 hmac_string.encode('utf-8'),
                 hashlib.sha512
             ).hexdigest()
 
+            # التحقق النهائي
             if calculated_hmac == hmac_received and success:
-                # الدفع نجح! حدّث حالة الحجز
                 payment = Payment.objects.filter(paymob_order_id=order_id).first()
                 if payment:
                     payment.is_verified = True
                     payment.transaction_id = str(obj.get('id', ''))
                     payment.save()
+                    
+                    # الفلوس دخلت الحساب بجد، نأكد الحجز
                     payment.booking.status = 'Confirmed'
                     payment.booking.save()
 
             return HttpResponse(status=200)
 
-        except Exception:
+        except Exception as e:
             return HttpResponse(status=500)
 
     return HttpResponse(status=405)
@@ -843,17 +895,304 @@ def owner_unblock_hour(request, booking_id):
 # ─────────────────────────��─────────────────
 # 5. ملخص الأرباح (Earnings)
 # ───────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════
+#  SECTION: داشبورد الأرباح المالية لصاحب الملعب
+#  يُستبدل به كل دوال owner_earnings الموجودة في views.py
+# ═══════════════════════════════════════════════════════════════════════════
+
+def _get_amount_paid_online(booking):
+    """
+    دالة مساعدة: تحسب المبلغ المدفوع أونلاين لحجز معين.
+    تعتمد على سجل الدفع (Payment) المرتبط بالحجز.
+    """
+    try:
+        payment = booking.payment_details
+        if payment.is_verified and payment.amount_cents > 0:
+            return Decimal(payment.amount_cents) / Decimal('100')
+    except Exception:
+        pass
+    return Decimal('0.00')
+
+
+def _resolve_owner(request):
+    """
+    دالة مساعدة: تحدد صاحب الملعب المقصود.
+    - لو المستخدم الحالي superuser وبعت owner_id → نستخدم ذلك الـ owner
+    - غير كده → نستخدم request.user نفسه
+    """
+    if request.user.is_superuser:
+        owner_id = request.GET.get('owner_id') or request.POST.get('owner_id')
+        if owner_id:
+            try:
+                return User.objects.get(id=int(owner_id))
+            except (User.DoesNotExist, ValueError):
+                pass
+    return request.user
+
+
 @login_required
 def owner_earnings(request):
+    """
+    داشبورد الأرباح المالية - 3 أقسام:
+      A) وردية اليوم (Cash Drawer Focus)
+      B) الرصيد المتراكم (Unsettled Ledger)
+      C) تفاصيل العمولة (Commission Breakdown - accordion)
+    """
+    owner  = _resolve_owner(request)
+    pitches = Pitch.objects.filter(owner=owner)
+
+    if not pitches.exists():
+        messages.error(request, "ليس لديك ملاعب مسجلة في حسابك.")
+        return redirect('home')
+
+    today = timezone.localtime().date()
+
+    # ─────────────────────────────────────────────────────────
+    # SECTION A ➜ وردية اليوم
+    # ─────────────────────────────────────────────────────────
+    today_bookings = (
+        Booking.objects
+        .filter(pitch__in=pitches, date=today)
+        .exclude(status__in=['Cancelled', 'No-Show'])
+        .select_related('pitch', 'payment_details')
+        .order_by('time')
+    )
+
+    today_total_sales    = Decimal('0.00')
+    today_cash_drawer    = Decimal('0.00')
+    today_online_holding = Decimal('0.00')
+
+    today_booking_rows = []
+    for booking in today_bookings:
+        full_price       = booking.pitch.price_per_hour
+        paid_online      = _get_amount_paid_online(booking)
+        cash_portion     = full_price - paid_online
+
+        today_total_sales    += full_price
+        today_cash_drawer    += cash_portion
+        today_online_holding += paid_online
+
+        today_booking_rows.append({
+            'booking':    booking,
+            'full_price': full_price,
+            'paid_online': paid_online,
+            'cash_portion': cash_portion,
+        })
+
+    # ─────────────────────────────────────────────────────────
+    # SECTION B ➜ الرصيد المتراكم (Unsettled Ledger)
+    #   فقط: status='Played' AND is_settled=False
+    # ─────────────────────────────────────────────────────────
+    unsettled_qs = (
+        Booking.objects
+        .filter(pitch__in=pitches, status='Played', is_settled=False)
+        .select_related('pitch', 'payment_details')
+        .order_by('-date', '-time')
+    )
+
+    total_online_collected = Decimal('0.00')
+    total_commission       = Decimal('0.00')
+
+    for booking in unsettled_qs:
+        full_price       = booking.pitch.price_per_hour
+        commission_rate  = booking.pitch.commission_percentage / Decimal('100')
+        commission_amt   = round(full_price * commission_rate, 2)
+
+        total_commission        += commission_amt
+        total_online_collected  += _get_amount_paid_online(booking)
+
+    net_settleable = total_online_collected - total_commission
+
+    # أرشيف التسويات السابقة (is_settled=True)
+    settled_qs = (
+        Booking.objects
+        .filter(pitch__in=pitches, status='Played', is_settled=True)
+        .select_related('pitch', 'payment_details')
+        .order_by('-date')
+    )
+
+    past_settled_total   = Decimal('0.00')
+    past_settled_commission = Decimal('0.00')
+    for booking in settled_qs:
+        full_price      = booking.pitch.price_per_hour
+        commission_rate = booking.pitch.commission_percentage / Decimal('100')
+        past_settled_commission += round(full_price * commission_rate, 2)
+        past_settled_total      += _get_amount_paid_online(booking)
+
+    past_settled_net = past_settled_total - past_settled_commission
+
+    # ─────────────────────────────────────────────────────────
+    # SECTION C ➜ تفاصيل العمولة (Commission Breakdown)
+    # ─────────────────────────────────────────────────────────
+    commission_rows = []
+    for booking in unsettled_qs:
+        full_price      = booking.pitch.price_per_hour
+        commission_rate = booking.pitch.commission_percentage / Decimal('100')
+        commission_amt  = round(full_price * commission_rate, 2)
+
+        commission_rows.append({
+            'booking':        booking,
+            'full_price':     full_price,
+            'commission_pct': booking.pitch.commission_percentage,
+            'commission_amt': commission_amt,
+            'net_to_owner':   round(full_price - commission_amt, 2),
+        })
+
+    return render(request, 'owner/earnings.html', {
+        # meta
+        'today':          today,
+        'owner':          owner,
+        'pitches':        pitches,
+        'is_superuser':   request.user.is_superuser,
+
+        # Section A
+        'today_total_sales':    today_total_sales,
+        'today_cash_drawer':    today_cash_drawer,
+        'today_online_holding': today_online_holding,
+        'today_booking_rows':   today_booking_rows,
+        'today_count':          len(today_booking_rows),
+
+        # Section B
+        'total_online_collected':  total_online_collected,
+        'total_commission':        total_commission,
+        'net_settleable':          net_settleable,
+        'unsettled_count':         unsettled_qs.count(),
+        'settled_qs':              settled_qs[:30],        # آخر 30 حجز مُسوَّى
+        'past_settled_total':      past_settled_total,
+        'past_settled_commission': past_settled_commission,
+        'past_settled_net':        past_settled_net,
+
+        # Section C
+        'commission_rows': commission_rows,
+    })
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# تسوية الحساب (Admin Only)
+# ─────────────────────────────────────────────────────────────────────────
+@login_required
+def settle_account(request):
+    """
+    POST only. متاح للـ superuser فقط (RBAC).
+    يُحوِّل كل حجوزات status='Played' + is_settled=False
+    إلى is_settled=True للملاعب المملوكة لـ owner_id.
+    """
+    if not request.user.is_superuser:
+        messages.error(request, "⛔ هذا الإجراء متاح للمشرفين فقط.")
+        return redirect('owner_earnings')
+
+    if request.method == 'POST':
+        owner_id = request.POST.get('owner_id')
+        try:
+            owner   = User.objects.get(id=int(owner_id))
+            pitches = Pitch.objects.filter(owner=owner)
+            count   = Booking.objects.filter(
+                pitch__in=pitches,
+                status='Played',
+                is_settled=False
+            ).update(is_settled=True)
+
+            messages.success(
+                request,
+                f"✅ تمت تسوية {count} حجز بنجاح لصاحب الملعب: {owner.get_full_name() or owner.username}"
+            )
+        except (User.DoesNotExist, ValueError, TypeError):
+            messages.error(request, "⛔ بيانات غير صحيحة - لم تتم التسوية.")
+
+    return redirect(f"{request.build_absolute_uri('/')[:-1]}{'/owner/earnings/'}?owner_id={owner_id}")
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# تصدير CSV لتفاصيل العمولة
+# ─────────────────────────────────────────────────────────────────────────
+@login_required
+def owner_earnings_export_csv(request):
+    """
+    يُصدِّر تفاصيل العمولة للحجوزات غير المسوَّاة (Played + is_settled=False)
+    كملف CSV جاهز للفتح في Excel.
+    """
+    owner   = _resolve_owner(request)
+    pitches = Pitch.objects.filter(owner=owner)
+
+    if not pitches.exists():
+        messages.error(request, "ليس لديك ملاعب مسجلة.")
+        return redirect('owner_earnings')
+
+    unsettled_qs = (
+        Booking.objects
+        .filter(pitch__in=pitches, status='Played', is_settled=False)
+        .select_related('pitch', 'payment_details')
+        .order_by('-date', '-time')
+    )
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+    response['Content-Disposition'] = 'attachment; filename="commission_details.csv"'
+
+    writer = csv.writer(response)
+    # الترويسة
+    writer.writerow([
+        'التاريخ', 'الوقت', 'كود الحجز', 'الملعب',
+        'السعر الكامل (ج.م)', 'نسبة العمولة (%)',
+        'مبلغ العمولة (ج.م)', 'الصافي لصاحب الملعب (ج.م)'
+    ])
+
+    for booking in unsettled_qs:
+        full_price      = booking.pitch.price_per_hour
+        commission_rate = booking.pitch.commission_percentage / Decimal('100')
+        commission_amt  = round(full_price * commission_rate, 2)
+        net_to_owner    = round(full_price - commission_amt, 2)
+
+        writer.writerow([
+            booking.date.strftime('%Y-%m-%d'),
+            booking.time,
+            booking.booking_code,
+            booking.pitch.name,
+            full_price,
+            booking.pitch.commission_percentage,
+            commission_amt,
+            net_to_owner,
+        ])
+
+    return response
+# ---------------------------------------------------------
+# الدالة الجديدة: تأكيد اللعب أو عدم الحضور من صاحب الملعب
+# ---------------------------------------------------------
+@login_required
+def owner_update_booking_status(request, booking_id):
+    # التأكد أن الحجز يخص ملعب يملكه هذا المستخدم
+    booking = get_object_or_404(Booking, id=booking_id, pitch__owner=request.user)
+    
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+        if new_status in ['Played', 'No-Show']:
+            booking.status = new_status
+            booking.save()
+            
+            if new_status == 'Played':
+                messages.success(request, f"تم تأكيد استلام المبلغ ولعب المباراة بنجاح ✅")
+            else:
+                messages.warning(request, f"تم تسجيل (عدم حضور) للعميل وتفريغ الملعب ❌")
+                
+    # العودة لنفس يوم الجدول
+    selected_date = booking.date.strftime('%Y-%m-%d')
+    return redirect(f'/owner/pitch/{booking.pitch.id}/schedule/?date={selected_date}')
+
+
+# ───────────────────────────────────────────
+# 5. ملخص الأرباح (Earnings) - مُعدلة لتشمل العمولة المتغيرة
+# ───────────────────────────────────────────
+@login_required
+def owner_earnings(request):
+    from decimal import Decimal # تأكد من وجودها
+    
     pitches = Pitch.objects.filter(owner=request.user)
 
     if not pitches.exists():
         messages.error(request, "ليس لديك ملاعب مسجلة.")
         return redirect('home')
 
-    today = timezone.now().date()
+    today = timezone.localtime().date() # تم إصلاح التوقيت
 
-    # أرباح لكل فترة
     periods = {
         'today': today,
         'this_week': today - timedelta(days=7),
@@ -862,16 +1201,30 @@ def owner_earnings(request):
 
     earnings = {}
     for period_name, start_date in periods.items():
-        verified = Payment.objects.filter(
+        # نأتي بالمدفوعات الأونلاين للحجوزات المؤكدة أو التي تم لعبها
+        verified_payments = Payment.objects.filter(
             booking__pitch__in=pitches,
-            booking__status='Confirmed',
+            booking__status__in=['Confirmed', 'Played'], 
             booking__date__gte=start_date,
             is_verified=True
         )
-        total_cents = verified.aggregate(total=Sum('amount_cents'))['total'] or 0
+        
+        total_net_for_owner = Decimal('0.00')
+        
+        for payment in verified_payments:
+            amount_paid_online = Decimal(payment.amount_cents) / Decimal('100')
+            
+            # حساب عمولة المنصة بناءً على نسبة هذا الملعب (مثلاً 5%)
+            commission_rate = payment.booking.pitch.commission_percentage / Decimal('100')
+            platform_fee = amount_paid_online * commission_rate
+            
+            # الصافي لصاحب الملعب من المدفوعات الأونلاين
+            owner_net = amount_paid_online - platform_fee
+            total_net_for_owner += owner_net
+
         earnings[period_name] = {
-            'amount': Decimal(total_cents) / 100,
-            'count': verified.count(),
+            'amount': round(total_net_for_owner, 2),
+            'count': verified_payments.count(),
         }
 
     # تفصيل لكل ملعب
@@ -879,18 +1232,27 @@ def owner_earnings(request):
     for pitch in pitches:
         pitch_payments = Payment.objects.filter(
             booking__pitch=pitch,
-            booking__status='Confirmed',
+            booking__status__in=['Confirmed', 'Played'],
             is_verified=True,
             booking__date__gte=today - timedelta(days=30),
         )
-        total = pitch_payments.aggregate(total=Sum('amount_cents'))['total'] or 0
+        
+        pitch_net_total = Decimal('0.00')
+        commission_rate = pitch.commission_percentage / Decimal('100')
+        
+        for payment in pitch_payments:
+            amount = Decimal(payment.amount_cents) / Decimal('100')
+            fee = amount * commission_rate
+            pitch_net_total += (amount - fee)
+
         pitch_earnings.append({
             'pitch': pitch,
-            'monthly_earnings': Decimal(total) / 100,
+            'monthly_earnings': round(pitch_net_total, 2),
             'booking_count': pitch_payments.count(),
         })
 
     return render(request, 'owner/earnings.html', {
         'earnings': earnings,
         'pitch_earnings': pitch_earnings,
+         'owner': request.user,
     })
