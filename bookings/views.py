@@ -26,6 +26,7 @@ import csv
 from decimal import Decimal
 from django.http import HttpResponse
 from django.contrib.auth.models import User
+from .google_sheets import add_booking_to_sheet
 
 
 # ---------------------------------------------------------
@@ -627,7 +628,8 @@ def paymob_callback(request):
                     # الفلوس دخلت الحساب بجد، نأكد الحجز
                     payment.booking.status = 'Confirmed'
                     payment.booking.save()
-
+                                        # إرسال البيانات لجوجل شيت
+                    add_booking_to_sheet(payment.booking)
             return HttpResponse(status=200)
 
         except Exception as e:
@@ -863,6 +865,9 @@ def owner_block_hour(request, pitch_id):
                     customer_phone=customer_phone,
                 )
                 messages.success(request, f"تم حجز الساعة {time_str} يدوياً ✅")
+                                # إرسال البيانات لجوجل شيت
+                new_booking = Booking.objects.get(pitch=pitch, date=selected_date, time=time_str)
+                add_booking_to_sheet(new_booking)
 
         except (ValueError, TypeError):
             messages.error(request, "بيانات غير صحيحة!")
