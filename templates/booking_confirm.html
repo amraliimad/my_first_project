@@ -272,8 +272,8 @@
                            onchange="selectType('online')">
                     <span class="option-icon">🪙</span>
                     <div class="option-text">
-                        <span class="option-title">{% trans "دفع عربون (50 ج.م)" %}</span>
-                        <span class="option-desc">{% trans "ودفع الباقي في الملعب" %}</span>
+                        <span class="option-title">{% trans "دفع عربون" %} (50 {% trans "ج.م" %})</span>
+                        <span class="option-desc">{% trans "ودفع الباقي كاش في الملعب" %}</span>
                     </div>
                 </label>
 
@@ -384,11 +384,15 @@
     /* ── Payment Logic ── */
     function selectType(mode) {
         var onlineMethods = document.getElementById('online-methods');
-        var box = document.getElementById('vodafone-box');
+        var vodaBox = document.getElementById('vodafone-box');
+        var walletBox = document.getElementById('wallet-box');
+        
         if (mode === 'pitch') {
             onlineMethods.style.display = 'none';
+            // إلغاء تحديد كل طرق الدفع الأونلاين وإخفاء الصناديق
             document.getElementsByName('pay').forEach(function(r){ r.checked = false; });
-            box.style.display = 'none';
+            vodaBox.style.display = 'none';
+            walletBox.style.display = 'none';
         } else {
             onlineMethods.style.display = 'block';
         }
@@ -398,6 +402,11 @@
         document.getElementById('vodafone-box').style.display = show ? 'block' : 'none';
         document.getElementById('wallet-box').style.display = 'none';
     }
+    
+    function toggleWallet(show) {
+        document.getElementById('wallet-box').style.display = show ? 'block' : 'none';
+        document.getElementById('vodafone-box').style.display = 'none';
+    }    
 
     /* ── Form Validation ── */
     document.getElementById('bookingForm').addEventListener('submit', function(e) {
@@ -424,11 +433,14 @@
                 return;
             }
         }
+        
         if (payMethod && payMethod.value === 'wallet') {
             var walletPhone = document.querySelector('input[name="wallet_phone"]').value.trim();
-            if (!walletPhone || walletPhone.length < 11) {
+            // التحقق من أن رقم الهاتف يتكون من 11 رقماً ويبدأ بـ 01
+            var phoneRegex = /^01[0125][0-9]{8}$/;
+            if (!walletPhone || !phoneRegex.test(walletPhone)) {
                 e.preventDefault();
-                showBookingError('{% trans "يرجى إدخال رقم المحفظة صحيح (11 رقم)" %} ⚠️');
+                showBookingError('{% trans "يرجى إدخال رقم محفظة مصري صحيح (11 رقم يبدأ بـ 01)" %} ⚠️');
                 return;
             }
         }
@@ -443,9 +455,5 @@
         container.appendChild(toast);
         setTimeout(function(){ toast.remove(); }, 4000);
     }
-    function toggleWallet(show) {
-        document.getElementById('wallet-box').style.display = show ? 'block' : 'none';
-        document.getElementById('vodafone-box').style.display = 'none';
-    }    
 </script>
 {% endblock %}

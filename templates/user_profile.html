@@ -189,6 +189,57 @@
         color: var(--primary); font-weight: 800;
     }
     .empty-link:hover { text-decoration: underline; }
+        /* ── 6.5 PROFILE MODAL (Custom) ── */
+    .modal-overlay {
+        display: none; position: fixed; inset: 0;
+        background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+        z-index: 2000; justify-content: center; align-items: center;
+        opacity: 0; transition: opacity 0.3s ease;
+    }
+    .modal-overlay.show { display: flex; opacity: 1; }
+    .custom-modal {
+        background: var(--surface); border-radius: var(--radius-xl);
+        padding: 32px; width: 90%; max-width: 480px;
+        box-shadow: var(--shadow-lg);
+        transform: translateY(20px); transition: transform 0.3s ease;
+    }
+    .modal-overlay.show .custom-modal { transform: translateY(0); }
+    .modal-header {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 24px; padding-bottom: 12px;
+        border-bottom: 1px solid var(--border);
+    }
+    .modal-title { font-size: 18px; font-weight: 800; color: var(--text); margin: 0; }
+    .btn-close-modal {
+        background: none; border: none; font-size: 20px; color: var(--text-muted);
+        cursor: pointer; transition: color 0.2s;
+    }
+    .btn-close-modal:hover { color: var(--danger); }
+    .custom-form-group { margin-bottom: 16px; text-align: right; }
+    .custom-form-group label {
+        display: block; font-size: 13px; font-weight: 700; color: var(--text-2); margin-bottom: 6px;
+    }
+    .custom-form-group input {
+        width: 100%; padding: 12px 16px;
+        border: 1.5px solid var(--border); border-radius: var(--radius-md);
+        background: var(--surface-2); color: var(--text);
+        font-family: 'Cairo', sans-serif; font-size: 14px;
+        transition: border-color 0.2s;
+    }
+    .custom-form-group input:focus { outline: none; border-color: var(--primary); }
+    .form-error { color: var(--danger); font-size: 12px; margin-top: 4px; font-weight: 600; }
+    .modal-actions {
+        display: flex; gap: 12px; margin-top: 24px;
+    }
+    .btn-modal {
+        flex: 1; padding: 12px; border-radius: var(--radius-sm);
+        font-family: 'Cairo', sans-serif; font-size: 14px; font-weight: 800;
+        cursor: pointer; transition: all 0.2s; border: none;
+    }
+    .btn-save { background: var(--primary); color: white; }
+    .btn-save:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+    .btn-cancel-modal { background: var(--surface-2); color: var(--text-2); border: 1px solid var(--border); }
+
     /* ── 7. ENTRANCE ANIMATION ── */
     .fade-up {
         opacity: 0; transform: translateY(16px);
@@ -283,12 +334,13 @@
             </div>
 
             <!-- أزرار التعديل -->
-            <div class="mt-3">
-                <button type="button" class="btn btn-sm btn-outline-light" data-bs-toggle="modal" data-bs-target="#editProfileModal">
-                    <i class="fas fa-edit"></i> تعديل بياناتي
+            <div style="margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button type="button" onclick="openProfileModal()" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px; border-radius: var(--radius-sm); font-family: 'Cairo', sans-serif; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                    ✏️ {% trans "تعديل بياناتي" %}
                 </button>
-                <a href="{% url 'password_change' %}" class="btn btn-sm btn-outline-light ms-2">
-                    <i class="fas fa-lock"></i> تغيير كلمة المرور
+                <!-- لاحظ: رابط تغيير الباسوورد يحتاج إلى View مخصص في Django (auth_views.PasswordChangeView) -->
+                <a href="#" style="background: transparent; color: white; border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px; border-radius: var(--radius-sm); font-weight: 700; transition: all 0.2s;">
+                    🔒 {% trans "تغيير كلمة المرور" %}
                 </a>
             </div>
         </div>
@@ -407,39 +459,50 @@
         </div>
         {% endif %}
     </div>
-
     <!-- ══════════════════════════════════════════════
-         Modal تعديل البيانات
+         CUSTOM MODAL لتعديل البيانات
          ══════════════════════════════════════════════ -->
-    <div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content text-dark">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="editProfileModalLabel">تعديل بيانات الحساب</h5>
-                    <button type="button" class="btn-close m-0" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form method="POST">
-                    <div class="modal-body text-end" dir="rtl">
-                        {% csrf_token %}
-                        <!-- تظهير الفورم بشكل منظم بـ بوتستراب -->
-                        {% for field in form %}
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">{{ field.label }}</label>
-                                {{ field }}
-                                {% if field.errors %}
-                                    <div class="text-danger small mt-1">{{ field.errors }}</div>
-                                {% endif %}
-                            </div>
-                        {% endfor %}
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                        <button type="submit" class="btn btn-primary" style="background-color: var(--primary-color); border: none;">حفظ التعديلات</button>
-                    </div>
-                </form>
+    <div class="modal-overlay" id="profileModal">
+        <div class="custom-modal">
+            <div class="modal-header">
+                <h3 class="modal-title">✏️ {% trans "تعديل بيانات الحساب" %}</h3>
+                <button type="button" class="btn-close-modal" onclick="closeProfileModal()">✕</button>
             </div>
+            <form method="POST">
+                {% csrf_token %}
+                {% for field in form %}
+                    <div class="custom-form-group">
+                        <label>{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                            <div class="form-error">{{ field.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+                <div class="modal-actions">
+                    <button type="submit" class="btn-modal btn-save">💾 {% trans "حفظ التعديلات" %}</button>
+                    <button type="button" class="btn-modal btn-cancel-modal" onclick="closeProfileModal()">❌ {% trans "إلغاء" %}</button>
+                </div>
+            </form>
         </div>
     </div>
 
 </div>
+
+<!-- إضافة كود JavaScript للتحكم في الـ Modal -->
+<script>
+    function openProfileModal() {
+        document.getElementById('profileModal').classList.add('show');
+        document.body.style.overflow = 'hidden'; // منع السكرول خلف الـ Modal
+    }
+    function closeProfileModal() {
+        document.getElementById('profileModal').classList.remove('show');
+        document.body.style.overflow = '';
+    }
+    // إغلاق الـ Modal عند الضغط خارجه
+    document.getElementById('profileModal').addEventListener('click', function(e) {
+        if (e.target === this) closeProfileModal();
+    });
+</script>
+
 {% endblock %}

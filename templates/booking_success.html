@@ -231,13 +231,31 @@
                 <span class="detail-value">{{ booking.get_payment_type_display }}</span>
             </div>
             <div class="detail-row">
-                <span class="detail-label">💰 {% trans "المبلغ" %}</span>
-                <span class="detail-value price-value">{{ booking.price }} {% trans "ج.م" %}</span>
+                <span class="detail-label">💰 {% trans "سعر الساعة" %}</span>
+                <span class="detail-value price-value">{{ booking.pitch.price_per_hour }} {% trans "ج.م" %}</span>
             </div>
+            {% if payment and payment.amount_cents > 0 %}
+            <div class="detail-row">
+                <span class="detail-label">💳 {% trans "المدفوع إلكترونياً" %}</span>
+                <span class="detail-value" style="color:var(--primary);">
+                    {% widthratio payment.amount_cents 100 1 %} {% trans "ج.م" %}
+                </span>
+            </div>
+            {% endif %}
             <div class="detail-row">
                 <span class="detail-label">📌 {% trans "الحالة" %}</span>
                 <span class="detail-value">
-                    <span class="badge-status">⏳ {% trans "في انتظار التأكيد" %}</span>
+                    {% if booking.status == 'Confirmed' %}
+                        <span class="badge-status" style="background: rgba(39,174,96,0.12); color: var(--primary); border-color: rgba(39,174,96,0.2);">
+                            ✅ {% trans "تم التأكيد" %}
+                        </span>
+                    {% elif booking.status == 'Pending' %}
+                        <span class="badge-status">⏳ {% trans "في انتظار التأكيد" %}</span>
+                    {% else %}
+                        <span class="badge-status" style="background: rgba(52,152,219,0.12); color: #3498db; border-color: rgba(52,152,219,0.2);">
+                            {{ booking.get_status_display }}
+                        </span>
+                    {% endif %}
                 </span>
             </div>
         </div>

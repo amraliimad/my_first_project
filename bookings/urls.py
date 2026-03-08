@@ -20,13 +20,10 @@ urlpatterns = [
     path('owner/pitch/<int:pitch_id>/schedule/', views.owner_schedule, name='owner_schedule'),
     path('owner/pitch/<int:pitch_id>/block/', views.owner_block_hour, name='owner_block_hour'),
     path('owner/unblock/<int:booking_id>/', views.owner_unblock_hour, name='owner_unblock_hour'),
-    path('owner/earnings/', views.owner_earnings, name='owner_earnings'),
     path('owner/booking/<int:booking_id>/update-status/', views.owner_update_booking_status, name='owner_update_booking_status'),
 
-        # ─── 🆕 داشبورد الأرباح المالية (الجديدة) ───
+    # ─── 🆕 داشبورد الأرباح المالية (الجديدة) ───
     path('owner/earnings/', views.owner_earnings, name='owner_earnings'),
     path('owner/earnings/settle/', views.settle_account, name='settle_account'),
     path('owner/earnings/export-csv/', views.owner_earnings_export_csv, name='owner_earnings_export_csv'),
-
-
 ]

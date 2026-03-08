@@ -120,28 +120,21 @@ LANGUAGES = [
 ]
 TIME_ZONE = "Africa/Cairo"      # ← مصر مش UTC!
 USE_I18N = True
-USE_L10N = True
 USE_TZ = True
+# تم إزالة USE_L10N لتجنب تحذيرات Django الحديثة
 LOCALE_PATHS = [BASE_DIR / 'locale']
 
 
 # ═══════════════════════════════════════════
-# 7. الملفات الثابتة والميديا
+# 7. الملفات الثابتة والميديا (Static & Cloudinary)
 # ═══════════════════════════════════════════
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+# استخدام WhiteNoise لضغط الملفات الثابتة (CSS/JS)
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# ═══════════════════════════════════════════
-# 7. الملفات الثابتة والميديا (Cloudinary)
-# ═══════════════════════════════════════════
-STATIC_URL = "/static/"
-STATICFILES_DIRS = [BASE_DIR / "static"]
-STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-# ── 🆕 إعدادات Cloudinary لصور الملاعب ──
+# ── إعدادات Cloudinary لصور الملاعب (Media) ──
 MEDIA_URL = '/media/'
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 

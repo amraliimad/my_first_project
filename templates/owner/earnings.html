@@ -481,9 +481,17 @@
       {# أونلاين محتجز عند المنصة #}
       <div class="fin-stat blue">
         <span class="stat-icon">📱</span>
-        <div class="stat-label">أونلاين عند المنصة (اليوم)</div>
+        <div class="stat-label">أونلاين لمباريات اليوم</div>
         <div class="stat-val">{{ today_online_holding|floatformat:0 }}<small>ج.م</small></div>
-        <div class="stat-sub">مدفوع إلكترونياً — لم يُسوَّ بعد</div>
+        <div class="stat-sub">مدفوع إلكترونياً للعب اليوم</div>
+      </div>
+
+      {# أونلاين لحجوزات قادمة (الجديد) #}
+      <div class="fin-stat gold" style="border-color:rgba(245,158,11,0.25)">
+        <span class="stat-icon">🔮</span>
+        <div class="stat-label">أونلاين لحجوزات قادمة</div>
+        <div class="stat-val" style="color:var(--fin-gold)">{{ upcoming_online_holding|floatformat:0 }}<small>ج.م</small></div>
+        <div class="stat-sub">حجوزات مستقبلية لم تُلعب بعد</div>
       </div>
 
     </div>

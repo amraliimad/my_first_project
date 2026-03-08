@@ -34,10 +34,11 @@
     <!-- Favicon -->
     <link rel="icon" href="{% static 'img/logo.png' %}" type="image/png">
 
-    <!-- Fonts -->
+    <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
     <!-- ══════════════════════════════════════════════
          GLOBAL CSS VARIABLES & BASE STYLES
@@ -365,6 +366,11 @@
         </nav>
         <div class="navbar-actions">
             {% if user.is_authenticated %}
+                {% if user.owned_pitches.exists %}
+                    <a href="{% url 'owner_dashboard' %}" class="btn" style="background:var(--accent); color:white; border:none; box-shadow:0 2px 8px rgba(243,156,18,0.3);">
+                        <i class="fas fa-cog"></i> {% trans "إدارة ملاعبي" %}
+                    </a>
+                {% endif %}
                 <a href="{% url 'user_profile' %}" class="btn btn-ghost">👤 {{ user.username }}</a>
             {% else %}
                 <a href="{% url 'login' %}" class="btn btn-primary">🔑 {% trans "تسجيل الدخول" %}</a>

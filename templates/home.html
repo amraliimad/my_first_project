@@ -1580,7 +1580,7 @@
             {% if pitches.has_other_pages %}
             <nav class="pagination" aria-label="{% trans 'التنقل بين الصفحات' %}">
                 {% if pitches.has_previous %}
-                    <a href="?page={{ pitches.previous_page_number }}" class="page-link"
+                    <a href="?{{ query_string }}&page={{ pitches.previous_page_number }}" class="page-link"
                        aria-label="{% trans 'الصفحة السابقة' %}">
                         <i class="fas fa-chevron-right"></i> {% trans "السابق" %}
                     </a>
@@ -1590,14 +1590,14 @@
                     {% if page_num == pitches.number %}
                         <span class="page-link active" aria-current="page">{{ page_num }}</span>
                     {% elif page_num == 1 or page_num == pitches.paginator.num_pages or page_num >= pitches.number|add:"-2" and page_num <= pitches.number|add:"2" %}
-                        <a href="?page={{ page_num }}" class="page-link">{{ page_num }}</a>
+                        <a href="?{{ query_string }}&page={{ page_num }}" class="page-link">{{ page_num }}</a>
                     {% elif page_num == pitches.number|add:"-3" or page_num == pitches.number|add:"3" %}
                         <span style="color:var(--text-muted); padding:0 4px;">…</span>
                     {% endif %}
                 {% endfor %}
 
                 {% if pitches.has_next %}
-                    <a href="?page={{ pitches.next_page_number }}" class="page-link"
+                    <a href="?{{ query_string }}&page={{ pitches.next_page_number }}" class="page-link"
                        aria-label="{% trans 'الصفحة التالية' %}">
                         {% trans "التالي" %} <i class="fas fa-chevron-left"></i>
                     </a>
@@ -1919,6 +1919,5 @@
             });
         }
     </script>
-
 </body>
 </html>

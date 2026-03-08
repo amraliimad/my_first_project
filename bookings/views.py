@@ -100,8 +100,16 @@ def home(request):
     page_number = request.GET.get('page')
     pitches     = paginator.get_page(page_number)
 
+    # بناء Query String للفلاتر عشان الـ Pagination
+    query_dict = request.GET.copy()
+    if 'page' in query_dict:
+        del query_dict['page']
+    query_string = query_dict.urlencode()
+
     # ✅ الجديد (مرة واحدة بس):
     return render(request, 'home.html', {
+        'pitches':           pitches,
+        'query_string':      query_string,  # <-- المتغير الجديد
         'pitches':           pitches,
         'pitches_count':     pitches_count,
         'selected_location': location_query,
@@ -153,11 +161,15 @@ def pitch_detail(request, pitch_id):
     average_rating = pitch.reviews.aggregate(Avg('rating'))['rating__avg'] or 0
     reviews        = pitch.reviews.all()
 
+    # 🧹 تنظيف الحجوزات المعلقة لهذا الملعب أولاً قبل عرض المواعيد
+    time_threshold = timezone.now() - timedelta(minutes=30)
+    Booking.objects.filter(pitch=pitch, status='Pending', created_at__lt=time_threshold).update(status='Cancelled')
+
     date_str = request.GET.get('date')
     try:
         selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
     except (ValueError, TypeError):
-        selected_date = datetime.now().date()
+        selected_date = timezone.localtime().date()
 
     active_bookings  = Booking.objects.filter(pitch=pitch, date=selected_date).exclude(status='Cancelled')
     hours_status_map = {int(b.time.split(':')[0]): b.status for b in active_bookings}
@@ -168,8 +180,8 @@ def pitch_detail(request, pitch_id):
     pricing_rules_list = list(pricing_rules)
 
     hours_schedule = []
-    current_hour   = datetime.now().hour
-    is_today       = (selected_date == datetime.now().date())
+    current_hour   = timezone.localtime().hour
+    is_today       = (selected_date == timezone.localtime().date())
 
     for i in range(24):
         # ----------------------------------------------------
@@ -225,7 +237,7 @@ def pitch_detail(request, pitch_id):
     # باقي كود الدالة كما هو بدون أي تغيير
     # ----------------------------------------------------
     days_list = []
-    today     = datetime.now().date()
+    today     = timezone.localtime().date()
 
     for i in range(14):
         day_date = today + timedelta(days=i)
@@ -274,11 +286,15 @@ def booking_confirm(request, pitch_id, hour):
         return redirect('pitch_detail', pitch_id=pitch.id)
     # ----------------------------------------------------
 
+    # 🧹 تنظيف الحجوزات قبل التأكد من الإتاحة
+    time_threshold = timezone.now() - timedelta(minutes=30)
+    Booking.objects.filter(pitch=pitch, status='Pending', created_at__lt=time_threshold).update(status='Cancelled')
+
     date_str = request.GET.get('date')
     try:
         selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
     except (ValueError, TypeError):
-        selected_date = datetime.now().date()
+        selected_date = timezone.localtime().date()
 
     time_str = f"{hour_int:02d}:00"
 
@@ -625,11 +641,29 @@ def paymob_callback(request):
                     payment.transaction_id = str(obj.get('id', ''))
                     payment.save()
                     
-                    # الفلوس دخلت الحساب بجد، نأكد الحجز
-                    payment.booking.status = 'Confirmed'
-                    payment.booking.save()
-                                        # إرسال البيانات لجوجل شيت
-                    add_booking_to_sheet(payment.booking)
+                    # حماية من التعارض: لو العميل اتأخر في الدفع وحد تاني حجز مكانه
+                    conflict_exists = Booking.objects.filter(
+                        pitch=payment.booking.pitch,
+                        date=payment.booking.date,
+                        time=payment.booking.time,
+                        status__in=['Confirmed', 'Played']
+                    ).exclude(id=payment.booking.id).exists()
+
+                    if not conflict_exists:
+                        # الفلوس دخلت والميعاد لسه فاضي، نأكد الحجز بأمان
+                        payment.booking.status = 'Confirmed'
+                        payment.booking.save()
+                    else:
+                        # الفلوس دخلت بس الميعاد اتأخد، هنكتب ملاحظة للإدارة للتعويض
+                        payment.booking.customer_name = "⚠️ دفع متأخر - تعارض مواعيد"
+                        payment.booking.save()
+
+                    # إرسال البيانات لجوجل شيت (بحماية try/except حتى لا يعطل الـ Webhook)
+                    try:
+                        add_booking_to_sheet(payment.booking)
+                    except Exception as sheet_error:
+                        pass # يتم تجاهل خطأ جوجل شيت لضمان رد 200 لـ Paymob
+
             return HttpResponse(status=200)
 
         except Exception as e:
@@ -701,9 +735,10 @@ def owner_dashboard(request):
     }
 
     # حساب أرباح الأسبوع
+    # حساب أرباح الأسبوع
     weekly_payments = Payment.objects.filter(
         booking__pitch__in=pitches,
-        booking__status='Confirmed',
+        booking__status__in=['Confirmed', 'Played'],
         booking__date__gte=today - timedelta(days=7),
         is_verified=True
     )
@@ -741,7 +776,7 @@ def owner_schedule(request, pitch_id):
     try:
         selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
     except (ValueError, TypeError):
-        selected_date = datetime.now().date()
+        selected_date = timezone.localtime().date()
 
     bookings = Booking.objects.filter(
         pitch=pitch, date=selected_date
@@ -810,7 +845,7 @@ def owner_schedule(request, pitch_id):
 
     # أيام للتنقل
     days_list = []
-    today = datetime.now().date()
+    today = timezone.localtime().date()
     for i in range(14):
         day_date = today + timedelta(days=i)
         days_list.append({
@@ -985,6 +1020,18 @@ def owner_earnings(request):
         })
 
     # ─────────────────────────────────────────────────────────
+    # 🆕 إضافة: رصيد الأونلاين للحجوزات المستقبلية (قادمة)
+    # ─────────────────────────────────────────────────────────
+    upcoming_payments = Payment.objects.filter(
+        booking__pitch__in=pitches,
+        booking__status='Confirmed',
+        booking__date__gt=today,
+        is_verified=True,
+        amount_cents__gt=0
+    )
+    upcoming_online_holding = sum((Decimal(p.amount_cents) / Decimal('100')) for p in upcoming_payments)
+
+    # ─────────────────────────────────────────────────────────
     # SECTION B ➜ الرصيد المتراكم (Unsettled Ledger)
     #   فقط: status='Played' AND is_settled=False
     # ─────────────────────────────────────────────────────────
@@ -1051,10 +1098,11 @@ def owner_earnings(request):
         'is_superuser':   request.user.is_superuser,
 
         # Section A
-        'today_total_sales':    today_total_sales,
-        'today_cash_drawer':    today_cash_drawer,
-        'today_online_holding': today_online_holding,
-        'today_booking_rows':   today_booking_rows,
+        'today_total_sales':       today_total_sales,
+        'today_cash_drawer':       today_cash_drawer,
+        'today_online_holding':    today_online_holding,
+        'upcoming_online_holding': upcoming_online_holding,
+        'today_booking_rows':      today_booking_rows,
         'today_count':          len(today_booking_rows),
 
         # Section B
@@ -1183,81 +1231,4 @@ def owner_update_booking_status(request, booking_id):
     return redirect(f'/owner/pitch/{booking.pitch.id}/schedule/?date={selected_date}')
 
 
-# ───────────────────────────────────────────
-# 5. ملخص الأرباح (Earnings) - مُعدلة لتشمل العمولة المتغيرة
-# ───────────────────────────────────────────
-@login_required
-def owner_earnings(request):
-    from decimal import Decimal # تأكد من وجودها
-    
-    pitches = Pitch.objects.filter(owner=request.user)
 
-    if not pitches.exists():
-        messages.error(request, "ليس لديك ملاعب مسجلة.")
-        return redirect('home')
-
-    today = timezone.localtime().date() # تم إصلاح التوقيت
-
-    periods = {
-        'today': today,
-        'this_week': today - timedelta(days=7),
-        'this_month': today - timedelta(days=30),
-    }
-
-    earnings = {}
-    for period_name, start_date in periods.items():
-        # نأتي بالمدفوعات الأونلاين للحجوزات المؤكدة أو التي تم لعبها
-        verified_payments = Payment.objects.filter(
-            booking__pitch__in=pitches,
-            booking__status__in=['Confirmed', 'Played'], 
-            booking__date__gte=start_date,
-            is_verified=True
-        )
-        
-        total_net_for_owner = Decimal('0.00')
-        
-        for payment in verified_payments:
-            amount_paid_online = Decimal(payment.amount_cents) / Decimal('100')
-            
-            # حساب عمولة المنصة بناءً على نسبة هذا الملعب (مثلاً 5%)
-            commission_rate = payment.booking.pitch.commission_percentage / Decimal('100')
-            platform_fee = amount_paid_online * commission_rate
-            
-            # الصافي لصاحب الملعب من المدفوعات الأونلاين
-            owner_net = amount_paid_online - platform_fee
-            total_net_for_owner += owner_net
-
-        earnings[period_name] = {
-            'amount': round(total_net_for_owner, 2),
-            'count': verified_payments.count(),
-        }
-
-    # تفصيل لكل ملعب
-    pitch_earnings = []
-    for pitch in pitches:
-        pitch_payments = Payment.objects.filter(
-            booking__pitch=pitch,
-            booking__status__in=['Confirmed', 'Played'],
-            is_verified=True,
-            booking__date__gte=today - timedelta(days=30),
-        )
-        
-        pitch_net_total = Decimal('0.00')
-        commission_rate = pitch.commission_percentage / Decimal('100')
-        
-        for payment in pitch_payments:
-            amount = Decimal(payment.amount_cents) / Decimal('100')
-            fee = amount * commission_rate
-            pitch_net_total += (amount - fee)
-
-        pitch_earnings.append({
-            'pitch': pitch,
-            'monthly_earnings': round(pitch_net_total, 2),
-            'booking_count': pitch_payments.count(),
-        })
-
-    return render(request, 'owner/earnings.html', {
-        'earnings': earnings,
-        'pitch_earnings': pitch_earnings,
-         'owner': request.user,
-    })
