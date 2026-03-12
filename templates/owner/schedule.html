@@ -1,276 +1,806 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}{% trans "جدول حجوزات" %} - {{ pitch.name }}{% endblock %}
+{% block title %}{% trans "جدول حجوزات" %} — {{ pitch.name }}{% endblock %}
 
 {% block content %}
 <style>
-    .schedule-container { max-width: 1000px; margin: 0 auto; padding: 30px 20px; }
-    .schedule-header {
-        background: var(--surface); border: 1px solid var(--border);
-        border-radius: var(--radius-lg); padding: 24px;
-        margin-bottom: 20px; box-shadow: var(--shadow-sm);
-    }
-    .schedule-header h1 { font-size: 22px; margin-bottom: 4px; }
-    .schedule-header p { color: var(--text-2); font-size: 14px; }
+/* ═══════════════════════════════════════════════
+   SCHEDULE PAGE — OPERATIONAL CONTROL AESTHETIC
+   ═══════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@500;700&display=swap');
 
-    /* أيام */
-    .days-bar {
-        display: flex; gap: 8px; overflow-x: auto; padding: 10px 0 16px;
-        margin-bottom: 20px;
-    }
-    .days-bar::-webkit-scrollbar { height: 4px; }
-    .days-bar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-    .day-chip {
-        flex-shrink: 0; padding: 10px 16px; border-radius: var(--radius-sm);
-        background: var(--surface); border: 1px solid var(--border);
-        font-size: 13px; font-weight: 600; text-align: center;
-        color: var(--text-2); cursor: pointer; transition: all 0.2s;
-        min-width: 70px;
-    }
-    .day-chip:hover { border-color: var(--primary); color: var(--primary); }
-    .day-chip.active {
-        background: var(--primary); color: white;
-        border-color: var(--primary); box-shadow: 0 4px 12px rgba(39,174,96,0.3);
-    }
-    .day-chip small { display: block; font-size: 11px; opacity: 0.8; }
+:root {
+  --sch-bg:         #0d1117;
+  --sch-surface:    #161b22;
+  --sch-surface-2:  #1c2128;
+  --sch-border:     #30363d;
+  --sch-border-2:   #21262d;
+  --sch-text:       #e6edf3;
+  --sch-text-2:     #8b949e;
+  --sch-text-3:     #6e7681;
 
-    /* جدول الساعات */
-    .hours-grid {
-        display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 12px; margin-bottom: 30px;
-    }
-    .hour-card {
-        background: var(--surface); border: 1px solid var(--border);
-        border-radius: var(--radius-md); padding: 16px;
-        display: flex; align-items: center; justify-content: space-between;
-        transition: all 0.2s; box-shadow: var(--shadow-sm);
-    }
-    .hour-card.booked { border-right: 4px solid var(--danger); background: var(--danger-ghost); }
-    .hour-card.manual { border-right: 4px solid var(--accent); }
-    .hour-card.available { border-right: 4px solid var(--primary); }
-    .hour-time { font-size: 18px; font-weight: 800; color: var(--text); }
-    .hour-status { font-size: 12px; color: var(--text-2); }
-    .hour-actions { display: flex; gap: 6px; }
+  --sch-green:      #3fb950;
+  --sch-green-dim:  rgba(63,185,80,.12);
+  --sch-green-glow: rgba(63,185,80,.25);
 
-    /* تفاصيل الحجوزات */
-    .details-section { margin-top: 30px; }
-    .details-section h2 {
-        font-size: 20px; margin-bottom: 16px;
-        padding-bottom: 10px; border-bottom: 2px solid var(--border);
-    }
-    .detail-card {
-        background: var(--surface); border: 1px solid var(--border);
-        border-radius: var(--radius-md); padding: 18px;
-        margin-bottom: 12px; box-shadow: var(--shadow-sm);
-    }
-    .detail-row {
-        display: flex; justify-content: space-between;
-        padding: 6px 0; font-size: 14px;
-        border-bottom: 1px solid var(--border);
-    }
-    .detail-row:last-child { border: none; }
-    .detail-label { color: var(--text-2); font-weight: 600; }
-    .detail-value { font-weight: 700; }
-    .paid { color: var(--primary); }
-    .remaining { color: var(--danger); }
+  --sch-red:        #f85149;
+  --sch-red-dim:    rgba(248,81,73,.10);
 
-    /* Modal للحجز اليدوي */
-    .modal-overlay {
-        display: none; position: fixed; inset: 0;
-        background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
-        z-index: 2000; justify-content: center; align-items: center;
-    }
-    .modal-overlay.show { display: flex; }
-    .modal-box {
-        background: var(--surface); border-radius: var(--radius-lg);
-        padding: 30px; width: 90%; max-width: 420px;
-        box-shadow: var(--shadow-lg);
-    }
-    .modal-box h3 { font-size: 20px; margin-bottom: 16px; }
-    .modal-input {
-        width: 100%; padding: 12px; border: 1px solid var(--border);
-        border-radius: var(--radius-sm); font-family: 'Cairo', sans-serif;
-        font-size: 14px; margin-bottom: 10px; background: var(--surface-2);
-        color: var(--text);
-    }
-    .modal-input:focus { outline: none; border-color: var(--primary); }
-    .modal-btns { display: flex; gap: 10px; margin-top: 16px; }
-    .btn-modal {
-        flex: 1; padding: 12px; border: none; border-radius: var(--radius-sm);
-        font-family: 'Cairo', sans-serif; font-size: 14px;
-        font-weight: 700; cursor: pointer; transition: all 0.2s;
-    }
-    .btn-confirm { background: var(--primary); color: white; }
-    .btn-confirm:hover { background: var(--primary-dark); }
-    .btn-cancel-modal { background: var(--surface-2); color: var(--text-2); border: 1px solid var(--border); }
+  --sch-amber:      #d29922;
+  --sch-amber-dim:  rgba(210,153,34,.12);
 
-    .back-link {
-        display: inline-flex; align-items: center; gap: 6px;
-        color: var(--primary); font-weight: 700; font-size: 14px;
-        margin-bottom: 16px;
-    }
-    .back-link:hover { text-decoration: underline; }
+  --sch-blue:       #388bfd;
+  --sch-blue-dim:   rgba(56,139,253,.12);
+
+  --sch-radius:     10px;
+  --sch-radius-lg:  16px;
+}
+
+/* ─── Layout ─── */
+.sch-wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 20px 60px;
+  font-family: 'Cairo', sans-serif;
+  direction: rtl;
+}
+
+/* ─── Back link ─── */
+.sch-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--sch-text-2);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 22px;
+  text-decoration: none;
+  transition: color .2s;
+  border: 1px solid var(--sch-border);
+  padding: 7px 14px;
+  border-radius: 30px;
+  background: var(--sch-surface);
+}
+.sch-back:hover { color: var(--sch-green); border-color: var(--sch-green); }
+.sch-back svg { flex-shrink: 0; }
+
+/* ─── Header ─── */
+.sch-header {
+  background: var(--sch-surface);
+  border: 1px solid var(--sch-border);
+  border-radius: var(--sch-radius-lg);
+  padding: 24px 28px;
+  margin-bottom: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+}
+.sch-header::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 180px; height: 100%;
+  background: linear-gradient(270deg, var(--sch-green-dim), transparent);
+  pointer-events: none;
+}
+.sch-header-title { font-size: 22px; font-weight: 900; color: var(--sch-text); margin: 0 0 4px; }
+.sch-header-sub { font-size: 13px; color: var(--sch-text-2); }
+.sch-header-sub span { color: var(--sch-green); font-weight: 700; }
+.sch-date-badge {
+  background: var(--sch-green-dim);
+  border: 1px solid var(--sch-green);
+  color: var(--sch-green);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 8px 18px;
+  border-radius: var(--sch-radius);
+  letter-spacing: .5px;
+  white-space: nowrap;
+}
+
+/* ─── Stats Row ─── */
+.sch-stats {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+.sch-stat {
+  background: var(--sch-surface);
+  border: 1px solid var(--sch-border);
+  border-radius: var(--sch-radius);
+  padding: 14px 20px;
+  flex: 1;
+  min-width: 120px;
+  text-align: center;
+}
+.sch-stat-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 5px;
+}
+.sch-stat-label { font-size: 12px; color: var(--sch-text-2); }
+.stat-total .sch-stat-num   { color: var(--sch-blue);  }
+.stat-booked .sch-stat-num  { color: var(--sch-red);   }
+.stat-free .sch-stat-num    { color: var(--sch-green); }
+.stat-manual .sch-stat-num  { color: var(--sch-amber); }
+
+/* ─── Days Bar ─── */
+.sch-days {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  margin-bottom: 24px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sch-border) transparent;
+}
+.sch-days::-webkit-scrollbar { height: 3px; }
+.sch-days::-webkit-scrollbar-thumb { background: var(--sch-border); border-radius: 4px; }
+.day-pill {
+  flex-shrink: 0;
+  text-align: center;
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--sch-border);
+  background: var(--sch-surface);
+  color: var(--sch-text-2);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 64px;
+  transition: all .18s;
+  line-height: 1.4;
+}
+.day-pill strong { display: block; font-size: 14px; color: var(--sch-text); margin-bottom: 2px; }
+.day-pill:hover { border-color: var(--sch-green); color: var(--sch-green); }
+.day-pill:hover strong { color: var(--sch-green); }
+.day-pill.active {
+  background: var(--sch-green);
+  border-color: var(--sch-green);
+  color: #fff;
+  box-shadow: 0 0 16px var(--sch-green-glow);
+}
+.day-pill.active strong { color: #fff; }
+
+/* ─── Section Title ─── */
+.sch-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sch-text-3);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sch-section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--sch-border);
+}
+
+/* ─── Hours Grid ─── */
+.hours-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 10px;
+  margin-bottom: 36px;
+}
+
+.hour-card {
+  background: var(--sch-surface);
+  border: 1px solid var(--sch-border);
+  border-radius: var(--sch-radius);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  animation: cardIn .25s ease both;
+  position: relative;
+  overflow: hidden;
+  transition: border-color .2s, box-shadow .2s;
+}
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+/* stagger */
+{% for h in hours_schedule %}.hour-card:nth-child({{ forloop.counter }}) { animation-delay: {{ forloop.counter0 }}0ms; }
+{% endfor %}
+
+.hour-card::before {
+  content: '';
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: 3px;
+  border-radius: 0 var(--sch-radius) var(--sch-radius) 0;
+}
+.hour-card.available::before  { background: var(--sch-green); }
+.hour-card.booked::before     { background: var(--sch-red);   }
+.hour-card.manual-card::before{ background: var(--sch-amber); }
+.hour-card.played::before     { background: var(--sch-blue);  }
+.hour-card.noshow::before     { background: var(--sch-text-3);}
+
+.hour-card.available  { border-color: var(--sch-border); }
+.hour-card.booked     { background: var(--sch-red-dim);   border-color: rgba(248,81,73,.2); }
+.hour-card.manual-card{ background: var(--sch-amber-dim); border-color: rgba(210,153,34,.25); }
+.hour-card.played     { background: var(--sch-blue-dim);  border-color: rgba(56,139,253,.2); }
+.hour-card.noshow     { background: var(--sch-surface-2); border-color: var(--sch-border-2); opacity: .7; }
+
+/* Hour Info */
+.hour-info { flex: 1; min-width: 0; }
+.hour-time-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--sch-text);
+  line-height: 1;
+  margin-bottom: 5px;
+}
+.hour-client {
+  font-size: 13px;
+  color: var(--sch-text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.hour-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  margin-top: 5px;
+}
+.badge-online  { background: var(--sch-blue-dim);  color: var(--sch-blue);  border: 1px solid rgba(56,139,253,.3); }
+.badge-manual  { background: var(--sch-amber-dim); color: var(--sch-amber); border: 1px solid rgba(210,153,34,.3); }
+.badge-cash    { background: var(--sch-green-dim); color: var(--sch-green); border: 1px solid rgba(63,185,80,.3); }
+
+/* Hour Actions */
+.hour-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+/* Buttons */
+.btn-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-family: 'Cairo', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s;
+  line-height: 1;
+}
+.btn-played  { background: var(--sch-green-dim); color: var(--sch-green); border-color: rgba(63,185,80,.3); }
+.btn-played:hover  { background: var(--sch-green); color: #fff; }
+.btn-noshow  { background: var(--sch-red-dim);   color: var(--sch-red);   border-color: rgba(248,81,73,.3); }
+.btn-noshow:hover  { background: var(--sch-red);   color: #fff; }
+.btn-unblock { background: var(--sch-surface-2); color: var(--sch-text-2); border-color: var(--sch-border); }
+.btn-unblock:hover { border-color: var(--sch-amber); color: var(--sch-amber); }
+.btn-manual-add {
+  background: var(--sch-green-dim);
+  color: var(--sch-green);
+  border-color: rgba(63,185,80,.3);
+  width: 100%;
+}
+.btn-manual-add:hover { background: var(--sch-green); color: #fff; box-shadow: 0 0 10px var(--sch-green-glow); }
+
+/* Status Tags */
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+.tag-played { background: var(--sch-blue-dim);  color: var(--sch-blue); }
+.tag-noshow { background: var(--sch-surface-2); color: var(--sch-text-3); }
+
+/* ─── Payment Details Table ─── */
+.pay-table-wrap {
+  background: var(--sch-surface);
+  border: 1px solid var(--sch-border);
+  border-radius: var(--sch-radius-lg);
+  overflow: hidden;
+  margin-bottom: 30px;
+}
+.pay-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.pay-table thead th {
+  background: var(--sch-surface-2);
+  color: var(--sch-text-3);
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  padding: 12px 16px;
+  text-align: right;
+  border-bottom: 1px solid var(--sch-border);
+  white-space: nowrap;
+}
+.pay-table tbody tr {
+  border-bottom: 1px solid var(--sch-border-2);
+  transition: background .15s;
+}
+.pay-table tbody tr:last-child { border-bottom: none; }
+.pay-table tbody tr:hover { background: var(--sch-surface-2); }
+.pay-table td { padding: 13px 16px; color: var(--sch-text); vertical-align: middle; }
+.pay-table .time-cell {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--sch-green);
+}
+.pay-table .paid-cell { color: var(--sch-green); font-weight: 700; }
+.pay-table .remain-cell { color: var(--sch-red); font-weight: 700; }
+.pay-table .zero { color: var(--sch-text-3); font-weight: 400; }
+
+/* ─── Empty State ─── */
+.empty-day {
+  text-align: center;
+  padding: 60px 20px;
+  background: var(--sch-surface);
+  border: 1px dashed var(--sch-border);
+  border-radius: var(--sch-radius-lg);
+  margin-bottom: 30px;
+}
+.empty-day .empty-icon { font-size: 48px; margin-bottom: 14px; }
+.empty-day h3 { font-size: 18px; color: var(--sch-text); margin-bottom: 6px; }
+.empty-day p  { font-size: 13px; color: var(--sch-text-2); }
+
+/* ─── Modal ─── */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.7);
+  backdrop-filter: blur(6px);
+  z-index: 9000;
+  justify-content: center;
+  align-items: center;
+}
+.modal-overlay.show { display: flex; }
+.modal-box {
+  background: var(--sch-surface);
+  border: 1px solid var(--sch-border);
+  border-radius: var(--sch-radius-lg);
+  padding: 32px;
+  width: 90%;
+  max-width: 440px;
+  box-shadow: 0 24px 64px rgba(0,0,0,.6);
+  animation: modalIn .2s ease;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(.94) translateY(-10px); }
+  to   { opacity: 1; transform: scale(1)   translateY(0);     }
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.modal-header h3 { font-size: 18px; font-weight: 900; color: var(--sch-text); margin: 0; }
+.modal-close {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--sch-surface-2); border: 1px solid var(--sch-border);
+  color: var(--sch-text-2); cursor: pointer; font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.modal-close:hover { border-color: var(--sch-red); color: var(--sch-red); }
+
+.modal-slot {
+  background: var(--sch-green-dim);
+  border: 1px solid rgba(63,185,80,.3);
+  border-radius: var(--sch-radius);
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.modal-slot-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--sch-green);
+}
+.modal-slot-date { font-size: 12px; color: var(--sch-text-2); }
+
+.modal-field { margin-bottom: 12px; }
+.modal-label { font-size: 12px; font-weight: 700; color: var(--sch-text-2); margin-bottom: 6px; display: block; }
+.modal-input {
+  width: 100%;
+  padding: 11px 14px;
+  background: var(--sch-surface-2);
+  border: 1px solid var(--sch-border);
+  border-radius: var(--sch-radius);
+  color: var(--sch-text);
+  font-family: 'Cairo', sans-serif;
+  font-size: 14px;
+  direction: rtl;
+  transition: border-color .15s;
+  box-sizing: border-box;
+}
+.modal-input:focus { outline: none; border-color: var(--sch-green); }
+.modal-input::placeholder { color: var(--sch-text-3); }
+
+.modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+.modal-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: var(--sch-radius);
+  border: 1px solid transparent;
+  font-family: 'Cairo', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s;
+}
+.modal-btn-confirm {
+  background: var(--sch-green);
+  color: #fff;
+  border-color: var(--sch-green);
+}
+.modal-btn-confirm:hover { box-shadow: 0 0 16px var(--sch-green-glow); filter: brightness(1.1); }
+.modal-btn-cancel {
+  background: var(--sch-surface-2);
+  color: var(--sch-text-2);
+  border-color: var(--sch-border);
+}
+.modal-btn-cancel:hover { border-color: var(--sch-red); color: var(--sch-red); }
+
+/* ─── Responsive ─── */
+@media (max-width: 600px) {
+  .sch-header { padding: 18px; }
+  .sch-header-title { font-size: 18px; }
+  .hours-grid { grid-template-columns: 1fr; }
+  .sch-stats { display: grid; grid-template-columns: 1fr 1fr; }
+  .pay-table { font-size: 12px; }
+  .pay-table thead th, .pay-table td { padding: 10px 10px; }
+}
 </style>
 
-<div class="schedule-container">
+<div class="sch-wrap">
 
-    <a href="{% url 'owner_dashboard' %}" class="back-link">→ {% trans "رجوع للداشبورد" %}</a>
+  <!-- Back -->
+  <a href="{% url 'owner_dashboard' %}" class="sch-back">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="M19 12H5M12 5l7 7-7 7"/>
+    </svg>
+    {% trans "رجوع للداشبورد" %}
+  </a>
 
-    <!-- الهيدر -->
-    <div class="schedule-header">
-        <h1>📋 {{ pitch.name }}</h1>
-        <p>📍 {{ pitch.get_location_display }} — {% trans "جدول يوم" %} {{ selected_date }}</p>
+  <!-- Header -->
+  <div class="sch-header">
+    <div>
+      <h1 class="sch-header-title">📋 {{ pitch.name }}</h1>
+      <p class="sch-header-sub">
+        📍 {{ pitch.get_location_display }} &nbsp;·&nbsp;
+        ⏰ {{ pitch.opening_hour }}:00 – {{ pitch.closing_hour }}:00 &nbsp;·&nbsp;
+        <span>{{ selected_date }}</span>
+      </p>
     </div>
+    <div class="sch-date-badge">{{ selected_date }}</div>
+  </div>
 
-    <!-- شريط الأيام -->
-    <div class="days-bar">
-        {% for day in days_list %}
-        <a href="?date={{ day.full_date }}"
-           class="day-chip {% if day.full_date == selected_date %}active{% endif %}">
-            {{ day.display }}
-            <small>{{ day.day_name }}</small>
-        </a>
-        {% endfor %}
+  <!-- Stats -->
+  {% with total=hours_schedule|length booked_count=bookings_with_details|length %}
+  <div class="sch-stats">
+    <div class="sch-stat stat-total">
+      <div class="sch-stat-num">{{ total }}</div>
+      <div class="sch-stat-label">إجمالي الساعات</div>
     </div>
+    <div class="sch-stat stat-booked">
+      <div class="sch-stat-num">{{ booked_count }}</div>
+      <div class="sch-stat-label">محجوز</div>
+    </div>
+    <div class="sch-stat stat-free">
+      <div class="sch-stat-num">{{ total|add:booked_count|add:"-"|add:booked_count }}</div>
+      <div class="sch-stat-label">متاح</div>
+    </div>
+    <div class="sch-stat stat-manual">
+      {% with mc=0 %}
+      <div class="sch-stat-num" id="manualCount">—</div>
+      {% endwith %}
+      <div class="sch-stat-label">حجوزات يدوية</div>
+    </div>
+  </div>
+  {% endwith %}
 
-    <!-- جدول الساعات -->
-    <div class="hours-grid">
-        {% for hour in hours_schedule %}
-        <div class="hour-card {% if hour.is_booked %}{% if hour.is_manual %}manual{% else %}booked{% endif %}{% else %}available{% endif %}">
-            <div>
-                <div class="hour-time">{{ hour.hour_display }}</div>
-                <div class="hour-status">
-                    {% if hour.is_booked %}
-                        {% if hour.is_manual %}
-                            📞 {{ hour.booking.customer_name|default:"حجز يدوي" }}
-                        {% else %}
-                            🌐 {{ hour.booking.user.username }}
-                        {% endif %}
-                    {% else %}
-                        ✅ {% trans "متاح" %}
-                    {% endif %}
-                </div>
-            </div>
-            <div class="hour-actions">
-                {% if hour.is_booked %}
-                    <!-- لو الحجز مؤكد أو يدوي ولسه ملعبوش -->
-                    {% if hour.booking.status == 'Confirmed' or hour.booking.status == 'Pending' %}
-                        <form method="post" action="{% url 'owner_update_booking_status' hour.booking.id %}" style="display:inline;">
-                            {% csrf_token %}
-                            <input type="hidden" name="status" value="Played">
-                            <button type="submit" class="btn-sm btn-green" title="حضر ودفع كامل المبلغ">✅ اكتمل</button>
-                        </form>
-                        <form method="post" action="{% url 'owner_update_booking_status' hour.booking.id %}" style="display:inline;" onsubmit="return confirm('هل أنت متأكد أن العميل لم يحضر؟ سيتم تفريغ الملعب.')">
-                            {% csrf_token %}
-                            <input type="hidden" name="status" value="No-Show">
-                            <button type="submit" class="btn-sm" style="background:var(--danger-ghost);color:var(--danger);" title="لم يحضر (إلغاء)">❌ غياب</button>
-                        </form>
-                    
-                    <!-- لو الحجز خلص واتدفع -->
-                    {% elif hour.booking.status == 'Played' %}
-                        <span style="font-size: 12px; color: var(--primary); font-weight: bold; background: var(--primary-ghost); padding: 4px 8px; border-radius: 4px;">✅ تم اللعب</span>
-                    
-                    <!-- لو العميل مجاش -->
-                    {% elif hour.booking.status == 'No-Show' %}
-                        <span style="font-size: 12px; color: var(--danger); font-weight: bold; background: var(--danger-ghost); padding: 4px 8px; border-radius: 4px;">❌ لم يحضر</span>
-                    {% endif %}
+  <!-- Days Bar -->
+  <div class="sch-days">
+    {% for day in days_list %}
+    <a href="?date={{ day.full_date }}"
+       class="day-pill {% if day.full_date == selected_date %}active{% endif %}">
+      <strong>{{ day.display }}</strong>
+      {{ day.day_name }}
+    </a>
+    {% endfor %}
+  </div>
 
-                    <!-- زر إلغاء الحجز اليدوي القديم (متاح لو الحجز لسه ملغاش أو اكتمل) -->
-                    {% if hour.is_manual and hour.booking.status not in 'Played,No-Show,Cancelled' %}
-                        <form method="post" action="{% url 'owner_unblock_hour' hour.booking.id %}" onsubmit="return confirm('{% trans "متأكد تفتح الميعاد ده؟" %}')" style="display:inline; margin-right:5px;">
-                            {% csrf_token %}
-                            <button type="submit" class="btn-sm" style="background:var(--surface-2);color:var(--text-2); border: 1px solid var(--border);">🔓 فتح</button>
-                        </form>
-                    {% endif %}
+  <!-- Hours Section -->
+  <div class="sch-section-title">جدول الساعات</div>
 
-                {% else %}
-                    <!-- لو مفيش حجز، يظهر زرار القفل اليدوي -->
-                    <button class="btn-sm btn-green" onclick="openBlockModal('{{ hour.hour_value }}', '{{ hour.hour_display }}')">
-                        🔒 {% trans "حجز يدوي" %}
-                    </button>
-                {% endif %}
-            </div>
+  {% if hours_schedule %}
+  <div class="hours-grid">
+    {% for hour in hours_schedule %}
+
+    <div class="hour-card
+      {% if not hour.is_booked %}available
+      {% elif hour.booking.status == 'Played' %}played
+      {% elif hour.booking.status == 'No-Show' %}noshow
+      {% elif hour.is_manual %}manual-card
+      {% else %}booked{% endif %}">
+
+      <!-- Time + Info -->
+      <div class="hour-info">
+        <div class="hour-time-mono">{{ hour.hour_display }}</div>
+        <div class="hour-client">
+          {% if hour.is_booked %}
+            {% if hour.is_manual %}
+              📞 {{ hour.booking.customer_name|default:"حجز يدوي" }}
+            {% else %}
+              🌐 {{ hour.booking.user.get_full_name|default:hour.booking.user.username }}
+            {% endif %}
+          {% else %}
+            <span style="color:var(--sch-green);">✅ متاح</span>
+          {% endif %}
         </div>
-        {% endfor %}
-    </div>
+        {% if hour.is_booked %}
+          <div style="margin-top:5px;">
+            {% if hour.is_manual %}
+              <span class="hour-badge badge-manual">يدوي</span>
+            {% elif hour.booking.payment_type == 'PayAtPitch' %}
+              <span class="hour-badge badge-cash">كاش في الملعب</span>
+            {% else %}
+              <span class="hour-badge badge-online">
+                {% if hour.booking.payment_type == 'Deposit' %}عربون{% else %}أونلاين{% endif %}
+              </span>
+            {% endif %}
+            {% if hour.booking.customer_phone %}
+              <span style="font-size:11px;color:var(--sch-text-3);margin-right:4px;">📱 {{ hour.booking.customer_phone }}</span>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
 
-    <!-- تفاصيل حجوزات اليوم -->
-    {% if bookings_with_details %}
-    <div class="details-section">
-        <h2>💰 {% trans "تفاصيل الدفع" %}</h2>
+      <!-- Actions -->
+      <div class="hour-actions">
+        {% if hour.is_booked %}
+          {% if hour.booking.status == 'Confirmed' or hour.booking.status == 'Pending' %}
+
+            <!-- ✅ اكتمل -->
+            <form method="post" action="{% url 'owner_update_booking_status' hour.booking.id %}" style="display:contents;">
+              {% csrf_token %}
+              <input type="hidden" name="status" value="Played">
+              <button type="submit" class="btn-act btn-played">✅ اكتمل</button>
+            </form>
+
+            <!-- ❌ غياب -->
+            <form method="post" action="{% url 'owner_update_booking_status' hour.booking.id %}"
+                  style="display:contents;"
+                  onsubmit="return confirm('هل أنت متأكد أن العميل لم يحضر؟')">
+              {% csrf_token %}
+              <input type="hidden" name="status" value="No-Show">
+              <button type="submit" class="btn-act btn-noshow">❌ غياب</button>
+            </form>
+
+            <!-- 🔓 فتح (يدوي فقط) -->
+            {% if hour.is_manual %}
+            <form method="post" action="{% url 'owner_unblock_hour' hour.booking.id %}"
+                  style="display:contents;"
+                  onsubmit="return confirm('{% trans "متأكد تفتح الميعاد ده؟" %}')">
+              {% csrf_token %}
+              <button type="submit" class="btn-act btn-unblock">🔓 فتح</button>
+            </form>
+            {% endif %}
+
+          {% elif hour.booking.status == 'Played' %}
+            <span class="status-tag tag-played">✅ تم اللعب</span>
+
+          {% elif hour.booking.status == 'No-Show' %}
+            <span class="status-tag tag-noshow">❌ لم يحضر</span>
+          {% endif %}
+
+        {% else %}
+          <!-- متاح → حجز يدوي -->
+          <button class="btn-act btn-manual-add"
+                  onclick="openBlockModal('{{ hour.hour_value }}', '{{ hour.hour_display }}')">
+            🔒 حجز يدوي
+          </button>
+        {% endif %}
+      </div>
+
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="empty-day">
+    <div class="empty-icon">📅</div>
+    <h3>لا توجد ساعات عمل لهذا اليوم</h3>
+    <p>تحقق من إعدادات ساعات الفتح والغلق للملعب</p>
+  </div>
+  {% endif %}
+
+
+  <!-- Payment Details Table -->
+  {% if bookings_with_details %}
+  <div class="sch-section-title">تفاصيل الدفع اليوم</div>
+  <div class="pay-table-wrap">
+    <table class="pay-table">
+      <thead>
+        <tr>
+          <th>الوقت</th>
+          <th>العميل</th>
+          <th>نوع الدفع</th>
+          <th>حالة الحجز</th>
+          <th>المدفوع أونلاين</th>
+          <th>المتبقي (كاش)</th>
+        </tr>
+      </thead>
+      <tbody>
         {% for item in bookings_with_details %}
-        <div class="detail-card">
-            <div class="detail-row">
-                <span class="detail-label">🕐 {% trans "الوقت" %}</span>
-                <span class="detail-value">{{ item.booking.time }}</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">👤 {% trans "العميل" %}</span>
-                <span class="detail-value">
-                    {% if item.booking.is_manual %}
-                        {{ item.booking.customer_name|default:"—" }}
-                        {% if item.booking.customer_phone %}(📱 {{ item.booking.customer_phone }}){% endif %}
-                    {% else %}
-                        {{ item.booking.user.username }}
-                    {% endif %}
-                </span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">💳 {% trans "نوع الدفع" %}</span>
-                <span class="detail-value">{{ item.booking.get_payment_type_display }}</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">✅ {% trans "المدفوع أونلاين" %}</span>
-                <span class="detail-value paid">{{ item.paid_online }} {% trans "ج.م" %}</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">💵 {% trans "المتبقي (كاش في الملعب)" %}</span>
-                <span class="detail-value remaining">{{ item.remaining }} {% trans "ج.م" %}</span>
-            </div>
-        </div>
+        <tr>
+          <td class="time-cell">{{ item.booking.time }}</td>
+          <td>
+            {% if item.booking.is_manual %}
+              <span style="color:var(--sch-amber);">📞</span>
+              {{ item.booking.customer_name|default:"—" }}
+              {% if item.booking.customer_phone %}
+              <br><small style="color:var(--sch-text-3);">{{ item.booking.customer_phone }}</small>
+              {% endif %}
+            {% else %}
+              <span style="color:var(--sch-blue);">🌐</span>
+              {{ item.booking.user.get_full_name|default:item.booking.user.username }}
+            {% endif %}
+          </td>
+          <td>{{ item.booking.get_payment_type_display }}</td>
+          <td>
+            {% if item.booking.status == 'Played' %}
+              <span class="status-tag tag-played">✅ لعب</span>
+            {% elif item.booking.status == 'Confirmed' %}
+              <span class="hour-badge badge-online">مؤكد</span>
+            {% elif item.booking.status == 'No-Show' %}
+              <span class="status-tag tag-noshow">❌ غياب</span>
+            {% else %}
+              <span style="color:var(--sch-text-3);">{{ item.booking.status }}</span>
+            {% endif %}
+          </td>
+          <td class="paid-cell">
+            {% if item.paid_online > 0 %}
+              {{ item.paid_online }} ج.م
+              {% if item.is_verified %}<span style="font-size:10px;color:var(--sch-green);margin-right:3px;">✓</span>{% endif %}
+            {% else %}
+              <span class="zero">—</span>
+            {% endif %}
+          </td>
+          <td class="remain-cell">
+            {% if item.remaining > 0 %}
+              {{ item.remaining }} ج.م
+            {% else %}
+              <span class="zero">٠</span>
+            {% endif %}
+          </td>
+        </tr>
         {% endfor %}
-    </div>
-    {% endif %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
 
-</div>
+</div><!-- /.sch-wrap -->
 
-<!-- Modal الحجز اليدوي -->
+
+<!-- ═══ Modal: حجز يدوي ═══ -->
 <div class="modal-overlay" id="blockModal">
-    <div class="modal-box">
-        <h3>🔒 {% trans "حجز يدوي" %}</h3>
-        <p style="color:var(--text-2);font-size:14px;margin-bottom:16px;">
-            {% trans "الساعة:" %} <strong id="modalHourDisplay"></strong>
-        </p>
-        <form method="post" action="{% url 'owner_block_hour' pitch.id %}">
-            {% csrf_token %}
-            <input type="hidden" name="date" value="{{ selected_date }}">
-            <input type="hidden" name="hour" id="modalHourValue">
-            <input type="text" name="customer_name" class="modal-input"
-                   placeholder="{% trans 'اسم العميل (اختياري)' %}">
-            <input type="text" name="customer_phone" class="modal-input"
-                   placeholder="{% trans 'رقم التليفون (اختياري)' %}">
-            <div class="modal-btns">
-                <button type="submit" class="btn-modal btn-confirm">✅ {% trans "تأكيد الحجز" %}</button>
-                <button type="button" class="btn-modal btn-cancel-modal" onclick="closeBlockModal()">❌ {% trans "إلغاء" %}</button>
-            </div>
-        </form>
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>🔒 حجز يدوي</h3>
+      <button class="modal-close" onclick="closeBlockModal()">✕</button>
     </div>
+
+    <div class="modal-slot">
+      <div>
+        <div class="modal-slot-time" id="modalHourDisplay">—</div>
+        <div class="modal-slot-date">{{ selected_date }} &nbsp;·&nbsp; {{ pitch.name }}</div>
+      </div>
+    </div>
+
+    <form method="post" action="{% url 'owner_block_hour' pitch.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="date"  value="{{ selected_date }}">
+      <input type="hidden" name="hour"  id="modalHourValue">
+
+      <div class="modal-field">
+        <label class="modal-label">اسم العميل <small style="color:var(--sch-text-3);">(اختياري)</small></label>
+        <input type="text" name="customer_name" class="modal-input"
+               placeholder="مثال: أحمد محمد" autocomplete="off">
+      </div>
+
+      <div class="modal-field">
+        <label class="modal-label">رقم التليفون <small style="color:var(--sch-text-3);">(اختياري)</small></label>
+        <input type="tel" name="customer_phone" class="modal-input"
+               placeholder="01XXXXXXXXX"
+               pattern="^01[0125][0-9]{8}$"
+               title="رقم موبايل مصري صحيح مكوّن من 11 رقم"
+               inputmode="numeric" dir="ltr">
+      </div>
+
+      <div class="modal-actions">
+        <button type="submit" class="modal-btn modal-btn-confirm">✅ تأكيد الحجز</button>
+        <button type="button" class="modal-btn modal-btn-cancel" onclick="closeBlockModal()">إلغاء</button>
+      </div>
+    </form>
+  </div>
 </div>
+
 
 <script>
-    function openBlockModal(hourValue, hourDisplay) {
-        document.getElementById('modalHourValue').value = hourValue;
-        document.getElementById('modalHourDisplay').textContent = hourDisplay;
-        document.getElementById('blockModal').classList.add('show');
-    }
-    function closeBlockModal() {
-        document.getElementById('blockModal').classList.remove('show');
-    }
-    // إغلاق بالضغط برا الـ modal
-    document.getElementById('blockModal').addEventListener('click', function(e) {
-        if (e.target === this) closeBlockModal();
-    });
+/* ─── Modal ─── */
+function openBlockModal(hourValue, hourDisplay) {
+  document.getElementById('modalHourValue').value   = hourValue;
+  document.getElementById('modalHourDisplay').textContent = hourDisplay;
+  document.getElementById('blockModal').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+function closeBlockModal() {
+  document.getElementById('blockModal').classList.remove('show');
+  document.body.style.overflow = '';
+}
+document.getElementById('blockModal').addEventListener('click', function(e) {
+  if (e.target === this) closeBlockModal();
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeBlockModal();
+});
+
+/* ─── Manual Count Stat ─── */
+(function() {
+  const manualCards = document.querySelectorAll('.hour-card.manual-card');
+  document.getElementById('manualCount').textContent = manualCards.length;
+})();
+
+/* ─── Free Count Fix ─── */
+(function() {
+  const total   = document.querySelectorAll('.hour-card').length;
+  const booked  = document.querySelectorAll('.hour-card.booked, .hour-card.manual-card, .hour-card.played, .hour-card.noshow').length;
+  // عدد الساعات المتاحة فعلاً
+  const freeEl = document.querySelector('.stat-free .sch-stat-num');
+  if (freeEl) freeEl.textContent = total - booked;
+})();
 </script>
 
 {% endblock %}

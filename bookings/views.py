@@ -1,32 +1,26 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
 from django.contrib import messages
-from django.db.models import Avg, Q, Sum
+from django.db.models import Avg, Q, Sum, Count
 from django.core.paginator import Paginator
 from django.utils import timezone
 from datetime import datetime, timedelta
 from math import radians, cos, sin, asin, sqrt
-from .models import Pitch, Booking, Payment, Review, PitchPricing
-from .forms import PaymentForm
-import hmac
-import hashlib
-import json
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .paymob import paymob_auth, create_order, create_payment_key, pay_with_wallet
 from django.conf import settings
-from django.http import JsonResponse
-from decimal import Decimal
-from .forms import ExtendedSignupForm 
-from .forms import PaymentForm, ExtendedSignupForm, UserProfileUpdateForm
-from .models import Pitch, Booking, Payment, Review, PitchPricing, UserProfile
-import csv
-from decimal import Decimal
-from django.http import HttpResponse
 from django.contrib.auth.models import User
+from decimal import Decimal
+import hmac, hashlib, json, csv
+from .models import Pitch, Booking, Payment, Review, PitchPricing, UserProfile
+from .forms import PaymentForm, ExtendedSignupForm, UserProfileUpdateForm
 from .google_sheets import add_booking_to_sheet
+from django.utils import timezone as tz
+from django.urls import reverse
+from .paymob import paymob_auth, create_order, create_payment_key, pay_with_wallet
+
+
 
 
 # ---------------------------------------------------------
@@ -44,11 +38,12 @@ def haversine(lon1, lat1, lon2, lat2):
 # الصفحة الرئيسية
 # ---------------------------------------------------------
 def home(request):
+    total_bookings = Booking.objects.filter(status__in=['Confirmed', 'Played']).count()
     # تنظيف الحجوزات المعلقة القديمة
     time_threshold = timezone.now() - timedelta(minutes=30)
     Booking.objects.filter(status='Pending', created_at__lt=time_threshold).update(status='Cancelled')
 
-    pitches_list  = Pitch.objects.all()
+    pitches_list = Pitch.objects.annotate(average_rating=Avg('reviews__rating'))
     pitches_count = Pitch.objects.count()
 
     user_lat = request.GET.get('lat')
@@ -109,14 +104,14 @@ def home(request):
     # ✅ الجديد (مرة واحدة بس):
     return render(request, 'home.html', {
         'pitches':           pitches,
-        'query_string':      query_string,  # <-- المتغير الجديد
-        'pitches':           pitches,
+        'query_string':      query_string,
         'pitches_count':     pitches_count,
         'selected_location': location_query,
         'selected_size':     size_query,
         'selected_floor':    floor_query,
         'selected_price':    max_price,
         'is_nearest_search': bool(user_lat),
+        'total_bookings': total_bookings,
     })
 # ---------------------------------------------------------
 # تفاصيل الملعب
@@ -128,9 +123,9 @@ def pitch_detail(request, pitch_id):
         if request.user.is_authenticated:
             # التأكد أن المستخدم لعب بالفعل في هذا الملعب (حجز مؤكد وتاريخ مضى)
             has_played = Booking.objects.filter(
-                user=request.user, 
-                pitch=pitch, 
-                status='Confirmed', 
+                user=request.user,
+                pitch=pitch,
+                status__in=['Confirmed', 'Played'],
                 date__lte=datetime.now().date()
             ).exists()
 
@@ -365,8 +360,6 @@ def booking_confirm(request, pitch_id, hour):
                     amount = int(final_price * 100)
 
                 try:
-                    from .paymob import paymob_auth, create_order, create_payment_key, pay_with_wallet
-
                     auth_token = paymob_auth()
                     order_id = create_order(auth_token, amount, booking.booking_code)
                     payment_key = create_payment_key(auth_token, order_id, amount, request.user, phone)
@@ -403,8 +396,10 @@ def booking_confirm(request, pitch_id, hour):
                 payment.payment_method = method_map.get(method_from_post, 'Cash')
                 payment.save()
 
+                booking.status = 'Pending'
+                booking.save()
                 request.session['last_booking_code'] = booking.booking_code
-                messages.success(request, "تم تسجيل الطلب! سيتم الإلغاء تلقائياً إذا لم يؤكد خلال 30 دقيقة.")
+                messages.success(request, "✅ تم استلام طلبك! سيتم التأكيد بعد التحقق من الدفع.")
                 return redirect('booking_success')
     else:
         form = PaymentForm()
@@ -423,11 +418,14 @@ def booking_confirm(request, pitch_id, hour):
 # ---------------------------------------------------------
 @login_required
 def booking_success(request):
-    booking_code = request.session.get('last_booking_code')
+    # اقرأ الكود من query param أولاً، بعدين fallback للـ session
+    booking_code = request.GET.get('code') or request.session.get('last_booking_code')
     booking = None
     payment = None
     if booking_code:
-        booking = Booking.objects.filter(booking_code=booking_code).first()
+        booking = Booking.objects.filter(
+            booking_code=booking_code, user=request.user
+        ).first()
         if booking:
             payment = Payment.objects.filter(booking=booking).first()
 
@@ -492,11 +490,14 @@ def user_profile(request):
     upcoming = Booking.objects.filter(user=user, date__gte=today).order_by('date', 'time')
     past     = Booking.objects.filter(user=user, date__lt=today).order_by('-date', '-time')
     
+    is_vip = Booking.objects.filter(user=user, status='Confirmed').count() >= 10
+
     return render(request, 'user_profile.html', {
         'upcoming_bookings': upcoming,
         'past_bookings':     past,
         'user':              user,
-        'form':              form,  # ضفنا الفورم هنا عشان تتبعت للـ HTML
+        'form':              form,
+        'is_vip':            is_vip,
     })
 
 
@@ -505,11 +506,15 @@ def user_profile(request):
 # ---------------------------------------------------------
 @login_required
 def cancel_booking(request, booking_id):
+    if request.method != 'POST':
+        return redirect('user_profile')
     booking = get_object_or_404(Booking, id=booking_id, user=request.user)
-    if booking.status != 'Cancelled':
+    if booking.status not in ['Cancelled', 'Played']:
         booking.status = 'Cancelled'
         booking.save()
         messages.success(request, "تم إلغاء الحجز بنجاح.")
+    else:
+        messages.error(request, "لا يمكن إلغاء هذا الحجز.")
     return redirect('user_profile')
 
 
@@ -683,7 +688,8 @@ def paymob_response(request):
         payment = Payment.objects.filter(paymob_order_id=order_id).first()
         if payment:
             request.session['last_booking_code'] = payment.booking.booking_code
-            return redirect('booking_success')
+            return redirect(reverse('booking_success') + f'?code={booking.booking_code}')
+
 
     messages.error(request, "الدفع لم يتم بنجاح. حاول تاني أو اختر طريقة دفع تانية.")
     return redirect('home')
@@ -726,7 +732,8 @@ def owner_dashboard(request):
             pitch__in=pitches, date=today
         ).exclude(status='Cancelled').count(),
         'pending_bookings': Booking.objects.filter(
-            pitch__in=pitches, status='Pending'
+            pitch__in=pitches, status='Confirmed',
+            date__gte=today
         ).count(),
         'confirmed_bookings': Booking.objects.filter(
             pitch__in=pitches, status='Confirmed',
@@ -736,14 +743,24 @@ def owner_dashboard(request):
 
     # حساب أرباح الأسبوع
     # حساب أرباح الأسبوع
-    weekly_payments = Payment.objects.filter(
+    # أونلاين verified
+    online_cents = Payment.objects.filter(
         booking__pitch__in=pitches,
         booking__status__in=['Confirmed', 'Played'],
         booking__date__gte=today - timedelta(days=7),
         is_verified=True
+    ).aggregate(total=Sum('amount_cents'))['total'] or 0
+
+    # كاش (PayAtPitch) — نحسب من pitch.price_per_hour مباشرة
+    cash_bookings = Booking.objects.filter(
+        pitch__in=pitches,
+        status__in=['Confirmed', 'Played'],
+        date__gte=today - timedelta(days=7),
+        payment_type='PayAtPitch'
     )
-    total_cents = weekly_payments.aggregate(total=Sum('amount_cents'))['total'] or 0
-    stats['weekly_earnings'] = Decimal(total_cents) / 100
+    cash_total = sum(b.pitch.price_per_hour for b in cash_bookings)
+
+    stats['weekly_earnings'] = Decimal(online_cents) / 100 + cash_total
 
     # حجوزات اليوم لكل ملعب
     today_schedule = []
@@ -787,15 +804,8 @@ def owner_schedule(request, pitch_id):
     for booking in bookings:
         payment = Payment.objects.filter(booking=booking).first()
 
-        if booking.payment_type == 'Deposit':
-            paid_online = Decimal('50.00')
-            remaining = pitch.price_per_hour - paid_online
-        elif booking.payment_type == 'Full':
-            paid_online = pitch.price_per_hour
-            remaining = Decimal('0.00')
-        else:
-            paid_online = Decimal('0.00')
-            remaining = pitch.price_per_hour
+        paid_online = _get_amount_paid_online(booking)
+        remaining   = pitch.price_per_hour - paid_online
 
         bookings_with_details.append({
             'booking': booking,
@@ -888,7 +898,7 @@ def owner_block_hour(request, pitch_id):
             if exists:
                 messages.error(request, "الميعاد ده محجوز بالفعل!")
             else:
-                Booking.objects.create(
+                new_booking = Booking.objects.create(
                     pitch=pitch,
                     user=request.user,
                     date=selected_date,
@@ -900,14 +910,16 @@ def owner_block_hour(request, pitch_id):
                     customer_phone=customer_phone,
                 )
                 messages.success(request, f"تم حجز الساعة {time_str} يدوياً ✅")
-                                # إرسال البيانات لجوجل شيت
-                new_booking = Booking.objects.get(pitch=pitch, date=selected_date, time=time_str)
-                add_booking_to_sheet(new_booking)
+                try:
+                    add_booking_to_sheet(new_booking)
+                except Exception:
+                    pass
 
         except (ValueError, TypeError):
             messages.error(request, "بيانات غير صحيحة!")
 
-    return redirect(f'/owner/pitch/{pitch.id}/schedule/?date={date_str}')
+    safe_date = date_str if date_str else timezone.localtime().date().strftime('%Y-%m-%d')
+    return redirect(f'/owner/pitch/{pitch.id}/schedule/?date={safe_date}')
 
 
 # ───────────────────────────────────────────
@@ -941,10 +953,6 @@ def owner_unblock_hour(request, booking_id):
 # ═══════════════════════════════════════════════════════════════════════════
 
 def _get_amount_paid_online(booking):
-    """
-    دالة مساعدة: تحسب المبلغ المدفوع أونلاين لحجز معين.
-    تعتمد على سجل الدفع (Payment) المرتبط بالحجز.
-    """
     try:
         payment = booking.payment_details
         if payment.is_verified and payment.amount_cents > 0:
@@ -952,7 +960,6 @@ def _get_amount_paid_online(booking):
     except Exception:
         pass
     return Decimal('0.00')
-
 
 def _resolve_owner(request):
     """
@@ -990,11 +997,12 @@ def owner_earnings(request):
     # ─────────────────────────────────────────────────────────
     # SECTION A ➜ وردية اليوم
     # ─────────────────────────────────────────────────────────
+    # today_bookings في owner_earnings
     today_bookings = (
         Booking.objects
         .filter(pitch__in=pitches, date=today)
         .exclude(status__in=['Cancelled', 'No-Show'])
-        .select_related('pitch', 'payment_details')
+        .select_related('pitch', 'payment_details')   # ← كده
         .order_by('time')
     )
 
@@ -1038,9 +1046,11 @@ def owner_earnings(request):
     unsettled_qs = (
         Booking.objects
         .filter(pitch__in=pitches, status='Played', is_settled=False)
-        .select_related('pitch', 'payment_details')
+        .select_related('pitch')
+        .select_related('payment_details')
         .order_by('-date', '-time')
     )
+    unsettled_list = list(unsettled_qs)   # ← تنفيذ الـ SQL مرة واحدة بس
 
     total_online_collected = Decimal('0.00')
     total_commission       = Decimal('0.00')
@@ -1056,21 +1066,22 @@ def owner_earnings(request):
     net_settleable = total_online_collected - total_commission
 
     # أرشيف التسويات السابقة (is_settled=True)
+    # settled_qs في owner_earnings
     settled_qs = (
         Booking.objects
         .filter(pitch__in=pitches, status='Played', is_settled=True)
-        .select_related('pitch', 'payment_details')
+        .select_related('pitch', 'payment_details')   # ← كده
         .order_by('-date')
     )
 
-    past_settled_total   = Decimal('0.00')
+    settled_qs_30 = settled_qs[:30]
+    past_settled_total      = Decimal('0.00')
     past_settled_commission = Decimal('0.00')
-    for booking in settled_qs:
+    for booking in settled_qs_30:
         full_price      = booking.pitch.price_per_hour
         commission_rate = booking.pitch.commission_percentage / Decimal('100')
         past_settled_commission += round(full_price * commission_rate, 2)
         past_settled_total      += _get_amount_paid_online(booking)
-
     past_settled_net = past_settled_total - past_settled_commission
 
     # ─────────────────────────────────────────────────────────
@@ -1109,14 +1120,15 @@ def owner_earnings(request):
         'total_online_collected':  total_online_collected,
         'total_commission':        total_commission,
         'net_settleable':          net_settleable,
-        'unsettled_count':         unsettled_qs.count(),
-        'settled_qs':              settled_qs[:30],        # آخر 30 حجز مُسوَّى
+        'unsettled_count':         len(unsettled_list),
+        'settled_qs':              settled_qs_30,        # آخر 30 حجز مُسوَّى
         'past_settled_total':      past_settled_total,
         'past_settled_commission': past_settled_commission,
         'past_settled_net':        past_settled_net,
 
         # Section C
         'commission_rows': commission_rows,
+        'total_full_price': sum(r['full_price'] for r in commission_rows),
     })
 
 
@@ -1143,7 +1155,7 @@ def settle_account(request):
                 pitch__in=pitches,
                 status='Played',
                 is_settled=False
-            ).update(is_settled=True)
+            ).update(is_settled=True, settled_at=tz.now())
 
             messages.success(
                 request,
@@ -1152,7 +1164,9 @@ def settle_account(request):
         except (User.DoesNotExist, ValueError, TypeError):
             messages.error(request, "⛔ بيانات غير صحيحة - لم تتم التسوية.")
 
-    return redirect(f"{request.build_absolute_uri('/')[:-1]}{'/owner/earnings/'}?owner_id={owner_id}")
+    owner_id = request.POST.get('owner_id') if request.method == 'POST' else None
+    redirect_url = f"/owner/earnings/?owner_id={owner_id}" if owner_id else "/owner/earnings/"
+    return redirect(redirect_url)
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -1165,6 +1179,8 @@ def owner_earnings_export_csv(request):
     كملف CSV جاهز للفتح في Excel.
     """
     owner   = _resolve_owner(request)
+    if owner != request.user and not request.user.is_superuser:
+        return redirect('owner_earnings')
     pitches = Pitch.objects.filter(owner=owner)
 
     if not pitches.exists():
@@ -1174,7 +1190,7 @@ def owner_earnings_export_csv(request):
     unsettled_qs = (
         Booking.objects
         .filter(pitch__in=pitches, status='Played', is_settled=False)
-        .select_related('pitch', 'payment_details')
+        .select_related('pitch', 'payment_set')
         .order_by('-date', '-time')
     )
 
@@ -1185,15 +1201,17 @@ def owner_earnings_export_csv(request):
     # الترويسة
     writer.writerow([
         'التاريخ', 'الوقت', 'كود الحجز', 'الملعب',
-        'السعر الكامل (ج.م)', 'نسبة العمولة (%)',
-        'مبلغ العمولة (ج.م)', 'الصافي لصاحب الملعب (ج.م)'
+        'السعر الكامل (ج.م)', 'المدفوع أونلاين (ج.م)',
+        'نسبة العمولة (%)', 'مبلغ العمولة (ج.م)',
+        'الصافي للتسوية (ج.م)'
     ])
 
     for booking in unsettled_qs:
         full_price      = booking.pitch.price_per_hour
+        paid_online     = _get_amount_paid_online(booking)
         commission_rate = booking.pitch.commission_percentage / Decimal('100')
         commission_amt  = round(full_price * commission_rate, 2)
-        net_to_owner    = round(full_price - commission_amt, 2)
+        net_settleable  = round(paid_online - commission_amt, 2)
 
         writer.writerow([
             booking.date.strftime('%Y-%m-%d'),
@@ -1201,9 +1219,10 @@ def owner_earnings_export_csv(request):
             booking.booking_code,
             booking.pitch.name,
             full_price,
+            paid_online,
             booking.pitch.commission_percentage,
             commission_amt,
-            net_to_owner,
+            net_settleable,
         ])
 
     return response
@@ -1217,14 +1236,15 @@ def owner_update_booking_status(request, booking_id):
     
     if request.method == 'POST':
         new_status = request.POST.get('status')
-        if new_status in ['Played', 'No-Show']:
+        if new_status in ['Played', 'No-Show'] and booking.status == 'Confirmed':
             booking.status = new_status
             booking.save()
-            
             if new_status == 'Played':
-                messages.success(request, f"تم تأكيد استلام المبلغ ولعب المباراة بنجاح ✅")
+                messages.success(request, "تم تأكيد استلام المبلغ ولعب المباراة بنجاح ✅")
             else:
-                messages.warning(request, f"تم تسجيل (عدم حضور) للعميل وتفريغ الملعب ❌")
+                messages.warning(request, "تم تسجيل (عدم حضور) للعميل وتفريغ الملعب ❌")
+        elif booking.status != 'Confirmed':
+            messages.error(request, "لا يمكن تعديل حجز تم إغلاقه مسبقاً.")
                 
     # العودة لنفس يوم الجدول
     selected_date = booking.date.strftime('%Y-%m-%d')

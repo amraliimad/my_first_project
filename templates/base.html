@@ -38,7 +38,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-Avb2QiuDEEvB4bZJYdft2mNjVShBftLdPG8FJ0V7irTLQ8Uo0qcPxh4Plq7G5tGm0rU+1SPhVotteLpBERwTkw==" crossorigin="anonymous" referrerpolicy="no-referrer">
 
     <!-- ══════════════════════════════════════════════
          GLOBAL CSS VARIABLES & BASE STYLES
@@ -304,7 +304,7 @@
             {% if user.is_authenticated %}
                 <div class="nav-section-title" style="margin-top:10px;">{% trans "حسابي" %}</div>
                                 <!-- 🆕 رابط داشبورد صاحب الملعب -->
-                {% if user.owned_pitches.exists %}
+                {% if has_pitches %}
                 <a href="{% url 'owner_dashboard' %}" class="nav-item {% block owner_active %}{% endblock %}" style="color:var(--accent);">
                     <span class="nav-icon">⚙️</span> {% trans "لوحة تحكم ملعبي" %}
                 </a>
@@ -366,12 +366,12 @@
         </nav>
         <div class="navbar-actions">
             {% if user.is_authenticated %}
-                {% if user.owned_pitches.exists %}
+                {% if has_pitches %}
                     <a href="{% url 'owner_dashboard' %}" class="btn" style="background:var(--accent); color:white; border:none; box-shadow:0 2px 8px rgba(243,156,18,0.3);">
                         <i class="fas fa-cog"></i> {% trans "إدارة ملاعبي" %}
                     </a>
                 {% endif %}
-                <a href="{% url 'user_profile' %}" class="btn btn-ghost">👤 {{ user.username }}</a>
+                <a href="{% url 'user_profile' %}" class="btn btn-ghost">👤 {{ user.first_name|default:user.username }}</a>
             {% else %}
                 <a href="{% url 'login' %}" class="btn btn-primary">🔑 {% trans "تسجيل الدخول" %}</a>
             {% endif %}
@@ -404,12 +404,8 @@
          SHARED JAVASCRIPT
          ══════════════════════════════════════════════ -->
     <script>
-        /* ── Theme Toggle ── */
-        (function(){
-            var s = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', s);
-            updateThemeLabel(s);
-        })();
+        /* ── Theme Init on Load ── */
+        updateThemeLabel(localStorage.getItem('theme') || 'light');
 
         function toggleTheme(){
             var c = document.documentElement.getAttribute('data-theme');

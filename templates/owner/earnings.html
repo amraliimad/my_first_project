@@ -595,7 +595,7 @@
     {% if is_superuser and unsettled_count > 0 %}
     <div class="settle-btn-wrap">
       <form method="POST" action="{% url 'settle_account' %}"
-            onsubmit="return confirm('هل أنت متأكد من تسوية {{ unsettled_count }} حجز بمبلغ صافي {{ net_settleable|floatformat:2 }} ج.م؟')">
+            onsubmit="return confirmSettle()">
         {% csrf_token %}
         <input type="hidden" name="owner_id" value="{{ owner.id }}">
         <button type="submit" class="btn-settle">
@@ -632,10 +632,10 @@
         <div style="display:flex; align-items:center; gap:12px;">
           <span class="archive-amt">
             {% with online=booking.payment_details %}
-              {% if online %}
-                {{ online.amount_cents|floatformat:0 }}
+              {% if online and online.is_verified %}
+                {% widthratio online.amount_cents 100 1 %}
               {% else %}0{% endif %}
-            {% endwith %} ج.م
+          {% endwith %} ج.م
           </span>
           <span class="archive-settled-badge">✓ مُسوَّى</span>
         </div>
@@ -704,12 +704,7 @@
           <div class="commission-totals">
             <div class="tot-item">
               <span>إجمالي الأسعار:</span>
-              <strong>
-                {% with total=0 %}
-                  {% for row in commission_rows %}{% endfor %}
-                  {{ total_online_collected|floatformat:2 }} ج.م
-                {% endwith %}
-              </strong>
+              <strong>{{ total_full_price|floatformat:2 }} ج.م</strong>
             </div>
             <div class="tot-item">
               <span>إجمالي العمولة:</span>
@@ -752,6 +747,10 @@
     toggle.classList.toggle('open', isOpen);
     icon.textContent = isOpen ? '▲' : '▼';
   }
+  function confirmSettle() {
+    // eslint-disable-next-line
+    const count = {{ unsettled_count|default:0 }};
+    // eslint-disable-next-line
+    const net = {{ net_settleable|default:0 }};
 </script>
-
 {% endblock %}

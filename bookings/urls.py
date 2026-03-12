@@ -14,6 +14,10 @@ urlpatterns = [
     # ── Paymob ──
     path('paymob/pay/<int:booking_id>/', views.paymob_wallet_pay, name='paymob_wallet_pay'),
     path('payment-pending/<str:booking_code>/', views.payment_pending, name='payment_pending'),
+    # ── Paymob Callbacks ──
+    path('paymob/callback/', views.paymob_callback, name='paymob_callback'),
+    path('paymob/response/', views.paymob_response, name='paymob_response'),
+    path('api/payment-status/<str:booking_code>/', views.check_payment_status, name='check_payment_status'),
 
     # ── 🆕 داشبورد صاحب الملعب ──
     path('owner/', views.owner_dashboard, name='owner_dashboard'),

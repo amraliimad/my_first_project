@@ -32,9 +32,9 @@ class ExtendedSignupForm(UserCreationForm):
         widget=forms.EmailInput(attrs={'placeholder': 'example@gmail.com', 'class': 'form-control'})
     )
     
-    first_name = forms.CharField(label="الاسم الأول", required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    middle_name = forms.CharField(label="الاسم الثاني", required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    last_name = forms.CharField(label="الاسم الأخير", required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    first_name  = forms.CharField(label="الاسم الأول",  required=True,  max_length=50, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    middle_name = forms.CharField(label="الاسم الثاني", required=True,  max_length=50, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    last_name   = forms.CharField(label="الاسم الأخير", required=True,  max_length=50, widget=forms.TextInput(attrs={'class': 'form-control'}))
     
     phone_number = forms.CharField(
         label="رقم الموبايل (واتساب)", 
@@ -46,11 +46,11 @@ class ExtendedSignupForm(UserCreationForm):
         model = User
         fields = ('username', 'first_name', 'last_name') 
 
-    field_order = ['username', 'first_name', 'middle_name', 'last_name', 'phone_number']
+    field_order = ['username', 'first_name', 'middle_name', 'last_name', 'phone_number', 'password1', 'password2']
 
     def clean_username(self):
         email = self.cleaned_data.get('username')
-        if User.objects.filter(email=email).exists():
+        if User.objects.filter(email=email).exists() or User.objects.filter(username=email).exists():
             raise forms.ValidationError("هذا البريد الإلكتروني مسجل بالفعل، يرجى تسجيل الدخول.")
         return email
 

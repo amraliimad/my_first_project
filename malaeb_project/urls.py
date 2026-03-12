@@ -7,6 +7,7 @@ from django.conf.urls.i18n import i18n_patterns
 from bookings import views as booking_views
 
 
+
 # 1. روابط بدون i18n (تغيير اللغة فقط)
 # 1. روابط بدون i18n (تغيير اللغة + Paymob)
 # 1. روابط بدون i18n
@@ -39,3 +40,7 @@ if settings.DEBUG:
 admin.site.site_header = "إدارة موقع ملاعبك"
 admin.site.site_title  = "لوحة تحكم ملاعبك"
 admin.site.index_title = "مرحباً بك في مدير نظام الحجوزات"
+path('password-change/', auth_views.PasswordChangeView.as_view(
+    template_name='registration/password_change.html',
+    success_url='/profile/'
+), name='password_change'),

@@ -122,9 +122,9 @@ class Booking(models.Model):
 
     pitch        = models.ForeignKey(Pitch, on_delete=models.CASCADE, verbose_name="الملعب")
     user         = models.ForeignKey(User,  on_delete=models.CASCADE, verbose_name="المستخدم")
-    date         = models.DateField(verbose_name="تاريخ الحجز")
+    date         = models.DateField(verbose_name="تاريخ الحجز", db_index=True)
     time         = models.CharField(max_length=10, verbose_name="وقت الحجز")
-    status       = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending', verbose_name="الحالة")
+    status       = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending', verbose_name="الحالة", db_index=True)
     payment_type = models.CharField(max_length=20, choices=PAYMENT_TYPE_CHOICES, default='Full', verbose_name="نوع الدفع")
     created_at   = models.DateTimeField(auto_now_add=True, verbose_name="وقت إنشاء الطلب")
     booking_code = models.CharField(max_length=10, unique=True, editable=False, null=True, verbose_name="كود الحجز")
@@ -138,6 +138,10 @@ class Booking(models.Model):
         default=False,
         verbose_name="تمت التسوية؟",
         help_text="يُحدَّث تلقائياً عند تسوية الحساب مع صاحب الملعب"
+    )
+    settled_at = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name="تاريخ التسوية"
     )
 
     class Meta:
@@ -230,4 +234,5 @@ def create_user_profile(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
-    instance.profile.save()
+    if hasattr(instance, 'profile'):
+        instance.profile.save()

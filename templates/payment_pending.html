@@ -90,17 +90,20 @@
 {% block extra_js %}
 <script>
     // Auto-check payment status every 10 seconds
-    setTimeout(function() {
-        fetch('/paymob/check-status/{{ booking.booking_code }}/')
+    var checkInterval = setInterval(function() {
+        fetch("{% url 'check_payment_status' booking.booking_code %}")
             .then(r => r.json())
             .then(data => {
                 if (data.status === 'Confirmed') {
-                    window.location.href = '{% url "booking_success" %}';
-                } else {
-                    location.reload();
+                    clearInterval(checkInterval);
+                    window.location.href = '{% url "booking_success" %}?code={{ booking.booking_code }}';
+                } else if (data.status === 'Cancelled') {
+                    clearInterval(checkInterval);
+                    window.location.href = '{% url "home" %}';
                 }
+                // لو لسه Pending، استنى التيك الجاي
             })
-            .catch(() => location.reload());
+            .catch(function() { /* هدوء، استنى التيك الجاي */ });
     }, 10000);
 </script>
 {% endblock %}

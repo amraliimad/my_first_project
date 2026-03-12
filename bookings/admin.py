@@ -19,11 +19,27 @@ class PitchAdmin(admin.ModelAdmin):
 
 class BookingAdmin(admin.ModelAdmin):
     # ✅ إضافة is_settled للرؤية والتعديل المباشر
-    list_display = ('booking_code', 'pitch', 'user', 'date', 'time', 'status', 'payment_type', 'is_manual', 'is_settled')
+    list_display = ('booking_code', 'pitch', 'user', 'date', 'time', 'status', 'payment_type', 'is_manual', 'is_settled', 'settled_at')
     list_filter = ('status', 'is_settled', 'date', 'pitch', 'is_manual', 'payment_type')
-    search_fields = ('booking_code', 'user__username', 'customer_name')
-    list_editable = ('status', 'is_settled')
-    date_hierarchy = 'date' # ✅ إضافة فلتر التاريخ الزمني السريع
+    search_fields = ('booking_code', 'user__username', 'customer_name', 'customer_phone')
+    list_editable = ('status',)
+    readonly_fields = ('booking_code', 'created_at', 'settled_at')
+    date_hierarchy = 'date'
+    actions = ['mark_as_settled', 'mark_as_played']
+
+    @admin.action(description='✅ تسوية الحجوزات المختارة')
+    def mark_as_settled(self, request, queryset):
+        from django.utils import timezone
+        updated = queryset.filter(status='Played').update(
+            is_settled=True,
+            settled_at=timezone.now()
+        )
+        self.message_user(request, f"تمت تسوية {updated} حجز.")
+
+    @admin.action(description='🏆 تحديد كـ Played')
+    def mark_as_played(self, request, queryset):
+        updated = queryset.filter(status='Confirmed').update(status='Played')
+        self.message_user(request, f"تم تحديث {updated} حجز كـ Played.") # ✅ إضافة فلتر التاريخ الزمني السريع
 
 # ─────────────────────────────────────────────────────────
 # 🆕 إضافة لوحة تحكم المدفوعات (FinTech Admin)

@@ -89,7 +89,7 @@
 
     <!-- الهيدر -->
     <div class="owner-header">
-        <h1>👋 {% trans "أهلاً" %} {{ user.username }}</h1>
+       <h1>👋 {% trans "أهلاً" %} {{ user.first_name|default:user.username }}</h1>
         <p>{% trans "لوحة تحكم ملاعبك — كل حاجة في مكان واحد" %}</p>
     </div>
 
@@ -108,12 +108,12 @@
         <div class="stat-card">
             <div class="stat-icon">⏳</div>
             <div class="stat-number">{{ stats.pending_bookings }}</div>
-            <div class="stat-label">{% trans "في انتظار التأكيد" %}</div>
+            <div class="stat-label">{% trans "حجوزات قادمة مؤكدة" %}</div>
         </div>
         <div class="stat-card">
             <div class="stat-icon">💰</div>
             <div class="stat-number">{{ stats.weekly_earnings }} {% trans "ج.م" %}</div>
-            <div class="stat-label">{% trans "أرباح الأسبوع (أونلاين)" %}</div>
+            <div class="stat-label">{% trans "أرباح الأسبوع (إجمالي)" %}</div>
         </div>
     </div>
 

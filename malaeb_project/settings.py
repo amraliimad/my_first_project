@@ -12,7 +12,12 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-only-change-in-production-!@#$%')
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'dev-only-unsafe-key-do-not-use-in-production'
+    else:
+        raise RuntimeError("SECRET_KEY environment variable is not set!")
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
 ALLOWED_HOSTS = [
@@ -72,6 +77,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                'bookings.context_processors.user_pitches',
             ],
         },
     },
@@ -83,31 +89,13 @@ WSGI_APPLICATION = "malaeb_project.wsgi.application"
 # ═══════════════════════════════════════════
 # 5. قاعدة البيانات - مرة واحدة بس!
 # ═══════════════════════════════════════════
-#DATABASES = {
-#   'default': {
-#        'ENGINE': 'django.db.backends.sqlite3',
-#        'NAME': BASE_DIR / 'db.sqlite3',
-#
-#
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
-}
-
-# الكود السحري بتاع Heroku
-db_from_env = dj_database_url.config(conn_max_age=600)
-DATABASES['default'].update(db_from_env)
-
-
-DATABASE_URL = os.environ.get('DATABASE_URL')
-if DATABASE_URL:
-    DATABASES['default'] = dj_database_url.config(
-        default=DATABASE_URL,
+    'default': dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
         conn_max_age=600,
-        ssl_require=True,
+        ssl_require=os.environ.get('DATABASE_URL', '').startswith('postgres'),
     )
+}
 
 
 # ═══════════════════════════════════════════
@@ -148,8 +136,9 @@ CLOUDINARY_STORAGE = {
 # ═══════════════════════════════════════════
 # 8. تسجيل الدخول والخروج
 # ═══════════════════════════════════════════
-LOGIN_REDIRECT_URL = "/"
-LOGOUT_REDIRECT_URL = "home"
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = 'home'
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
@@ -169,11 +158,12 @@ CSRF_TRUSTED_ORIGINS = [
 # ═══════════════════════════════════════════
 # 10. إعدادات الأمان (Production فقط)
 # ═══════════════════════════════════════════
+X_FRAME_OPTIONS = 'SAMEORIGIN'
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_BROWSER_XSS_FILTER = True
+    X_FRAME_OPTIONS = 'DENY'
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
@@ -186,3 +176,5 @@ if not DEBUG:
 PAYMOB_API_KEY = os.environ.get('PAYMOB_API_KEY')
 PAYMOB_INTEGRATION_ID_WALLET = os.environ.get('PAYMOB_INTEGRATION_ID_WALLET')
 PAYMOB_HMAC_SECRET = os.environ.get('PAYMOB_HMAC_SECRET')
+SUPPORT_WHATSAPP = os.environ.get('SUPPORT_WHATSAPP', '201034819083')
+PAYMOB_BASE_URL = os.environ.get('PAYMOB_BASE_URL', 'https://accept.paymob.com/api')

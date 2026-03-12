@@ -339,11 +339,11 @@
                     ✏️ {% trans "تعديل بياناتي" %}
                 </button>
                 <!-- لاحظ: رابط تغيير الباسوورد يحتاج إلى View مخصص في Django (auth_views.PasswordChangeView) -->
-                <a href="#" style="background: transparent; color: white; border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px; border-radius: var(--radius-sm); font-weight: 700; transition: all 0.2s;">
+                <a href="{% url 'password_change' %}" style="background: transparent; color: white; border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px; border-radius: var(--radius-sm); font-weight: 700; transition: all 0.2s;">
                     🔒 {% trans "تغيير كلمة المرور" %}
                 </a>
             </div>
-        </div>
+        </div
 
         <div class="profile-stats">
             <div class="stat-bubble">
@@ -397,11 +397,13 @@
                         </td>
                         <td data-label="{% trans 'إجراءات' %}">
                             {% if booking.status != 'Cancelled' %}
-                                <a href="{% url 'cancel_booking' booking.id %}"
-                                   class="btn-cancel"
-                                   onclick="return confirm('{% trans "هل أنت متأكد من إلغاء هذا الحجز؟" %}')">
-                                    🗑️ {% trans "إلغاء" %}
-                                </a>
+                                <form method="POST" action="{% url 'cancel_booking' booking.id %}" style="display:inline;"
+                                      onsubmit="return confirm('{% trans "هل أنت متأكد من إلغاء هذا الحجز؟" %}')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-cancel">
+                                        🗑️ {% trans "إلغاء" %}
+                                    </button>
+                                </form>
                             {% else %}
                                 <span style="color:var(--text-muted); font-size:13px;">—</span>
                             {% endif %}
