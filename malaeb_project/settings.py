@@ -118,8 +118,7 @@ LOCALE_PATHS = [BASE_DIR / 'locale']
 # ═══════════════════════════════════════════
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
-STATIC_ROOT = BASE_DIR / "staticfiles"
-# استخدام WhiteNoise لضغط الملفات الثابتة (CSS/JS)
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')# استخدام WhiteNoise لضغط الملفات الثابتة (CSS/JS)
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # ── إعدادات Cloudinary لصور الملاعب (Media) ──
