@@ -18,8 +18,7 @@ if not SECRET_KEY:
         SECRET_KEY = 'dev-only-unsafe-key-do-not-use-in-production'
     else:
         raise RuntimeError("SECRET_KEY environment variable is not set!")
-DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
-
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = [
     'mal3abonline-50a569f7c025.herokuapp.com',
     'mal3abonline.me',
