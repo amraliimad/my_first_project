@@ -2,971 +2,48 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login
 from django.contrib import messages
-from django.db.models import Avg, Q, Sum, Count
+from django.db.models import Avg, Q, Sum
 from django.core.paginator import Paginator
 from django.utils import timezone
-from datetime import datetime, timedelta
-from math import radians, cos, sin, asin, sqrt
+from django.utils import timezone as tz
+from django.urls import reverse
 from django.http import HttpResponse, JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.contrib.auth.models import User
 from decimal import Decimal
-import hmac, hashlib, json, csv
-from .models import Pitch, Booking, Payment, Review, PitchPricing, UserProfile
-from .forms import PaymentForm, ExtendedSignupForm, UserProfileUpdateForm
-from .google_sheets import add_booking_to_sheet
-from django.utils import timezone as tz
-from django.urls import reverse
-from .paymob import paymob_auth, create_order, create_payment_key, pay_with_wallet
+from datetime import datetime, timedelta
+from math import radians, cos, sin, asin, sqrt
+import csv
+
+from .models import (
+    Clinic, Doctor, Appointment, AppointmentPayment,
+    DoctorReview, UserProfile, SPECIALTY_CHOICES, LOCATION_CHOICES
+)
+from .forms import ExtendedSignupForm, UserProfileUpdateForm
 
 
+# ═══════════════════════════════════════════════════════
+# دوال مساعدة
+# ═══════════════════════════════════════════════════════
 
-
-# ---------------------------------------------------------
-# دالة مساعدة لحساب المسافة (Haversine Formula)
-# ---------------------------------------------------------
 def haversine(lon1, lat1, lon2, lat2):
     lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
-    dlon = lon2 - lon1
-    dlat = lat2 - lat1
+    dlon, dlat = lon2 - lon1, lat2 - lat1
     a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-    c = 2 * asin(sqrt(a))
-    r = 6371
-    return c * r
-# ---------------------------------------------------------
-# الصفحة الرئيسية
-# ---------------------------------------------------------
-def home(request):
-    total_bookings = Booking.objects.filter(status__in=['Confirmed', 'Played']).count()
-    # تنظيف الحجوزات المعلقة القديمة
-    time_threshold = timezone.now() - timedelta(minutes=30)
-    Booking.objects.filter(status='Pending', created_at__lt=time_threshold).update(status='Cancelled')
+    return 2 * asin(sqrt(a)) * 6371
 
-    pitches_list = Pitch.objects.annotate(average_rating=Avg('reviews__rating'))
-    pitches_count = Pitch.objects.count()
 
-    user_lat = request.GET.get('lat')
-    user_lng = request.GET.get('lng')
-
-    if user_lat and user_lng:
-        try:
-            user_lat = float(user_lat)
-            user_lng = float(user_lng)
-            pitches_with_distance = []
-            for pitch in pitches_list:
-                if pitch.latitude and pitch.longitude:
-                    dist = haversine(user_lng, user_lat, pitch.longitude, pitch.latitude)
-                    pitch.distance = round(dist, 1)
-                else:
-                    pitch.distance = 99999
-                pitches_with_distance.append(pitch)
-            pitches_list = sorted(pitches_with_distance, key=lambda x: x.distance)
-        except ValueError:
-            pass
-    else:
-        pitches_list = pitches_list.order_by('-id')
-
-    location_query = request.GET.get('location')
-    size_query     = request.GET.get('size')
-    floor_query    = request.GET.get('floor_type')
-    max_price      = request.GET.get('price')
-
-    if isinstance(pitches_list, list):
-        if location_query and location_query != 'all':
-            pitches_list = [p for p in pitches_list if p.location == location_query]
-        if size_query and size_query != 'all':
-            pitches_list = [p for p in pitches_list if p.size == size_query]
-        if floor_query and floor_query != 'all':
-            pitches_list = [p for p in pitches_list if p.floor_type == floor_query]
-        if max_price:
-            pitches_list = [p for p in pitches_list if p.price_per_hour <= float(max_price)]
-    else:
-        if location_query and location_query != 'all':
-            pitches_list = pitches_list.filter(location=location_query)
-        if size_query and size_query != 'all':
-            pitches_list = pitches_list.filter(size=size_query)
-        if floor_query and floor_query != 'all':
-            pitches_list = pitches_list.filter(floor_type=floor_query)
-        if max_price:
-            pitches_list = pitches_list.filter(price_per_hour__lte=max_price)
-
-    paginator   = Paginator(pitches_list, 6)
-    page_number = request.GET.get('page')
-    pitches     = paginator.get_page(page_number)
-
-    # بناء Query String للفلاتر عشان الـ Pagination
-    query_dict = request.GET.copy()
-    if 'page' in query_dict:
-        del query_dict['page']
-    query_string = query_dict.urlencode()
-
-    # ✅ الجديد (مرة واحدة بس):
-    return render(request, 'home.html', {
-        'pitches':           pitches,
-        'query_string':      query_string,
-        'pitches_count':     pitches_count,
-        'selected_location': location_query,
-        'selected_size':     size_query,
-        'selected_floor':    floor_query,
-        'selected_price':    max_price,
-        'is_nearest_search': bool(user_lat),
-        'total_bookings': total_bookings,
-    })
-# ---------------------------------------------------------
-# تفاصيل الملعب
-# ---------------------------------------------------------
-def pitch_detail(request, pitch_id):
-    pitch = get_object_or_404(Pitch, id=pitch_id)
-
-    if request.method == 'POST' and 'rating' in request.POST:
-        if request.user.is_authenticated:
-            # التأكد أن المستخدم لعب بالفعل في هذا الملعب (حجز مؤكد وتاريخ مضى)
-            has_played = Booking.objects.filter(
-                user=request.user,
-                pitch=pitch,
-                status__in=['Confirmed', 'Played'],
-                date__lte=datetime.now().date()
-            ).exists()
-
-            if not has_played:
-                            messages.error(request, "لا يمكنك تقييم الملعب إلا بعد اللعب فيه!")
-            # ✅ الكود الجديد:
-            elif not Review.objects.filter(pitch=pitch, user=request.user).exists():
-                rating = int(request.POST.get('rating', 5))
-                comment = request.POST.get('comment', '')
-                
-                # التأكد إن التقييم بين 1 و 5
-                if rating < 1:
-                    rating = 1
-                elif rating > 5:
-                    rating = 5
-                
-                Review.objects.create(
-                    pitch=pitch,
-                    user=request.user,
-                    rating=rating,
-                    comment=comment,
-                )
-                messages.success(request, "تم نشر تقييمك!") 
-            else:
-                messages.warning(request, "لقد قمت بتقييم هذا الملعب مسبقاً.")
-            return redirect('pitch_detail', pitch_id=pitch.id)
-
-    average_rating = pitch.reviews.aggregate(Avg('rating'))['rating__avg'] or 0
-    reviews        = pitch.reviews.all()
-
-    # 🧹 تنظيف الحجوزات المعلقة لهذا الملعب أولاً قبل عرض المواعيد
-    time_threshold = timezone.now() - timedelta(minutes=30)
-    Booking.objects.filter(pitch=pitch, status='Pending', created_at__lt=time_threshold).update(status='Cancelled')
-
-    date_str = request.GET.get('date')
+def _get_amount_paid_online(appointment):
     try:
-        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-    except (ValueError, TypeError):
-        selected_date = timezone.localtime().date()
-
-    active_bookings  = Booking.objects.filter(pitch=pitch, date=selected_date).exclude(status='Cancelled')
-    hours_status_map = {int(b.time.split(':')[0]): b.status for b in active_bookings}
-
-    pricing_rules      = PitchPricing.objects.filter(pitch=pitch).filter(
-        Q(specific_date=selected_date) | Q(specific_date__isnull=True)
-    ).order_by('price')
-    pricing_rules_list = list(pricing_rules)
-
-    hours_schedule = []
-    current_hour   = timezone.localtime().hour
-    is_today       = (selected_date == timezone.localtime().date())
-
-    for i in range(24):
-        # ----------------------------------------------------
-        # 1. إضافة جديدة: التحقق من مواعيد الفتح والغلق
-        # ----------------------------------------------------
-        is_open = False
-        if pitch.opening_hour < pitch.closing_hour:
-            # الوضع الطبيعي (مثلاً بيفتح 8 الصبح ويقفل 11 بالليل)
-            if pitch.opening_hour <= i < pitch.closing_hour:
-                is_open = True
-        elif pitch.opening_hour > pitch.closing_hour:
-            # لو الملعب بيطبق لليوم التاني (مثلاً يفتح 6 مساءً ويقفل 3 الفجر)
-            if i >= pitch.opening_hour or i < pitch.closing_hour:
-                is_open = True
-        else:
-            # لو ساعة الفتح تساوي ساعة الغلق، هنعتبره فاتح 24 ساعة
-            is_open = True
-
-        # لو الساعة دي برة مواعيد العمل، تجاهلها وماتعرضهاش
-        if not is_open:
-            continue
-        # ----------------------------------------------------
-
-        # 2. جلب حالة الحجز (هل هو محجوز ولا متاح)
-        status  = hours_status_map.get(i)
-        
-        # 3. التحقق إذا كان الوقت ده عدى خلاص في يومنا الحالي
-        is_past = is_today and i <= current_hour
-
-        # 4. تنسيق الوقت بالعربي
-        if i == 0:      formatted_time = "12:00 ص"
-        elif i < 12:    formatted_time = f"{i}:00 ص"
-        elif i == 12:   formatted_time = "12:00 م"
-        else:           formatted_time = f"{i-12}:00 م"
-
-        # 5. حساب السعر المتغير (Dynamic Pricing)
-        hour_price = pitch.price_per_hour
-        for rule in pricing_rules_list:
-            if rule.start_hour <= i < rule.end_hour:
-                hour_price = rule.price
-                break
-
-        # 6. إضافة الساعة للقائمة اللي هتتبعت للـ Template
-        hours_schedule.append({
-            'hour_display': formatted_time,
-            'hour_value':   i,
-            'status':       status,
-            'is_past':      is_past,
-            'price':        hour_price,
-        })
-
-    # ----------------------------------------------------
-    # باقي كود الدالة كما هو بدون أي تغيير
-    # ----------------------------------------------------
-    days_list = []
-    today     = timezone.localtime().date()
-
-    for i in range(14):
-        day_date = today + timedelta(days=i)
-        days_list.append({
-            'full_date': day_date.strftime('%Y-%m-%d'),
-            'day_name':  day_date.strftime('%A'),
-            'display':   day_date.strftime('%d/%m'),
-        })
-    related_pitches = Pitch.objects.filter(location=pitch.location).exclude(id=pitch.id)[:3]
-
-    return render(request, 'pitch_detail.html', {
-        'pitch':           pitch,
-        'days_list':       days_list,
-        'selected_date':   selected_date.strftime('%Y-%m-%d'),
-        'hours_schedule':  hours_schedule,
-        'reviews':         reviews,
-        'average_rating':  round(average_rating, 1),
-        'review_count':    reviews.count(),
-        'related_pitches': related_pitches,
-    })
-
-
-# ---------------------------------------------------------
-# تأكيد الحجز
-# ---------------------------------------------------------
-@login_required(login_url='login')
-def booking_confirm(request, pitch_id, hour):
-    pitch    = get_object_or_404(Pitch, id=pitch_id)
-    hour_int = int(hour)
-
-    # ----------------------------------------------------
-    # 1. الحماية الإضافية: التأكد أن الملعب فاتح في هذا الوقت
-    # ----------------------------------------------------
-    is_open = False
-    if pitch.opening_hour < pitch.closing_hour:
-        if pitch.opening_hour <= hour_int < pitch.closing_hour:
-            is_open = True
-    elif pitch.opening_hour > pitch.closing_hour:
-        if hour_int >= pitch.opening_hour or hour_int < pitch.closing_hour:
-            is_open = True
-    else:
-        is_open = True # إذا كانت ساعات الفتح والغلق متساوية (يُعتبر 24 ساعة)
-
-    if not is_open:
-        messages.error(request, "عذراً، الملعب مغلق في هذا الوقت ولا يمكن الحجز.")
-        return redirect('pitch_detail', pitch_id=pitch.id)
-    # ----------------------------------------------------
-
-    # 🧹 تنظيف الحجوزات قبل التأكد من الإتاحة
-    time_threshold = timezone.now() - timedelta(minutes=30)
-    Booking.objects.filter(pitch=pitch, status='Pending', created_at__lt=time_threshold).update(status='Cancelled')
-
-    date_str = request.GET.get('date')
-    try:
-        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-    except (ValueError, TypeError):
-        selected_date = timezone.localtime().date()
-
-    time_str = f"{hour_int:02d}:00"
-
-    is_taken = Booking.objects.filter(
-        pitch=pitch, date=selected_date,
-        time=time_str, status__in=['Confirmed', 'Pending']
-    ).exists()
-
-    if is_taken:
-        messages.error(request, "عذراً، هذا الموعد تم حجزه للتو!")
-        return redirect('pitch_detail', pitch_id=pitch.id)
-
-    today_bookings_count = Booking.objects.filter(
-        user=request.user, date=selected_date
-    ).exclude(status='Cancelled').count()
-
-    if today_bookings_count >= 4:
-        messages.error(request, "عذراً، لقد وصلت للحد الأقصى (4 ساعات) في اليوم.")
-        return redirect('pitch_detail', pitch_id=pitch.id)
-
-    final_price   = pitch.price_per_hour
-    special_price = PitchPricing.objects.filter(
-        pitch=pitch, start_hour__lte=hour_int, end_hour__gt=hour_int
-    ).filter(Q(specific_date=selected_date) | Q(specific_date__isnull=True)).order_by('price').first()
-
-    if special_price:
-        final_price = special_price.price
-
-    is_vip = Booking.objects.filter(user=request.user, status='Confirmed').count() >= 10
-
-    if request.method == 'POST':
-        real_time_count = Booking.objects.filter(
-            user=request.user, date=selected_date
-        ).exclude(status='Cancelled').count()
-
-        if real_time_count >= 4:
-            messages.error(request, "تنبيه: لديك 4 حجوزات بالفعل لهذا اليوم.")
-            return redirect('pitch_detail', pitch_id=pitch.id)
-
-        payment_type_choice = request.POST.get('payment_type', 'Full')
-
-        if payment_type_choice == 'PayAtPitch' and not is_vip:
-            messages.error(request, "خيار الدفع في الملعب متاح فقط للعملاء المميزين.")
-            return redirect(request.path)
-
-        form = PaymentForm(request.POST)
-        if form.is_valid():
-            booking = Booking.objects.create(
-                pitch=pitch, user=request.user,
-                date=selected_date, time=time_str,
-                status='Pending', payment_type=payment_type_choice
-            )
-
-            method_from_post = request.POST.get('pay', 'Cash')
-
-            # لو اختار محفظة إلكترونية → روح Paymob
-            if method_from_post == 'wallet':
-                phone = request.POST.get('wallet_phone', '')
-                if not phone:
-                    messages.error(request, "يرجى إدخال رقم المحفظة!")
-                    booking.delete()
-                    return redirect(request.path + f'?date={selected_date}')
-
-                # حساب المبلغ بالقروش
-                if payment_type_choice == 'Deposit':
-                    amount = 5000  # 50 جنيه
-                else:
-                    amount = int(final_price * 100)
-
-                try:
-                    auth_token = paymob_auth()
-                    order_id = create_order(auth_token, amount, booking.booking_code)
-                    payment_key = create_payment_key(auth_token, order_id, amount, request.user, phone)
-                    redirect_url = pay_with_wallet(payment_key, phone)
-
-                    # حفظ بيانات الدفع
-                    Payment.objects.create(
-                        booking=booking,
-                        paymob_order_id=str(order_id),
-                        amount_cents=amount,
-                        payment_method='Vodafone',
-                    )
-
-                    if redirect_url:
-                        # حفظ كود الحجز في الجلسة
-                        request.session['last_booking_code'] = booking.booking_code
-                        # وجّه العميل لصفحة الانتظار بدل Paymob مباشرة
-                        return redirect('payment_pending', booking_code=booking.booking_code)
-                    else:
-                        messages.error(request, "حدث خطأ في بوابة الدفع. حاول تاني.")
-                        booking.delete()
-                        return redirect('pitch_detail', pitch_id=pitch.id)
-
-                except Exception as e:
-                    messages.error(request, f"خطأ في الدفع: {str(e)}")
-                    booking.delete()
-                    return redirect('pitch_detail', pitch_id=pitch.id)
-
-            # لو اختار طريقة دفع تانية (يدوي زي ما كان)
-            else:
-                payment = form.save(commit=False)
-                payment.booking = booking
-                method_map = {'voda': 'Vodafone', 'insta': 'Instapay', 'cash': 'Cash', 'fawry': 'Fawry'}
-                payment.payment_method = method_map.get(method_from_post, 'Cash')
-                payment.save()
-
-                booking.status = 'Pending'
-                booking.save()
-                request.session['last_booking_code'] = booking.booking_code
-                messages.success(request, "✅ تم استلام طلبك! سيتم التأكيد بعد التحقق من الدفع.")
-                return redirect('booking_success')
-    else:
-        form = PaymentForm()
-
-    return render(request, 'booking_confirm.html', {
-        'pitch':  pitch,
-        'hour':   time_str,
-        'date':   selected_date,
-        'form':   form,
-        'price':  final_price,
-        'is_vip': is_vip,
-    })
-
-# ---------------------------------------------------------
-# نجاح الحجز
-# ---------------------------------------------------------
-@login_required
-def booking_success(request):
-    # اقرأ الكود من query param أولاً، بعدين fallback للـ session
-    booking_code = request.GET.get('code') or request.session.get('last_booking_code')
-    booking = None
-    payment = None
-    if booking_code:
-        booking = Booking.objects.filter(
-            booking_code=booking_code, user=request.user
-        ).first()
-        if booking:
-            payment = Payment.objects.filter(booking=booking).first()
-
-    return render(request, 'booking_success.html', {
-        'booking_code': booking_code,
-        'booking': booking,
-        'payment': payment,
-    })
-# ---------------------------------------------------------
-# صفحة انتظار الدفع
-# ---------------------------------------------------------
-@login_required
-def payment_pending(request, booking_code):
-    booking = get_object_or_404(Booking, booking_code=booking_code, user=request.user)
-    payment = Payment.objects.filter(booking=booking).first()
-
-    return render(request, 'payment_pending.html', {
-        'booking': booking,
-        'payment': payment,
-    })
-
-# ---------------------------------------------------------
-# الملف الشخصي
-# ---------------------------------------------------------
-@login_required(login_url='login')
-def user_profile(request):
-    user = request.user
-    
-    # 1. التأكد إن المستخدم له بروفايل (عشان نتجنب أي خطأ للحسابات القديمة)
-    if hasattr(user, 'profile'):
-        profile = user.profile
-    else:
-        profile = UserProfile.objects.create(user=user)
-
-    # 2. معالجة فورم تعديل البيانات
-    if request.method == 'POST':
-        form = UserProfileUpdateForm(request.POST)
-        if form.is_valid():
-            # حفظ بيانات جدول User
-            user.first_name = form.cleaned_data['first_name']
-            user.last_name = form.cleaned_data['last_name']
-            user.save()
-            
-            # حفظ بيانات جدول UserProfile
-            profile.middle_name = form.cleaned_data['middle_name']
-            profile.phone_number = form.cleaned_data['phone_number']
-            profile.save()
-            
-            messages.success(request, "تم تحديث بياناتك بنجاح! 💾")
-            return redirect('user_profile')
-    else:
-        # تعبئة الفورم ببيانات المستخدم الحالية وقت فتح الصفحة
-        form = UserProfileUpdateForm(initial={
-            'first_name': user.first_name,
-            'middle_name': profile.middle_name,
-            'last_name': user.last_name,
-            'phone_number': profile.phone_number,
-        })
-
-    # 3. جلب الحجوزات بنفس طريقتك القديمة الممتازة
-    today    = timezone.now().date()
-    upcoming = Booking.objects.filter(user=user, date__gte=today).order_by('date', 'time')
-    past     = Booking.objects.filter(user=user, date__lt=today).order_by('-date', '-time')
-    
-    is_vip = Booking.objects.filter(user=user, status='Confirmed').count() >= 10
-
-    return render(request, 'user_profile.html', {
-        'upcoming_bookings': upcoming,
-        'past_bookings':     past,
-        'user':              user,
-        'form':              form,
-        'is_vip':            is_vip,
-    })
-
-
-# ---------------------------------------------------------
-# إلغاء الحجز
-# ---------------------------------------------------------
-@login_required
-def cancel_booking(request, booking_id):
-    if request.method != 'POST':
-        return redirect('user_profile')
-    booking = get_object_or_404(Booking, id=booking_id, user=request.user)
-    if booking.status not in ['Cancelled', 'Played']:
-        booking.status = 'Cancelled'
-        booking.save()
-        messages.success(request, "تم إلغاء الحجز بنجاح.")
-    else:
-        messages.error(request, "لا يمكن إلغاء هذا الحجز.")
-    return redirect('user_profile')
-
-
-# ---------------------------------------------------------
-# تسجيل حساب جديد
-# ---------------------------------------------------------
-def signup(request):
-    if request.user.is_authenticated:
-        return redirect('home')
-    
-    if request.method == 'POST':
-        # التعديل هنا: استخدمنا الفورم الجديدة
-        form = ExtendedSignupForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            login(request, user)
-            messages.success(request, "تم إنشاء الحساب بنجاح !")
-            return redirect('home')
-    else:
-        # التعديل هنا كمان
-        form = ExtendedSignupForm()
-        
-    return render(request, 'registration/signup.html', {'form': form})
-
-# ---------------------------------------------------------
-# من نحن
-# ---------------------------------------------------------
-def about_us(request):
-    return render(request, 'about_us.html')
-
-# ---------------------------------------------------------
-# Paymob: بدء عملية الدفع بالمحفظة
-# ---------------------------------------------------------
-@login_required
-def paymob_wallet_pay(request, booking_id):
-    booking = get_object_or_404(Booking, id=booking_id, user=request.user)
-    phone = request.POST.get('wallet_phone', '')
-
-    if not phone:
-        messages.error(request, "يرجى إدخال رقم المحفظة!")
-        return redirect('booking_confirm', pitch_id=booking.pitch.id, hour=int(booking.time.split(':')[0]))
-
-    # حساب المبلغ بالقروش
-    if booking.payment_type == 'Deposit':
-        amount = 5000  # 50 جنيه = 5000 قرش
-    else:
-        amount = int(booking.pitch.price_per_hour * 100)
-
-    # خطوات Paymob
-    try:
-        auth_token = paymob_auth()
-        order_id = create_order(auth_token, amount, booking.booking_code)
-        payment_key = create_payment_key(auth_token, order_id, amount, request.user, phone)
-        redirect_url = pay_with_wallet(payment_key, phone)
-
-        # حفظ بيانات الدفع
-        payment, created = Payment.objects.get_or_create(booking=booking)
-        payment.paymob_order_id = str(order_id)
-        payment.amount_cents = amount
-        payment.payment_method = 'Vodafone'
-        payment.save()
-
-        if redirect_url:
-            return redirect(redirect_url)
-        else:
-            messages.error(request, "حدث خطأ في بوابة الدفع. حاول تاني.")
-            return redirect('pitch_detail', pitch_id=booking.pitch.id)
-
-    except Exception as e:
-        messages.error(request, f"خطأ في الدفع: {str(e)}")
-        return redirect('pitch_detail', pitch_id=booking.pitch.id)
-
-
-# ---------------------------------------------------------
-# Paymob: Callback بعد الدفع (Paymob يبعت النتيجة هنا)
-# ---------------------------------------------------------
-@csrf_exempt
-def paymob_callback(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            obj = data.get('obj', {})
-            order_id = str(obj.get('order', {}).get('id', ''))
-            success = obj.get('success', False)
-            hmac_received = request.GET.get('hmac', '')
-
-            # 🛠️ الدالة المنقذة: بتحول الـ Boolean لحروف صغيرة زي ما Paymob عايز بالظبط
-            def bool_to_str(val):
-                if isinstance(val, bool):
-                    return str(val).lower()
-                return str(val)
-
-            # تجميع البيانات بنفس الترتيب الأبجدي الصارم لـ Paymob
-            hmac_string = (
-                bool_to_str(obj.get('amount_cents', '')) +
-                bool_to_str(obj.get('created_at', '')) +
-                bool_to_str(obj.get('currency', '')) +
-                bool_to_str(obj.get('error_occured', '')) +
-                bool_to_str(obj.get('has_parent_transaction', '')) +
-                bool_to_str(obj.get('id', '')) +
-                bool_to_str(obj.get('integration_id', '')) +
-                bool_to_str(obj.get('is_3d_secure', '')) +
-                bool_to_str(obj.get('is_auth', '')) +
-                bool_to_str(obj.get('is_capture', '')) +
-                bool_to_str(obj.get('is_refunded', '')) +
-                bool_to_str(obj.get('is_standalone_payment', '')) +
-                bool_to_str(obj.get('is_voided', '')) +
-                bool_to_str(obj.get('order', {}).get('id', '')) +
-                bool_to_str(obj.get('owner', '')) +
-                bool_to_str(obj.get('pending', '')) +
-                bool_to_str(obj.get('source_data', {}).get('pan', '')) +
-                bool_to_str(obj.get('source_data', {}).get('sub_type', '')) +
-                bool_to_str(obj.get('source_data', {}).get('type', '')) +
-                bool_to_str(obj.get('success', ''))
-            )
-
-            # التشفير
-            calculated_hmac = hmac.new(
-                settings.PAYMOB_HMAC_SECRET.encode('utf-8'),
-                hmac_string.encode('utf-8'),
-                hashlib.sha512
-            ).hexdigest()
-
-            # التحقق النهائي
-            if calculated_hmac == hmac_received and success:
-                payment = Payment.objects.filter(paymob_order_id=order_id).first()
-                if payment:
-                    payment.is_verified = True
-                    payment.transaction_id = str(obj.get('id', ''))
-                    payment.save()
-                    
-                    # حماية من التعارض: لو العميل اتأخر في الدفع وحد تاني حجز مكانه
-                    conflict_exists = Booking.objects.filter(
-                        pitch=payment.booking.pitch,
-                        date=payment.booking.date,
-                        time=payment.booking.time,
-                        status__in=['Confirmed', 'Played']
-                    ).exclude(id=payment.booking.id).exists()
-
-                    if not conflict_exists:
-                        # الفلوس دخلت والميعاد لسه فاضي، نأكد الحجز بأمان
-                        payment.booking.status = 'Confirmed'
-                        payment.booking.save()
-                    else:
-                        # الفلوس دخلت بس الميعاد اتأخد، هنكتب ملاحظة للإدارة للتعويض
-                        payment.booking.customer_name = "⚠️ دفع متأخر - تعارض مواعيد"
-                        payment.booking.save()
-
-                    # إرسال البيانات لجوجل شيت (بحماية try/except حتى لا يعطل الـ Webhook)
-                    try:
-                        add_booking_to_sheet(payment.booking)
-                    except Exception as sheet_error:
-                        pass # يتم تجاهل خطأ جوجل شيت لضمان رد 200 لـ Paymob
-
-            return HttpResponse(status=200)
-
-        except Exception as e:
-            return HttpResponse(status=500)
-
-    return HttpResponse(status=405)
-
-
-# ---------------------------------------------------------
-# Paymob: صفحة بعد الدفع (المستخدم يرجع هنا)
-# ---------------------------------------------------------
-def paymob_response(request):
-    success = request.GET.get('success', 'false')
-    order_id = request.GET.get('order', '')
-
-    if success == 'true':
-        payment = Payment.objects.filter(paymob_order_id=order_id).first()
-        if payment:
-            request.session['last_booking_code'] = payment.booking.booking_code
-            return redirect(reverse('booking_success') + f'?code={booking.booking_code}')
-
-
-    messages.error(request, "الدفع لم يتم بنجاح. حاول تاني أو اختر طريقة دفع تانية.")
-    return redirect('home')
-# ---------------------------------------------------------
-# API: التحقق من حالة الدفع (للصفحة المنتظرة)
-# ---------------------------------------------------------
-
-@login_required
-def check_payment_status(request, booking_code):
-    booking = Booking.objects.filter(
-        booking_code=booking_code,
-        user=request.user
-    ).first()
-
-    if booking:
-        return JsonResponse({
-            'status': booking.status,
-            'booking_code': booking.booking_code,
-        })
-    return JsonResponse({'status': 'not_found'}, status=404)
-
-# ═══════════════════════════════════════════════════════
-# داشبورد صاحب الملعب
-# ═══════════════════════════════════════════════════════
-
-@login_required
-def owner_dashboard(request):
-    """الصفحة الرئيسية لصاحب الملعب"""
-    pitches = Pitch.objects.filter(owner=request.user)
-
-    if not pitches.exists():
-        messages.error(request, "ليس لديك ملاعب مسجلة في حسابك.")
-        return redirect('home')
-
-    today = timezone.now().date()
-
-    stats = {
-        'total_pitches': pitches.count(),
-        'today_bookings': Booking.objects.filter(
-            pitch__in=pitches, date=today
-        ).exclude(status='Cancelled').count(),
-        'pending_bookings': Booking.objects.filter(
-            pitch__in=pitches, status='Confirmed',
-            date__gte=today
-        ).count(),
-        'confirmed_bookings': Booking.objects.filter(
-            pitch__in=pitches, status='Confirmed',
-            date__gte=today
-        ).count(),
-    }
-
-    # حساب أرباح الأسبوع
-    # حساب أرباح الأسبوع
-    # أونلاين verified
-    online_cents = Payment.objects.filter(
-        booking__pitch__in=pitches,
-        booking__status__in=['Confirmed', 'Played'],
-        booking__date__gte=today - timedelta(days=7),
-        is_verified=True
-    ).aggregate(total=Sum('amount_cents'))['total'] or 0
-
-    # كاش (PayAtPitch) — نحسب من pitch.price_per_hour مباشرة
-    cash_bookings = Booking.objects.filter(
-        pitch__in=pitches,
-        status__in=['Confirmed', 'Played'],
-        date__gte=today - timedelta(days=7),
-        payment_type='PayAtPitch'
-    )
-    cash_total = sum(b.pitch.price_per_hour for b in cash_bookings)
-
-    stats['weekly_earnings'] = Decimal(online_cents) / 100 + cash_total
-
-    # حجوزات اليوم لكل ملعب
-    today_schedule = []
-    for pitch in pitches:
-        pitch_bookings = Booking.objects.filter(
-            pitch=pitch, date=today
-        ).exclude(status='Cancelled').order_by('time')
-        today_schedule.append({
-            'pitch': pitch,
-            'bookings': pitch_bookings,
-            'count': pitch_bookings.count(),
-        })
-
-    return render(request, 'owner/dashboard.html', {
-        'pitches': pitches,
-        'stats': stats,
-        'today': today,
-        'today_schedule': today_schedule,
-    })
-
-
-# ───────────────────────────────────────────
-# 1. جدول الحجوزات (مين جاي النهاردة؟)
-# ───────────────────────────────────────────
-@login_required
-def owner_schedule(request, pitch_id):
-    pitch = get_object_or_404(Pitch, id=pitch_id, owner=request.user)
-
-    date_str = request.GET.get('date')
-    try:
-        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-    except (ValueError, TypeError):
-        selected_date = timezone.localtime().date()
-
-    bookings = Booking.objects.filter(
-        pitch=pitch, date=selected_date
-    ).exclude(status='Cancelled').order_by('time')
-
-    # تفاصيل الدفع لكل حجز
-    bookings_with_details = []
-    for booking in bookings:
-        payment = Payment.objects.filter(booking=booking).first()
-
-        paid_online = _get_amount_paid_online(booking)
-        remaining   = pitch.price_per_hour - paid_online
-
-        bookings_with_details.append({
-            'booking': booking,
-            'payment': payment,
-            'paid_online': paid_online,
-            'remaining': remaining,
-            'is_verified': payment.is_verified if payment else False,
-        })
-
-    # ساعات العمل مع حالة كل ساعة
-    booked_hours = {int(b.time.split(':')[0]): b for b in bookings}
-    hours_schedule = []
-
-    for i in range(24):
-        # التحقق من مواعيد العمل
-        is_open = False
-        if pitch.opening_hour < pitch.closing_hour:
-            if pitch.opening_hour <= i < pitch.closing_hour:
-                is_open = True
-        elif pitch.opening_hour > pitch.closing_hour:
-            if i >= pitch.opening_hour or i < pitch.closing_hour:
-                is_open = True
-        else:
-            is_open = True
-
-        if not is_open:
-            continue
-
-        # تنسيق الوقت
-        if i == 0:
-            formatted_time = "12:00 ص"
-        elif i < 12:
-            formatted_time = f"{i}:00 ص"
-        elif i == 12:
-            formatted_time = "12:00 م"
-        else:
-            formatted_time = f"{i - 12}:00 م"
-
-        booking_obj = booked_hours.get(i)
-        hours_schedule.append({
-            'hour_value': i,
-            'hour_display': formatted_time,
-            'booking': booking_obj,
-            'is_booked': booking_obj is not None,
-            'is_manual': booking_obj.is_manual if booking_obj else False,
-        })
-
-    # أيام للتنقل
-    days_list = []
-    today = timezone.localtime().date()
-    for i in range(14):
-        day_date = today + timedelta(days=i)
-        days_list.append({
-            'full_date': day_date.strftime('%Y-%m-%d'),
-            'day_name': day_date.strftime('%A'),
-            'display': day_date.strftime('%d/%m'),
-        })
-
-    return render(request, 'owner/schedule.html', {
-        'pitch': pitch,
-        'bookings_with_details': bookings_with_details,
-        'hours_schedule': hours_schedule,
-        'selected_date': selected_date.strftime('%Y-%m-%d'),
-        'days_list': days_list,
-    })
-
-
-# ───────────────────────────────────────────
-# 3. إغلاق ميعاد يدوياً (Manual Block)
-# ───────────────────────────────────────────
-@login_required
-def owner_block_hour(request, pitch_id):
-    pitch = get_object_or_404(Pitch, id=pitch_id, owner=request.user)
-
-    if request.method == 'POST':
-        date_str = request.POST.get('date')
-        hour = request.POST.get('hour')
-        customer_name = request.POST.get('customer_name', '')
-        customer_phone = request.POST.get('customer_phone', '')
-
-        try:
-            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-            hour_int = int(hour)
-            time_str = f"{hour_int:02d}:00"
-
-            exists = Booking.objects.filter(
-                pitch=pitch, date=selected_date, time=time_str
-            ).exclude(status='Cancelled').exists()
-
-            if exists:
-                messages.error(request, "الميعاد ده محجوز بالفعل!")
-            else:
-                new_booking = Booking.objects.create(
-                    pitch=pitch,
-                    user=request.user,
-                    date=selected_date,
-                    time=time_str,
-                    status='Confirmed',
-                    payment_type='PayAtPitch',
-                    is_manual=True,
-                    customer_name=customer_name,
-                    customer_phone=customer_phone,
-                )
-                messages.success(request, f"تم حجز الساعة {time_str} يدوياً ✅")
-                try:
-                    add_booking_to_sheet(new_booking)
-                except Exception:
-                    pass
-
-        except (ValueError, TypeError):
-            messages.error(request, "بيانات غير صحيحة!")
-
-    safe_date = date_str if date_str else timezone.localtime().date().strftime('%Y-%m-%d')
-    return redirect(f'/owner/pitch/{pitch.id}/schedule/?date={safe_date}')
-
-
-# ───────────────────────────────────────────
-# 4. فتح ميعاد يدوي (Unblock)
-# ───────────────────────────────────────────
-@login_required
-def owner_unblock_hour(request, booking_id):
-    booking = get_object_or_404(
-        Booking, id=booking_id,
-        pitch__owner=request.user,
-        is_manual=True
-    )
-
-    if request.method == 'POST':
-        selected_date = booking.date.strftime('%Y-%m-%d')
-        pitch_id = booking.pitch.id
-        booking.status = 'Cancelled'
-        booking.save()
-        messages.success(request, "تم فتح الميعاد ✅")
-        return redirect(f'/owner/pitch/{pitch_id}/schedule/?date={selected_date}')
-
-    return redirect('owner_dashboard')
-
-
-# ─────────────────────────��─────────────────
-# 5. ملخص الأرباح (Earnings)
-# ───────────────────────────────────────────
-# ═══════════════════════════════════════════════════════════════════════════
-#  SECTION: داشبورد الأرباح المالية لصاحب الملعب
-#  يُستبدل به كل دوال owner_earnings الموجودة في views.py
-# ═══════════════════════════════════════════════════════════════════════════
-
-def _get_amount_paid_online(booking):
-    try:
-        payment = booking.payment_details
-        if payment.is_verified and payment.amount_cents > 0:
-            return Decimal(payment.amount_cents) / Decimal('100')
+        p = appointment.payment_details
+        if p.is_verified and p.amount_cents > 0:
+            return Decimal(p.amount_cents) / Decimal('100')
     except Exception:
         pass
     return Decimal('0.00')
 
+
 def _resolve_owner(request):
-    """
-    دالة مساعدة: تحدد صاحب الملعب المقصود.
-    - لو المستخدم الحالي superuser وبعت owner_id → نستخدم ذلك الـ owner
-    - غير كده → نستخدم request.user نفسه
-    """
     if request.user.is_superuser:
         owner_id = request.GET.get('owner_id') or request.POST.get('owner_id')
         if owner_id:
@@ -977,171 +54,778 @@ def _resolve_owner(request):
     return request.user
 
 
-@login_required
-def owner_earnings(request):
-    """
-    داشبورد الأرباح المالية - 3 أقسام:
-      A) وردية اليوم (Cash Drawer Focus)
-      B) الرصيد المتراكم (Unsettled Ledger)
-      C) تفاصيل العمولة (Commission Breakdown - accordion)
-    """
-    owner  = _resolve_owner(request)
-    pitches = Pitch.objects.filter(owner=owner)
-
-    if not pitches.exists():
-        messages.error(request, "ليس لديك ملاعب مسجلة في حسابك.")
-        return redirect('home')
-
-    today = timezone.localtime().date()
-
-    # ─────────────────────────────────────────────────────────
-    # SECTION A ➜ وردية اليوم
-    # ─────────────────────────────────────────────────────────
-    # today_bookings في owner_earnings
-    today_bookings = (
-        Booking.objects
-        .filter(pitch__in=pitches, date=today)
-        .exclude(status__in=['Cancelled', 'No-Show'])
-        .select_related('pitch', 'payment_details')   # ← كده
-        .order_by('time')
-    )
-
-    today_total_sales    = Decimal('0.00')
-    today_cash_drawer    = Decimal('0.00')
-    today_online_holding = Decimal('0.00')
-
-    today_booking_rows = []
-    for booking in today_bookings:
-        full_price       = booking.pitch.price_per_hour
-        paid_online      = _get_amount_paid_online(booking)
-        cash_portion     = full_price - paid_online
-
-        today_total_sales    += full_price
-        today_cash_drawer    += cash_portion
-        today_online_holding += paid_online
-
-        today_booking_rows.append({
-            'booking':    booking,
-            'full_price': full_price,
-            'paid_online': paid_online,
-            'cash_portion': cash_portion,
+def _generate_slots(doctor, selected_date):
+    """يولّد السلوتات بناءً على slot_duration الدكتور"""
+    slots = []
+    slot_minutes = doctor.slot_duration
+    opening = doctor.opening_hour * 60
+    closing  = doctor.closing_hour * 60
+    current  = opening
+    while current + slot_minutes <= closing:
+        h, m = current // 60, current % 60
+        slots.append({
+            'hour':     h,
+            'minute':   m,
+            'time_str': f"{h:02d}:{m:02d}",
+            'display':  _format_time_arabic(h, m),
         })
+        current += slot_minutes
+    return slots
 
-    # ─────────────────────────────────────────────────────────
-    # 🆕 إضافة: رصيد الأونلاين للحجوزات المستقبلية (قادمة)
-    # ─────────────────────────────────────────────────────────
-    upcoming_payments = Payment.objects.filter(
-        booking__pitch__in=pitches,
-        booking__status='Confirmed',
-        booking__date__gt=today,
-        is_verified=True,
-        amount_cents__gt=0
-    )
-    upcoming_online_holding = sum((Decimal(p.amount_cents) / Decimal('100')) for p in upcoming_payments)
 
-    # ─────────────────────────────────────────────────────────
-    # SECTION B ➜ الرصيد المتراكم (Unsettled Ledger)
-    #   فقط: status='Played' AND is_settled=False
-    # ─────────────────────────────────────────────────────────
-    unsettled_qs = (
-        Booking.objects
-        .filter(pitch__in=pitches, status='Played', is_settled=False)
-        .select_related('pitch')
-        .select_related('payment_details')
-        .order_by('-date', '-time')
-    )
-    unsettled_list = list(unsettled_qs)   # ← تنفيذ الـ SQL مرة واحدة بس
+def _format_time_arabic(h, m):
+    suffix   = "ص" if h < 12 else "م"
+    display_h = h if h <= 12 else h - 12
+    if display_h == 0:
+        display_h = 12
+    return f"{display_h}:{m:02d} {suffix}"
 
-    total_online_collected = Decimal('0.00')
-    total_commission       = Decimal('0.00')
 
-    for booking in unsettled_qs:
-        full_price       = booking.pitch.price_per_hour
-        commission_rate  = booking.pitch.commission_percentage / Decimal('100')
-        commission_amt   = round(full_price * commission_rate, 2)
+def _clean_pending(doctor=None):
+    threshold = timezone.now() - timedelta(minutes=30)
+    qs = Appointment.objects.filter(status='Pending', created_at__lt=threshold)
+    if doctor:
+        qs = qs.filter(doctor=doctor)
+    qs.update(status='Cancelled')
 
-        total_commission        += commission_amt
-        total_online_collected  += _get_amount_paid_online(booking)
 
-    net_settleable = total_online_collected - total_commission
+# ═══════════════════════════════════════════════════════
+# الصفحة الرئيسية — قائمة العيادات
+# ═══════════════════════════════════════════════════════
 
-    # أرشيف التسويات السابقة (is_settled=True)
-    # settled_qs في owner_earnings
-    settled_qs = (
-        Booking.objects
-        .filter(pitch__in=pitches, status='Played', is_settled=True)
-        .select_related('pitch', 'payment_details')   # ← كده
-        .order_by('-date')
-    )
+def home(request):
+    _clean_pending()
 
-    settled_qs_30 = settled_qs[:30]
-    past_settled_total      = Decimal('0.00')
-    past_settled_commission = Decimal('0.00')
-    for booking in settled_qs_30:
-        full_price      = booking.pitch.price_per_hour
-        commission_rate = booking.pitch.commission_percentage / Decimal('100')
-        past_settled_commission += round(full_price * commission_rate, 2)
-        past_settled_total      += _get_amount_paid_online(booking)
-    past_settled_net = past_settled_total - past_settled_commission
+    total_appointments = Appointment.objects.filter(
+        status__in=['Confirmed', 'Attended']
+    ).count()
 
-    # ─────────────────────────────────────────────────────────
-    # SECTION C ➜ تفاصيل العمولة (Commission Breakdown)
-    # ─────────────────────────────────────────────────────────
-    commission_rows = []
-    for booking in unsettled_qs:
-        full_price      = booking.pitch.price_per_hour
-        commission_rate = booking.pitch.commission_percentage / Decimal('100')
-        commission_amt  = round(full_price * commission_rate, 2)
+    clinics_qs = Clinic.objects.filter(is_available=True).prefetch_related('doctors')
 
-        commission_rows.append({
-            'booking':        booking,
-            'full_price':     full_price,
-            'commission_pct': booking.pitch.commission_percentage,
-            'commission_amt': commission_amt,
-            'net_to_owner':   round(full_price - commission_amt, 2),
-        })
+    # بحث بالقرب
+    user_lat = request.GET.get('lat')
+    user_lng = request.GET.get('lng')
 
-    return render(request, 'owner/earnings.html', {
-        # meta
-        'today':          today,
-        'owner':          owner,
-        'pitches':        pitches,
-        'is_superuser':   request.user.is_superuser,
+    if user_lat and user_lng:
+        try:
+            user_lat, user_lng = float(user_lat), float(user_lng)
+            clinics_list = []
+            for c in clinics_qs:
+                if c.latitude and c.longitude:
+                    c.distance = round(haversine(user_lng, user_lat, c.longitude, c.latitude), 1)
+                else:
+                    c.distance = 99999
+                clinics_list.append(c)
+            clinics_list = sorted(clinics_list, key=lambda x: x.distance)
+        except ValueError:
+            clinics_list = list(clinics_qs.order_by('-id'))
+    else:
+        clinics_list = list(clinics_qs.order_by('-id'))
 
-        # Section A
-        'today_total_sales':       today_total_sales,
-        'today_cash_drawer':       today_cash_drawer,
-        'today_online_holding':    today_online_holding,
-        'upcoming_online_holding': upcoming_online_holding,
-        'today_booking_rows':      today_booking_rows,
-        'today_count':          len(today_booking_rows),
+    # فلاتر
+    location_query  = request.GET.get('location')
+    specialty_query = request.GET.get('specialty')
+    max_price       = request.GET.get('price')
 
-        # Section B
-        'total_online_collected':  total_online_collected,
-        'total_commission':        total_commission,
-        'net_settleable':          net_settleable,
-        'unsettled_count':         len(unsettled_list),
-        'settled_qs':              settled_qs_30,        # آخر 30 حجز مُسوَّى
-        'past_settled_total':      past_settled_total,
-        'past_settled_commission': past_settled_commission,
-        'past_settled_net':        past_settled_net,
+    if location_query and location_query != 'all':
+        clinics_list = [c for c in clinics_list if c.location == location_query]
+    if specialty_query and specialty_query != 'all':
+        # فلتر العيادات اللي فيها الدكتور بالتخصص ده
+        clinics_list = [c for c in clinics_list
+                        if c.doctors.filter(specialty=specialty_query, is_active=True).exists()]
+    if max_price:
+        try:
+            max_p = Decimal(max_price)
+            clinics_list = [c for c in clinics_list
+                            if c.doctors.filter(price__lte=max_p, is_active=True).exists()]
+        except Exception:
+            pass
 
-        # Section C
-        'commission_rows': commission_rows,
-        'total_full_price': sum(r['full_price'] for r in commission_rows),
+    paginator   = Paginator(clinics_list, 9)
+    page_number = request.GET.get('page')
+    clinics     = paginator.get_page(page_number)
+
+    query_dict = request.GET.copy()
+    if 'page' in query_dict:
+        del query_dict['page']
+
+    return render(request, 'home.html', {
+        'clinics':            clinics,
+        'clinics_count':      Clinic.objects.filter(is_available=True).count(),
+        'total_appointments': total_appointments,
+        'query_string':       query_dict.urlencode(),
+        'selected_location':  location_query,
+        'selected_specialty': specialty_query,
+        'selected_price':     max_price,
+        'is_nearest_search':  bool(user_lat),
+        'location_choices':   LOCATION_CHOICES,
+        'specialty_choices':  SPECIALTY_CHOICES,
     })
 
 
-# ─────────────────────────────────────────────────────────────────────────
-# تسوية الحساب (Admin Only)
-# ─────────────────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════
+# تفاصيل العيادة — بيعرض دكاترتها
+# ═══════════════════════════════════════════════════════
+
+def clinic_detail(request, clinic_id):
+    clinic  = get_object_or_404(Clinic, id=clinic_id, is_available=True)
+    doctors = clinic.doctors.filter(is_active=True).annotate(
+        average_rating=Avg('reviews__rating')
+    ).order_by('display_order', 'name')
+
+    # فلتر بالتخصص لو المجمع متعدد
+    specialty_filter = request.GET.get('specialty')
+    if specialty_filter and specialty_filter != 'all':
+        doctors = doctors.filter(specialty=specialty_filter)
+
+    # التخصصات المتاحة في العيادة
+    available_specialties = clinic.doctors.filter(is_active=True)\
+        .values_list('specialty', flat=True).distinct()
+    spec_map = dict(SPECIALTY_CHOICES)
+    specialties_list = [(s, spec_map.get(s, s)) for s in available_specialties]
+
+    today = timezone.localtime().date()
+
+    return render(request, 'clinic_detail.html', {
+        'clinic':             clinic,
+        'doctors':            doctors,
+        'today':              today.strftime('%Y-%m-%d'),
+        'specialties_list':   specialties_list,
+        'selected_specialty': specialty_filter,
+        'is_multi':           clinic.is_multi_specialty,
+    })
+
+
+# ═══════════════════════════════════════════════════════
+# تفاصيل الدكتور — بيعرض سلوتاته
+# ═══════════════════════════════════════════════════════
+
+def doctor_detail(request, doctor_id):
+    doctor = get_object_or_404(Doctor, id=doctor_id, is_active=True)
+    clinic = doctor.clinic
+    _clean_pending(doctor)
+
+    # إضافة تقييم
+    if request.method == 'POST' and 'rating' in request.POST:
+        if request.user.is_authenticated:
+            has_attended = Appointment.objects.filter(
+                patient=request.user, doctor=doctor,
+                status='Attended', date__lte=datetime.now().date()
+            ).exists()
+
+            if not has_attended:
+                messages.error(request, "لا يمكنك تقييم الدكتور إلا بعد حضور الكشف!")
+            elif not DoctorReview.objects.filter(doctor=doctor, patient=request.user).exists():
+                rating  = max(1, min(5, int(request.POST.get('rating', 5))))
+                comment = request.POST.get('comment', '')
+                DoctorReview.objects.create(doctor=doctor, patient=request.user, rating=rating, comment=comment)
+                messages.success(request, "تم نشر تقييمك! شكراً ✅")
+            else:
+                messages.warning(request, "لقد قمت بتقييم هذا الدكتور مسبقاً.")
+        return redirect('doctor_detail', doctor_id=doctor.id)
+
+    # اختيار اليوم
+    date_str = request.GET.get('date')
+    try:
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        selected_date = timezone.localtime().date()
+
+    doctor_works = doctor.works_on_day(selected_date.weekday())
+
+    # المواعيد المحجوزة
+    booked_times = set(
+        Appointment.objects
+        .filter(doctor=doctor, date=selected_date)
+        .exclude(status__in=['Cancelled', 'No-Show'])
+        .values_list('time', flat=True)
+    )
+
+    now         = timezone.localtime()
+    is_today    = (selected_date == now.date())
+    curr_mins   = now.hour * 60 + now.minute
+    slots       = _generate_slots(doctor, selected_date)
+
+    slots_schedule = []
+    for slot in slots:
+        slot_mins = slot['hour'] * 60 + slot['minute']
+        slots_schedule.append({
+            'time_str':  slot['time_str'],
+            'display':   slot['display'],
+            'is_booked': slot['time_str'] in booked_times,
+            'is_past':   is_today and slot_mins <= curr_mins,
+        })
+
+    # 14 يوم للتنقل
+    today     = timezone.localtime().date()
+    days_list = []
+    for i in range(14):
+        day = today + timedelta(days=i)
+        days_list.append({
+            'full_date': day.strftime('%Y-%m-%d'),
+            'day_name':  day.strftime('%A'),
+            'display':   day.strftime('%d/%m'),
+            'works':     doctor.works_on_day(day.weekday()),
+        })
+
+    reviews        = doctor.reviews.select_related('patient').all()
+    average_rating = reviews.aggregate(Avg('rating'))['rating__avg'] or 0
+
+    # دكاترة تانيين في نفس العيادة
+    related_doctors = clinic.doctors.filter(is_active=True).exclude(id=doctor.id)[:3]
+
+    return render(request, 'doctor_detail.html', {
+        'doctor':          doctor,
+        'clinic':          clinic,
+        'days_list':       days_list,
+        'selected_date':   selected_date.strftime('%Y-%m-%d'),
+        'slots_schedule':  slots_schedule,
+        'doctor_works':    doctor_works,
+        'reviews':         reviews,
+        'average_rating':  round(average_rating, 1),
+        'review_count':    reviews.count(),
+        'related_doctors': related_doctors,
+    })
+
+
+# ═══════════════════════════════════════════════════════
+# تأكيد الحجز
+# ═══════════════════════════════════════════════════════
+
+@login_required(login_url='login')
+def appointment_confirm(request, doctor_id, time_str):
+    doctor = get_object_or_404(Doctor, id=doctor_id, is_active=True)
+    clinic = doctor.clinic
+
+    date_str = request.GET.get('date')
+    try:
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        selected_date = timezone.localtime().date()
+
+    # التحقق أن الدكتور شغال النهاردة
+    if not doctor.works_on_day(selected_date.weekday()):
+        messages.error(request, "عذراً، الدكتور لا يعمل في هذا اليوم.")
+        return redirect('doctor_detail', doctor_id=doctor.id)
+
+    # التحقق أن السلوت مش محجوز
+    _clean_pending(doctor)
+    is_taken = Appointment.objects.filter(
+        doctor=doctor, date=selected_date, time=time_str
+    ).exclude(status__in=['Cancelled', 'No-Show']).exists()
+
+    if is_taken:
+        messages.error(request, "عذراً، هذا الموعد تم حجزه للتو!")
+        return redirect('doctor_detail', doctor_id=doctor.id)
+
+    if request.method == 'POST':
+        payment_type = request.POST.get('payment_type', 'Full')
+        complaint    = request.POST.get('complaint', '')
+
+        appointment = Appointment.objects.create(
+            doctor=doctor,
+            patient=request.user,
+            date=selected_date,
+            time=time_str,
+            status='Pending',
+            payment_type=payment_type,
+            complaint=complaint,
+        )
+
+        AppointmentPayment.objects.create(
+            appointment=appointment,
+            payment_method='Vodafone',
+            amount_cents=int(doctor.price * 100),
+        )
+
+        request.session['last_appointment_code'] = appointment.booking_code
+        messages.success(
+            request,
+            f"✅ تم استلام طلبك! برجاء تحويل {doctor.price} ج.م على واتساب وإرسال صورة الإيصال للتأكيد."
+        )
+        return redirect(reverse('appointment_success') + f'?code={appointment.booking_code}')
+
+    return render(request, 'appointment_confirm.html', {
+        'doctor':   doctor,
+        'clinic':   clinic,
+        'time_str': time_str,
+        'date':     selected_date,
+        'price':    doctor.price,
+        'whatsapp': getattr(settings, 'SUPPORT_WHATSAPP', clinic.whatsapp_number),
+    })
+
+
+# ═══════════════════════════════════════════════════════
+# نجاح الحجز
+# ═══════════════════════════════════════════════════════
+
+@login_required
+def appointment_success(request):
+    code = request.GET.get('code') or request.session.get('last_appointment_code')
+    appointment = None
+    payment     = None
+
+    if code:
+        appointment = Appointment.objects.filter(
+            booking_code=code, patient=request.user
+        ).select_related('doctor__clinic').first()
+        if appointment:
+            try:
+                payment = appointment.payment_details
+            except Exception:
+                pass
+
+    return render(request, 'appointment_success.html', {
+        'appointment': appointment,
+        'payment':     payment,
+        'code':        code,
+        'whatsapp':    getattr(settings, 'SUPPORT_WHATSAPP', ''),
+    })
+
+
+# ═══════════════════════════════════════════════════════
+# الملف الشخصي للمريض
+# ═══════════════════════════════════════════════════════
+
+@login_required(login_url='login')
+def user_profile(request):
+    user    = request.user
+    profile = user.profile if hasattr(user, 'profile') else UserProfile.objects.create(user=user)
+
+    if request.method == 'POST':
+        form = UserProfileUpdateForm(request.POST)
+        if form.is_valid():
+            user.first_name      = form.cleaned_data['first_name']
+            user.last_name       = form.cleaned_data['last_name']
+            user.save()
+            profile.middle_name  = form.cleaned_data['middle_name']
+            profile.phone_number = form.cleaned_data['phone_number']
+            profile.save()
+            messages.success(request, "تم تحديث بياناتك بنجاح! 💾")
+            return redirect('user_profile')
+    else:
+        form = UserProfileUpdateForm(initial={
+            'first_name':   user.first_name,
+            'middle_name':  profile.middle_name,
+            'last_name':    user.last_name,
+            'phone_number': profile.phone_number,
+        })
+
+    today    = timezone.now().date()
+    upcoming = Appointment.objects.filter(
+        patient=user, date__gte=today
+    ).exclude(status='Cancelled').select_related('doctor__clinic').order_by('date', 'time')
+    past = Appointment.objects.filter(
+        patient=user, date__lt=today
+    ).select_related('doctor__clinic').order_by('-date', '-time')
+
+    return render(request, 'user_profile.html', {
+        'upcoming_appointments': upcoming,
+        'past_appointments':     past,
+        'user':                  user,
+        'form':                  form,
+    })
+
+
+# ═══════════════════════════════════════════════════════
+# إلغاء موعد
+# ═══════════════════════════════════════════════════════
+
+@login_required
+def cancel_appointment(request, appointment_id):
+    if request.method != 'POST':
+        return redirect('user_profile')
+    appointment = get_object_or_404(Appointment, id=appointment_id, patient=request.user)
+    if appointment.status not in ['Cancelled', 'Attended', 'No-Show']:
+        appointment.status = 'Cancelled'
+        appointment.save()
+        messages.success(request, "تم إلغاء الموعد بنجاح.")
+    else:
+        messages.error(request, "لا يمكن إلغاء هذا الموعد.")
+    return redirect('user_profile')
+
+
+# ═══════════════════════════════════════════════════════
+# تسجيل + من نحن
+# ═══════════════════════════════════════════════════════
+
+def signup(request):
+    if request.user.is_authenticated:
+        return redirect('home')
+    if request.method == 'POST':
+        form = ExtendedSignupForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            messages.success(request, "تم إنشاء الحساب بنجاح!")
+            return redirect('home')
+    else:
+        form = ExtendedSignupForm()
+    return render(request, 'registration/signup.html', {'form': form})
+
+
+def about_us(request):
+    return render(request, 'about_us.html')
+
+
+# ═══════════════════════════════════════════════════════
+# داشبورد المالك
+# ═══════════════════════════════════════════════════════
+
+@login_required
+def owner_dashboard(request):
+    clinics = Clinic.objects.filter(owner=request.user).prefetch_related('doctors')
+
+    if not clinics.exists():
+        messages.error(request, "ليس لديك عيادات مسجلة في حسابك.")
+        return redirect('home')
+
+    today = timezone.now().date()
+
+    # إجمالي الدكاترة في كل عيادات المالك
+    all_doctors = Doctor.objects.filter(clinic__in=clinics, is_active=True)
+
+    stats = {
+        'total_clinics':  clinics.count(),
+        'total_doctors':  all_doctors.count(),
+        'today_appointments': Appointment.objects.filter(
+            doctor__in=all_doctors, date=today
+        ).exclude(status='Cancelled').count(),
+        'confirmed_upcoming': Appointment.objects.filter(
+            doctor__in=all_doctors, status='Confirmed', date__gte=today
+        ).count(),
+        'pending_count': Appointment.objects.filter(
+            doctor__in=all_doctors, status='Pending'
+        ).count(),
+    }
+
+    # أرباح آخر 7 أيام
+    online_cents = AppointmentPayment.objects.filter(
+        appointment__doctor__in=all_doctors,
+        appointment__status__in=['Confirmed', 'Attended'],
+        appointment__date__gte=today - timedelta(days=7),
+        is_verified=True
+    ).aggregate(total=Sum('amount_cents'))['total'] or 0
+    stats['weekly_earnings'] = Decimal(online_cents) / 100
+
+    # جدول اليوم لكل عيادة
+    today_schedule = []
+    for clinic in clinics:
+        clinic_doctors = clinic.doctors.filter(is_active=True)
+        clinic_appts   = Appointment.objects.filter(
+            doctor__in=clinic_doctors, date=today
+        ).exclude(status='Cancelled').select_related('doctor').order_by('time')
+
+        today_schedule.append({
+            'clinic':       clinic,
+            'appointments': clinic_appts,
+            'count':        clinic_appts.count(),
+        })
+
+    return render(request, 'owner/dashboard.html', {
+        'clinics':        clinics,
+        'stats':          stats,
+        'today':          today,
+        'today_schedule': today_schedule,
+    })
+
+
+# ═══════════════════════════════════════════════════════
+# جدول مواعيد دكتور معين
+# ═══════════════════════════════════════════════════════
+
+@login_required
+def owner_schedule(request, doctor_id):
+    doctor = get_object_or_404(Doctor, id=doctor_id, clinic__owner=request.user)
+    clinic = doctor.clinic
+
+    date_str = request.GET.get('date')
+    try:
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        selected_date = timezone.localtime().date()
+
+    appointments = Appointment.objects.filter(
+        doctor=doctor, date=selected_date
+    ).exclude(status='Cancelled').order_by('time')
+
+    # تفاصيل الدفع
+    appointments_with_details = []
+    for appt in appointments:
+        paid_online = _get_amount_paid_online(appt)
+        appointments_with_details.append({
+            'appointment': appt,
+            'paid_online': paid_online,
+            'remaining':   doctor.price - paid_online,
+            'is_verified': getattr(getattr(appt, 'payment_details', None), 'is_verified', False),
+        })
+
+    # السلوتات
+    booked_times = {a.time: a for a in appointments}
+    now          = timezone.localtime()
+    is_today     = (selected_date == now.date())
+    curr_mins    = now.hour * 60 + now.minute
+    slots        = _generate_slots(doctor, selected_date)
+    slots_schedule = []
+    for slot in slots:
+        slot_mins = slot['hour'] * 60 + slot['minute']
+        appt_obj  = booked_times.get(slot['time_str'])
+        slots_schedule.append({
+            'time_str':    slot['time_str'],
+            'display':     slot['display'],
+            'appointment': appt_obj,
+            'is_booked':   appt_obj is not None,
+            'is_manual':   appt_obj.is_manual if appt_obj else False,
+            'is_past':     is_today and slot_mins <= curr_mins,
+        })
+
+    # أيام التنقل
+    today     = timezone.localtime().date()
+    days_list = []
+    for i in range(14):
+        day = today + timedelta(days=i)
+        days_list.append({
+            'full_date': day.strftime('%Y-%m-%d'),
+            'day_name':  day.strftime('%A'),
+            'display':   day.strftime('%d/%m'),
+            'works':     doctor.works_on_day(day.weekday()),
+        })
+
+    return render(request, 'owner/schedule.html', {
+        'doctor':                    doctor,
+        'clinic':                    clinic,
+        'appointments_with_details': appointments_with_details,
+        'slots_schedule':            slots_schedule,
+        'selected_date':             selected_date.strftime('%Y-%m-%d'),
+        'days_list':                 days_list,
+        'doctor_works':              doctor.works_on_day(selected_date.weekday()),
+    })
+
+
+# ═══════════════════════════════════════════════════════
+# حجز يدوي (من السكرتيرة)
+# ═══════════════════════════════════════════════════════
+
+@login_required
+def owner_block_slot(request, doctor_id):
+    doctor = get_object_or_404(Doctor, id=doctor_id, clinic__owner=request.user)
+
+    if request.method == 'POST':
+        date_str      = request.POST.get('date')
+        time_str      = request.POST.get('time_str')
+        patient_name  = request.POST.get('patient_name', '')
+        patient_phone = request.POST.get('patient_phone', '')
+
+        try:
+            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            exists = Appointment.objects.filter(
+                doctor=doctor, date=selected_date, time=time_str
+            ).exclude(status__in=['Cancelled', 'No-Show']).exists()
+
+            if exists:
+                messages.error(request, "هذا الموعد محجوز بالفعل!")
+            else:
+                Appointment.objects.create(
+                    doctor=doctor,
+                    patient=request.user,
+                    date=selected_date,
+                    time=time_str,
+                    status='Confirmed',
+                    payment_type='PayAtClinic',
+                    is_manual=True,
+                    patient_name=patient_name,
+                    patient_phone=patient_phone,
+                )
+                messages.success(request, f"تم حجز الموعد {time_str} يدوياً ✅")
+        except (ValueError, TypeError):
+            messages.error(request, "بيانات غير صحيحة!")
+
+    safe_date = date_str if date_str else timezone.localtime().date().strftime('%Y-%m-%d')
+    return redirect(f'/owner/doctor/{doctor.id}/schedule/?date={safe_date}')
+
+
+# ═══════════════════════════════════════════════════════
+# إلغاء موعد يدوي
+# ═══════════════════════════════════════════════════════
+
+@login_required
+def owner_unblock_slot(request, appointment_id):
+    appointment = get_object_or_404(
+        Appointment, id=appointment_id,
+        doctor__clinic__owner=request.user,
+        is_manual=True
+    )
+    if request.method == 'POST':
+        selected_date = appointment.date.strftime('%Y-%m-%d')
+        doctor_id     = appointment.doctor.id
+        appointment.status = 'Cancelled'
+        appointment.save()
+        messages.success(request, "تم فتح الموعد ✅")
+        return redirect(f'/owner/doctor/{doctor_id}/schedule/?date={selected_date}')
+    return redirect('owner_dashboard')
+
+
+# ═══════════════════════════════════════════════════════
+# تحديث حالة الموعد (حضر / لم يحضر)
+# ═══════════════════════════════════════════════════════
+
+@login_required
+def owner_update_appointment_status(request, appointment_id):
+    appointment = get_object_or_404(
+        Appointment, id=appointment_id, doctor__clinic__owner=request.user
+    )
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+        if new_status in ['Attended', 'No-Show'] and appointment.status == 'Confirmed':
+            appointment.status = new_status
+            appointment.save()
+            if new_status == 'Attended':
+                messages.success(request, "تم تسجيل حضور المريض واكتمال الكشف ✅")
+            else:
+                messages.warning(request, "تم تسجيل غياب المريض ❌")
+        elif appointment.status != 'Confirmed':
+            messages.error(request, "لا يمكن تعديل موعد تم إغلاقه مسبقاً.")
+
+    selected_date = appointment.date.strftime('%Y-%m-%d')
+    return redirect(f'/owner/doctor/{appointment.doctor.id}/schedule/?date={selected_date}')
+
+
+# ═══════════════════════════════════════════════════════
+# تأكيد الدفع (الأونر يأكد إن الفلوس وصلت)
+# ═══════════════════════════════════════════════════════
+
+@login_required
+def owner_confirm_payment(request, appointment_id):
+    appointment = get_object_or_404(
+        Appointment, id=appointment_id, doctor__clinic__owner=request.user
+    )
+    if request.method == 'POST':
+        try:
+            payment = appointment.payment_details
+        except Exception:
+            payment = AppointmentPayment.objects.create(
+                appointment=appointment,
+                payment_method='Vodafone',
+                amount_cents=int(appointment.doctor.price * 100),
+            )
+        payment.is_verified = True
+        payment.save()
+        appointment.status = 'Confirmed'
+        appointment.save()
+        messages.success(request, "✅ تم تأكيد الدفع والموعد.")
+
+    selected_date = appointment.date.strftime('%Y-%m-%d')
+    return redirect(f'/owner/doctor/{appointment.doctor.id}/schedule/?date={selected_date}')
+
+
+# ═══════════════════════════════════════════════════════
+# الأرباح
+# ═══════════════════════════════════════════════════════
+
+@login_required
+def owner_earnings(request):
+    owner   = _resolve_owner(request)
+    clinics = Clinic.objects.filter(owner=owner)
+
+    if not clinics.exists():
+        messages.error(request, "ليس لديك عيادات مسجلة.")
+        return redirect('home')
+
+    all_doctors = Doctor.objects.filter(clinic__in=clinics, is_active=True)
+    today       = timezone.localtime().date()
+
+    # وردية اليوم
+    today_appointments = (
+        Appointment.objects
+        .filter(doctor__in=all_doctors, date=today)
+        .exclude(status__in=['Cancelled', 'No-Show'])
+        .select_related('doctor__clinic', 'payment_details')
+        .order_by('time')
+    )
+    today_total  = Decimal('0.00')
+    today_cash   = Decimal('0.00')
+    today_online = Decimal('0.00')
+    today_rows   = []
+
+    for appt in today_appointments:
+        price     = appt.doctor.price
+        paid      = _get_amount_paid_online(appt)
+        cash_part = price - paid
+        today_total  += price
+        today_cash   += cash_part
+        today_online += paid
+        today_rows.append({'appointment': appt, 'price': price, 'paid_online': paid, 'cash_part': cash_part})
+
+    # غير مسوّاة
+    unsettled_list = list(
+        Appointment.objects
+        .filter(doctor__in=all_doctors, status='Attended', is_settled=False)
+        .select_related('doctor__clinic', 'payment_details')
+        .order_by('-date', '-time')
+    )
+    total_collected  = Decimal('0.00')
+    total_commission = Decimal('0.00')
+    commission_rows  = []
+
+    for appt in unsettled_list:
+        price           = appt.doctor.price
+        commission_rate = appt.doctor.clinic.commission_percentage / Decimal('100')
+        commission_amt  = round(price * commission_rate, 2)
+        paid            = _get_amount_paid_online(appt)
+        total_collected  += paid
+        total_commission += commission_amt
+        commission_rows.append({
+            'appointment':    appt,
+            'price':          price,
+            'commission_pct': appt.doctor.clinic.commission_percentage,
+            'commission_amt': commission_amt,
+            'net_to_owner':   round(price - commission_amt, 2),
+        })
+
+    net_settleable = total_collected - total_commission
+
+    # مسوّاة سابقاً (آخر 30)
+    settled_qs = (
+        Appointment.objects
+        .filter(doctor__in=all_doctors, status='Attended', is_settled=True)
+        .select_related('doctor__clinic', 'payment_details')
+        .order_by('-date')[:30]
+    )
+    past_total      = Decimal('0.00')
+    past_commission = Decimal('0.00')
+    for appt in settled_qs:
+        rate             = appt.doctor.clinic.commission_percentage / Decimal('100')
+        past_commission += round(appt.doctor.price * rate, 2)
+        past_total      += _get_amount_paid_online(appt)
+
+    return render(request, 'owner/earnings.html', {
+        'today':            today,
+        'owner':            owner,
+        'clinics':          clinics,
+        'is_superuser':     request.user.is_superuser,
+        'today_total':      today_total,
+        'today_cash':       today_cash,
+        'today_online':     today_online,
+        'today_rows':       today_rows,
+        'today_count':      len(today_rows),
+        'total_collected':  total_collected,
+        'total_commission': total_commission,
+        'net_settleable':   net_settleable,
+        'unsettled_count':  len(unsettled_list),
+        'commission_rows':  commission_rows,
+        'settled_qs':       settled_qs,
+        'past_total':       past_total,
+        'past_commission':  past_commission,
+        'past_net':         past_total - past_commission,
+    })
+
+
+# ═══════════════════════════════════════════════════════
+# تسوية الحساب (Superuser فقط)
+# ═══════════════════════════════════════════════════════
+
 @login_required
 def settle_account(request):
-    """
-    POST only. متاح للـ superuser فقط (RBAC).
-    يُحوِّل كل حجوزات status='Played' + is_settled=False
-    إلى is_settled=True للملاعب المملوكة لـ owner_id.
-    """
     if not request.user.is_superuser:
         messages.error(request, "⛔ هذا الإجراء متاح للمشرفين فقط.")
         return redirect('owner_earnings')
@@ -1149,106 +833,52 @@ def settle_account(request):
     if request.method == 'POST':
         owner_id = request.POST.get('owner_id')
         try:
-            owner   = User.objects.get(id=int(owner_id))
-            pitches = Pitch.objects.filter(owner=owner)
-            count   = Booking.objects.filter(
-                pitch__in=pitches,
-                status='Played',
-                is_settled=False
+            owner       = User.objects.get(id=int(owner_id))
+            all_doctors = Doctor.objects.filter(clinic__owner=owner)
+            count       = Appointment.objects.filter(
+                doctor__in=all_doctors, status='Attended', is_settled=False
             ).update(is_settled=True, settled_at=tz.now())
-
-            messages.success(
-                request,
-                f"✅ تمت تسوية {count} حجز بنجاح لصاحب الملعب: {owner.get_full_name() or owner.username}"
-            )
+            messages.success(request, f"✅ تمت تسوية {count} موعد لـ {owner.get_full_name() or owner.username}")
         except (User.DoesNotExist, ValueError, TypeError):
-            messages.error(request, "⛔ بيانات غير صحيحة - لم تتم التسوية.")
+            messages.error(request, "⛔ بيانات غير صحيحة.")
 
-    owner_id = request.POST.get('owner_id') if request.method == 'POST' else None
+    owner_id     = request.POST.get('owner_id') if request.method == 'POST' else None
     redirect_url = f"/owner/earnings/?owner_id={owner_id}" if owner_id else "/owner/earnings/"
     return redirect(redirect_url)
 
 
-# ─────────────────────────────────────────────────────────────────────────
-# تصدير CSV لتفاصيل العمولة
-# ─────────────────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════
+# تصدير CSV
+# ═══════════════════════════════════════════════════════
+
 @login_required
 def owner_earnings_export_csv(request):
-    """
-    يُصدِّر تفاصيل العمولة للحجوزات غير المسوَّاة (Played + is_settled=False)
-    كملف CSV جاهز للفتح في Excel.
-    """
-    owner   = _resolve_owner(request)
-    if owner != request.user and not request.user.is_superuser:
-        return redirect('owner_earnings')
-    pitches = Pitch.objects.filter(owner=owner)
+    owner       = _resolve_owner(request)
+    all_doctors = Doctor.objects.filter(clinic__owner=owner)
 
-    if not pitches.exists():
-        messages.error(request, "ليس لديك ملاعب مسجلة.")
-        return redirect('owner_earnings')
-
-    unsettled_qs = (
-        Booking.objects
-        .filter(pitch__in=pitches, status='Played', is_settled=False)
-        .select_related('pitch', 'payment_set')
+    unsettled = (
+        Appointment.objects
+        .filter(doctor__in=all_doctors, status='Attended', is_settled=False)
+        .select_related('doctor__clinic', 'payment_details')
         .order_by('-date', '-time')
     )
 
     response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
-    response['Content-Disposition'] = 'attachment; filename="commission_details.csv"'
-
+    response['Content-Disposition'] = 'attachment; filename="clinic_earnings.csv"'
     writer = csv.writer(response)
-    # الترويسة
-    writer.writerow([
-        'التاريخ', 'الوقت', 'كود الحجز', 'الملعب',
-        'السعر الكامل (ج.م)', 'المدفوع أونلاين (ج.م)',
-        'نسبة العمولة (%)', 'مبلغ العمولة (ج.م)',
-        'الصافي للتسوية (ج.م)'
-    ])
+    writer.writerow(['التاريخ', 'الوقت', 'كود الموعد', 'الدكتور', 'العيادة',
+                     'سعر الكشف', 'المدفوع أونلاين', 'نسبة العمولة', 'مبلغ العمولة', 'الصافي'])
 
-    for booking in unsettled_qs:
-        full_price      = booking.pitch.price_per_hour
-        paid_online     = _get_amount_paid_online(booking)
-        commission_rate = booking.pitch.commission_percentage / Decimal('100')
-        commission_amt  = round(full_price * commission_rate, 2)
-        net_settleable  = round(paid_online - commission_amt, 2)
-
+    for appt in unsettled:
+        price           = appt.doctor.price
+        paid            = _get_amount_paid_online(appt)
+        commission_rate = appt.doctor.clinic.commission_percentage / Decimal('100')
+        commission_amt  = round(price * commission_rate, 2)
         writer.writerow([
-            booking.date.strftime('%Y-%m-%d'),
-            booking.time,
-            booking.booking_code,
-            booking.pitch.name,
-            full_price,
-            paid_online,
-            booking.pitch.commission_percentage,
-            commission_amt,
-            net_settleable,
+            appt.date.strftime('%Y-%m-%d'), appt.time, appt.booking_code,
+            appt.doctor.full_name, appt.doctor.clinic.name,
+            price, paid, appt.doctor.clinic.commission_percentage,
+            commission_amt, round(paid - commission_amt, 2),
         ])
 
     return response
-# ---------------------------------------------------------
-# الدالة الجديدة: تأكيد اللعب أو عدم الحضور من صاحب الملعب
-# ---------------------------------------------------------
-@login_required
-def owner_update_booking_status(request, booking_id):
-    # التأكد أن الحجز يخص ملعب يملكه هذا المستخدم
-    booking = get_object_or_404(Booking, id=booking_id, pitch__owner=request.user)
-    
-    if request.method == 'POST':
-        new_status = request.POST.get('status')
-        if new_status in ['Played', 'No-Show'] and booking.status == 'Confirmed':
-            booking.status = new_status
-            booking.save()
-            if new_status == 'Played':
-                messages.success(request, "تم تأكيد استلام المبلغ ولعب المباراة بنجاح ✅")
-            else:
-                messages.warning(request, "تم تسجيل (عدم حضور) للعميل وتفريغ الملعب ❌")
-        elif booking.status != 'Confirmed':
-            messages.error(request, "لا يمكن تعديل حجز تم إغلاقه مسبقاً.")
-                
-    # العودة لنفس يوم الجدول
-    selected_date = booking.date.strftime('%Y-%m-%d')
-    return redirect(f'/owner/pitch/{booking.pitch.id}/schedule/?date={selected_date}')
-
-
-

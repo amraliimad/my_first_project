@@ -2,293 +2,195 @@
 {% load static %}
 {% load i18n %}
 
-{% block title %}{% trans "الملف الشخصي" %} — Mal3ab Online{% endblock %}
+{% block title %}الملف الشخصي — كلينيك أونلاين{% endblock %}
 {% block profile_active %}active{% endblock %}
 
 {% block breadcrumb %}
-    <a href="{% url 'home' %}">{% trans "الرئيسية" %}</a>
+    <a href="{% url 'home' %}">الرئيسية</a>
     <span>›</span>
-    <span style="color:var(--text-2);">{% trans "الملف الشخصي" %}</span>
+    <span style="color:var(--text-2);">حسابي ومواعيدي</span>
 {% endblock %}
 
 {% block extra_css %}
 <style>
-    /* نفس الـ CSS بتاعك بدون أي تغيير لأن تصميمه ممتاز */
-    /* ============================================================
-       USER PROFILE — Page-Specific Styles
-       ============================================================ */
-    .page-container {
-        max-width: 960px;
-        margin: 0 auto;
-        padding: 32px 24px 60px;
-    }
-    /* ── 1. PROFILE HERO ── */
+    .page-container { max-width: 960px; margin: 0 auto; padding: 32px 24px 60px; }
+
+    /* ── Profile Hero ── */
     .profile-hero {
-        background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 60%, var(--primary-light) 100%);
-        border-radius: var(--radius-xl);
-        padding: 32px;
+        background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 60%, #38bdf8 100%);
+        border-radius: var(--radius-xl); padding: 32px;
         display: flex; align-items: center; gap: 24px;
         margin-bottom: 28px;
-        box-shadow: 0 10px 32px rgba(39,174,96,0.3);
+        box-shadow: 0 10px 32px rgba(14,165,233,0.3);
         position: relative; overflow: hidden;
+        flex-wrap: wrap;
     }
     .profile-hero::before {
-        content: '';
-        position: absolute;
-        width: 240px; height: 240px;
-        background: rgba(255,255,255,0.05);
-        border-radius: 50%;
-        top: -60px; left: -60px;
+        content: ''; position: absolute;
+        width: 240px; height: 240px; background: rgba(255,255,255,.05);
+        border-radius: 50%; top: -60px; left: -60px;
     }
     .profile-hero::after {
-        content: '';
-        position: absolute;
-        width: 160px; height: 160px;
-        background: rgba(255,255,255,0.04);
-        border-radius: 50%;
-        bottom: -40px; right: -40px;
+        content: ''; position: absolute;
+        width: 160px; height: 160px; background: rgba(255,255,255,.04);
+        border-radius: 50%; bottom: -40px; right: -40px;
     }
     .profile-avatar {
         width: 80px; height: 80px;
-        background: rgba(255,255,255,0.2);
-        border: 3px solid rgba(255,255,255,0.4);
-        border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 36px; flex-shrink: 0;
-        position: relative; z-index: 1;
-        color: white; font-weight: bold;
+        background: rgba(255,255,255,.2); border: 3px solid rgba(255,255,255,.4);
+        border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        font-size: 36px; flex-shrink: 0; position: relative; z-index: 1; color: white;
     }
-    .profile-info {
-        color: white;
-        position: relative; z-index: 1;
-    }
-    .profile-name {
-        font-size: 24px; font-weight: 900; margin-bottom: 4px;
-    }
-    .profile-meta {
-        font-size: 13px; opacity: 0.85;
-        font-weight: 600; line-height: 1.8;
-    }
+    .profile-info { color: white; position: relative; z-index: 1; flex: 1; }
+    .profile-name  { font-size: 24px; font-weight: 900; margin-bottom: 4px; }
+    .profile-meta  { font-size: 13px; opacity: .85; font-weight: 600; line-height: 1.8; }
     .profile-stats {
-        margin-right: auto;
-        display: flex; gap: 16px; flex-wrap: wrap;
+        margin-right: auto; display: flex; gap: 16px; flex-wrap: wrap;
         position: relative; z-index: 1;
     }
     .stat-bubble {
-        background: rgba(255,255,255,0.15);
-        backdrop-filter: blur(8px);
-        border: 1px solid rgba(255,255,255,0.2);
-        border-radius: var(--radius-md);
-        padding: 10px 18px;
+        background: rgba(255,255,255,.15); backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,.2);
+        border-radius: var(--radius-md); padding: 10px 18px;
         text-align: center; color: white;
     }
-    .stat-num {
-        font-size: 22px; font-weight: 900; display: block;
-    }
-    .stat-label {
-        font-size: 11px; opacity: 0.8; font-weight: 700;
-    }
-    /* ── 2. SECTION BLOCKS ── */
+    .stat-num   { font-size: 22px; font-weight: 900; display: block; }
+    .stat-label { font-size: 11px; opacity: .8; font-weight: 700; }
+
+    /* ── Section Block ── */
     .section-block {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-xl);
-        padding: 28px;
-        margin-bottom: 24px;
-        box-shadow: var(--shadow-sm);
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius-xl); padding: 28px;
+        margin-bottom: 24px; box-shadow: var(--shadow-sm);
     }
     .section-heading {
         font-size: 17px; font-weight: 800; color: var(--text);
         display: flex; align-items: center; gap: 10px;
-        margin-bottom: 20px;
-        padding-bottom: 14px;
+        margin-bottom: 20px; padding-bottom: 14px;
         border-bottom: 1px solid var(--border);
     }
     .section-heading::before {
-        content: '';
-        width: 4px; height: 20px;
-        background: var(--primary);
-        border-radius: 4px;
+        content: ''; width: 4px; height: 20px;
+        background: #0ea5e9; border-radius: 4px;
     }
-    .section-heading.archive::before {
-        background: var(--text-muted);
-    }
-    /* ── 3. BOOKING TABLES ── */
+    .section-heading.archive::before { background: var(--text-muted); }
+
+    /* ── Table ── */
     .table-wrap { overflow-x: auto; }
-    table {
-        width: 100%; border-collapse: collapse; font-size: 14px;
-    }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
     th {
-        background: var(--surface-2);
-        color: var(--text-muted);
-        font-size: 12px; font-weight: 700;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
-        padding: 12px 16px;
-        text-align: right;
-        border-bottom: 1px solid var(--border);
+        background: var(--surface-2); color: var(--text-muted);
+        font-size: 12px; font-weight: 700; letter-spacing: .5px;
+        text-transform: uppercase; padding: 12px 16px;
+        text-align: right; border-bottom: 1px solid var(--border);
     }
     td {
-        padding: 14px 16px;
-        text-align: right;
+        padding: 14px 16px; text-align: right;
         border-bottom: 1px solid var(--border);
-        color: var(--text-2);
-        font-weight: 600;
-        vertical-align: middle;
+        color: var(--text-2); font-weight: 600; vertical-align: middle;
     }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: var(--surface-2); }
-    .booking-code-cell {
-        font-family: 'Cairo', monospace;
-        font-weight: 800; color: #2980b9; font-size: 13px;
-    }
-    /* ── 4. STATUS BADGES ── */
+    .code-cell { font-family: monospace; font-weight: 800; color: #0ea5e9; font-size: 13px; }
+    .doctor-cell { color: var(--text); font-weight: 700; }
+    .clinic-cell { font-size: 12px; color: var(--text-muted); }
+
+    /* ── Badges ── */
     .badge {
         display: inline-flex; align-items: center; gap: 5px;
         padding: 5px 12px; border-radius: 50px;
-        font-size: 12px; font-weight: 800;
-        white-space: nowrap;
+        font-size: 12px; font-weight: 800; white-space: nowrap;
     }
-    .badge-success {
-        background: rgba(39,174,96,0.12); color: var(--primary);
-        border: 1px solid rgba(39,174,96,0.2);
-    }
-    .badge-warning {
-        background: rgba(243,156,18,0.12); color: #c87f0a;
-        border: 1px solid rgba(243,156,18,0.2);
-    }
-    .badge-danger {
-        background: var(--danger-ghost); color: var(--danger);
-        border: 1px solid rgba(231,76,60,0.2);
-    }
-    /* ── 5. CANCEL BUTTON ── */
+    .badge-confirmed { background: rgba(14,165,233,.12); color: #0ea5e9;  border: 1px solid rgba(14,165,233,.2); }
+    .badge-pending   { background: rgba(245,158,11,.12); color: #d97706;   border: 1px solid rgba(245,158,11,.2); }
+    .badge-attended  { background: rgba(16,185,129,.12); color: #10b981;   border: 1px solid rgba(16,185,129,.2); }
+    .badge-cancelled { background: rgba(239,68,68,.12);  color: #ef4444;   border: 1px solid rgba(239,68,68,.2); }
+    .badge-noshow    { background: rgba(100,116,139,.12);color: #64748b;   border: 1px solid rgba(100,116,139,.2);}
+
+    /* ── Cancel Button ── */
     .btn-cancel {
         display: inline-flex; align-items: center; gap: 4px;
         color: var(--danger); font-size: 12px; font-weight: 700;
-        border: 1.5px solid var(--danger);
-        padding: 5px 12px;
-        border-radius: var(--radius-sm);
-        transition: all 0.2s;
-        background: transparent;
+        border: 1.5px solid var(--danger); padding: 5px 12px;
+        border-radius: var(--radius-sm); transition: all .2s; background: transparent; cursor: pointer;
+        font-family: 'Cairo', sans-serif;
     }
-    .btn-cancel:hover {
-        background: var(--danger); color: white;
-    }
-    /* ── 6. EMPTY STATE ── */
-    .empty-state {
-        text-align: center; padding: 40px 20px;
-        color: var(--text-muted);
-    }
-    .empty-state .empty-icon {
-        font-size: 42px; margin-bottom: 12px; opacity: 0.5;
-    }
-    .empty-state p {
-        font-size: 15px; font-weight: 600; margin-bottom: 16px;
-    }
-    .empty-link {
-        color: var(--primary); font-weight: 800;
-    }
+    .btn-cancel:hover { background: var(--danger); color: white; }
+
+    /* ── Empty State ── */
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+    .empty-state .empty-icon { font-size: 42px; margin-bottom: 12px; opacity: .5; }
+    .empty-state p { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+    .empty-link { color: #0ea5e9; font-weight: 800; }
     .empty-link:hover { text-decoration: underline; }
-        /* ── 6.5 PROFILE MODAL (Custom) ── */
+
+    /* ── Modal ── */
     .modal-overlay {
         display: none; position: fixed; inset: 0;
-        background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
-        z-index: 2000; justify-content: center; align-items: center;
-        opacity: 0; transition: opacity 0.3s ease;
+        background: rgba(0,0,0,.5); backdrop-filter: blur(4px);
+        z-index: 3000; justify-content: center; align-items: center;
     }
-    .modal-overlay.show { display: flex; opacity: 1; }
+    .modal-overlay.show { display: flex; }
     .custom-modal {
-        background: var(--surface); border-radius: var(--radius-xl);
-        padding: 32px; width: 90%; max-width: 480px;
-        box-shadow: var(--shadow-lg);
-        transform: translateY(20px); transition: transform 0.3s ease;
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius-xl); padding: 32px;
+        width: 90%; max-width: 480px;
+        box-shadow: var(--shadow-lg); animation: modalIn .25s ease;
     }
-    .modal-overlay.show .custom-modal { transform: translateY(0); }
+    @keyframes modalIn {
+        from { opacity:0; transform:scale(.94) translateY(-10px); }
+        to   { opacity:1; transform:scale(1) translateY(0); }
+    }
     .modal-header {
-        display: flex; justify-content: space-between; align-items: center;
-        margin-bottom: 24px; padding-bottom: 12px;
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 22px; padding-bottom: 14px;
         border-bottom: 1px solid var(--border);
     }
     .modal-title { font-size: 18px; font-weight: 800; color: var(--text); margin: 0; }
     .btn-close-modal {
-        background: none; border: none; font-size: 20px; color: var(--text-muted);
-        cursor: pointer; transition: color 0.2s;
+        width: 32px; height: 32px; border-radius: 50%;
+        background: var(--surface-2); border: 1px solid var(--border);
+        color: var(--text-muted); cursor: pointer; font-size: 16px;
+        display: flex; align-items: center; justify-content: center;
+        transition: all .15s;
     }
-    .btn-close-modal:hover { color: var(--danger); }
-    .custom-form-group { margin-bottom: 16px; text-align: right; }
+    .btn-close-modal:hover { border-color: var(--danger); color: var(--danger); }
+    .custom-form-group { margin-bottom: 16px; }
     .custom-form-group label {
-        display: block; font-size: 13px; font-weight: 700; color: var(--text-2); margin-bottom: 6px;
+        display: block; font-size: 13px; font-weight: 700;
+        color: var(--text-2); margin-bottom: 7px;
     }
     .custom-form-group input {
-        width: 100%; padding: 12px 16px;
+        width: 100%; padding: 12px 14px;
         border: 1.5px solid var(--border); border-radius: var(--radius-md);
         background: var(--surface-2); color: var(--text);
-        font-family: 'Cairo', sans-serif; font-size: 14px;
-        transition: border-color 0.2s;
+        font-family: 'Cairo', sans-serif; font-size: 14px; transition: border-color .2s;
     }
-    .custom-form-group input:focus { outline: none; border-color: var(--primary); }
-    .form-error { color: var(--danger); font-size: 12px; margin-top: 4px; font-weight: 600; }
-    .modal-actions {
-        display: flex; gap: 12px; margin-top: 24px;
-    }
+    .custom-form-group input:focus { outline: none; border-color: #0ea5e9; box-shadow: 0 0 0 4px rgba(14,165,233,.1); }
+    .form-error { font-size: 12px; color: var(--danger); margin-top: 5px; font-weight: 600; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 22px; }
     .btn-modal {
-        flex: 1; padding: 12px; border-radius: var(--radius-sm);
-        font-family: 'Cairo', sans-serif; font-size: 14px; font-weight: 800;
-        cursor: pointer; transition: all 0.2s; border: none;
+        flex: 1; padding: 12px; border-radius: var(--radius-md);
+        border: none; font-family: 'Cairo', sans-serif;
+        font-size: 14px; font-weight: 700; cursor: pointer; transition: all .2s;
     }
-    .btn-save { background: var(--primary); color: white; }
-    .btn-save:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+    .btn-save {
+        background: linear-gradient(135deg, #0ea5e9, #0284c7);
+        color: white; box-shadow: 0 4px 12px rgba(14,165,233,.3);
+    }
+    .btn-save:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(14,165,233,.4); }
     .btn-cancel-modal { background: var(--surface-2); color: var(--text-2); border: 1px solid var(--border); }
+    .btn-cancel-modal:hover { border-color: var(--danger); color: var(--danger); }
 
-    /* ── 7. ENTRANCE ANIMATION ── */
-    .fade-up {
-        opacity: 0; transform: translateY(16px);
-        animation: fadeUp 0.5s ease forwards;
-    }
-    .fade-up:nth-child(1){ animation-delay:0.05s; }
-    .fade-up:nth-child(2){ animation-delay:0.12s; }
-    .fade-up:nth-child(3){ animation-delay:0.19s; }
-    @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
-    /* ── 8. RESPONSIVE — Mobile Card Mode ── */
-    @media (max-width: 640px) {
-        .booking-table thead { display: none; }
-        .booking-table tbody tr {
-            display: block;
-            background: var(--surface-2);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-md);
-            padding: 16px;
-            margin-bottom: 12px;
-        }
-        .booking-table tbody tr:hover {
-            background: var(--primary-ghost);
-        }
-        .booking-table td {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 6px 0;
-            border: none;
-            font-size: 13px;
-        }
-        .booking-table td::before {
-            content: attr(data-label);
-            font-size: 11px; font-weight: 800;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-    }
-    @media (max-width: 768px) {
-        .profile-hero {
-            flex-direction: column;
-            text-align: center;
-        }
-        .profile-stats {
-            margin-right: 0;
-            justify-content: center;
-        }
-        .page-container { padding: 24px 14px 40px; }
+    .fade-up { opacity: 0; transform: translateY(16px); animation: fadeUp .5s ease forwards; }
+    @keyframes fadeUp { to { opacity:1; transform:translateY(0); } }
+    .fade-up:nth-child(1){ animation-delay:.05s; }
+    .fade-up:nth-child(2){ animation-delay:.12s; }
+    .fade-up:nth-child(3){ animation-delay:.19s; }
+
+    @media(max-width:640px){
+        .profile-hero { flex-direction: column; text-align: center; }
+        .profile-stats { margin-right: 0; justify-content: center; }
         .section-block { padding: 20px; }
     }
 </style>
@@ -297,115 +199,98 @@
 {% block content %}
 <div class="page-container">
 
-    <!-- ══════════════════════════════════════════════
-         PROFILE HERO
-         ══════════════════════════════════════════════ -->
+    <!-- ── Profile Hero ── -->
     <div class="profile-hero fade-up">
-        <!-- الصورة الرمزية: لو ليه اسم أول هياخد أول حرف، لو مفيش هياخد أول حرف من اليوزرنيم -->
-        <div class="profile-avatar">
-            {% if user.first_name %}
-                {{ user.first_name|first|upper }}
-            {% else %}
-                {{ user.username|first|upper }}
-            {% endif %}
-        </div>
+        <div class="profile-avatar">👤</div>
 
         <div class="profile-info">
             <div class="profile-name">
                 {% if user.first_name %}
-                    {{ user.first_name }} 
-                    {% if user.profile.middle_name %}{{ user.profile.middle_name }}{% endif %} 
+                    {{ user.first_name }}
+                    {% if user.profile.middle_name %}{{ user.profile.middle_name }}{% endif %}
                     {{ user.last_name }}
                 {% else %}
                     {{ user.username }}
                 {% endif %}
-                
-                {% if is_vip %}
-                <span class="badge bg-warning text-dark ms-2" style="font-size: 0.8rem; vertical-align: middle;">
-                    <i class="fas fa-crown"></i> VIP
-                </span>
-                {% endif %}
             </div>
-            
             <div class="profile-meta">
-                📅 {% trans "تاريخ الانضمام" %}: {{ user.date_joined|date:"d/m/Y" }}<br>
-                📧 {% trans "البريد" %}: {{ user.email|default:"غير مسجل" }}<br>
-                📞 {% trans "الموبايل" %}: {{ user.profile.phone_number|default:"غير مسجل" }}
+                📅 تاريخ الانضمام: {{ user.date_joined|date:"d/m/Y" }}<br>
+                📧 البريد: {{ user.email|default:"غير مسجل" }}<br>
+                📞 الموبايل: {{ user.profile.phone_number|default:"غير مسجل" }}
             </div>
-
-            <!-- أزرار التعديل -->
-            <div style="margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <button type="button" onclick="openProfileModal()" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px; border-radius: var(--radius-sm); font-family: 'Cairo', sans-serif; font-weight: 700; cursor: pointer; transition: all 0.2s;">
-                    ✏️ {% trans "تعديل بياناتي" %}
+            <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+                <button type="button" onclick="openProfileModal()"
+                        style="background:rgba(255,255,255,.2);color:white;border:1px solid rgba(255,255,255,.4);padding:8px 16px;border-radius:var(--radius-sm);font-family:'Cairo',sans-serif;font-weight:700;cursor:pointer;transition:all .2s;">
+                    ✏️ تعديل بياناتي
                 </button>
-                <!-- لاحظ: رابط تغيير الباسوورد يحتاج إلى View مخصص في Django (auth_views.PasswordChangeView) -->
-                <a href="{% url 'password_change' %}" style="background: transparent; color: white; border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px; border-radius: var(--radius-sm); font-weight: 700; transition: all 0.2s;">
-                    🔒 {% trans "تغيير كلمة المرور" %}
+                <a href="{% url 'password_change' %}"
+                   style="background:transparent;color:white;border:1px solid rgba(255,255,255,.4);padding:8px 16px;border-radius:var(--radius-sm);font-weight:700;transition:all .2s;display:inline-flex;align-items:center;gap:6px;">
+                    🔒 تغيير كلمة المرور
                 </a>
             </div>
-        </div
+        </div>
 
         <div class="profile-stats">
             <div class="stat-bubble">
-                <!-- تم تصحيح طريقة العد هنا -->
-                <span class="stat-num">{{ upcoming_bookings.count }}</span>
-                <span class="stat-label">{% trans "حجز قادم" %}</span>
+                <span class="stat-num">{{ upcoming_appointments.count }}</span>
+                <span class="stat-label">موعد قادم</span>
             </div>
             <div class="stat-bubble">
-                <!-- وتم تصحيحها هنا أيضاً -->
-                <span class="stat-num">{{ past_bookings.count }}</span>
-                <span class="stat-label">{% trans "حجز سابق" %}</span>
+                <span class="stat-num">{{ past_appointments.count }}</span>
+                <span class="stat-label">موعد سابق</span>
             </div>
         </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════
-         UPCOMING BOOKINGS
-         ══════════════════════════════════════════════ -->
+    <!-- ── Upcoming Appointments ── -->
     <div class="section-block fade-up">
-        <h2 class="section-heading">📅 {% trans "حجوزاتك القادمة" %}</h2>
-        {% if upcoming_bookings %}
+        <h2 class="section-heading">📅 مواعيدك القادمة</h2>
+        {% if upcoming_appointments %}
         <div class="table-wrap">
-            <table class="booking-table">
+            <table>
                 <thead>
                     <tr>
-                        <th>{% trans "الكود" %}</th>
-                        <th>{% trans "الملعب" %}</th>
-                        <th>{% trans "التاريخ" %}</th>
-                        <th>{% trans "الساعة" %}</th>
-                        <th>{% trans "الحالة" %}</th>
-                        <th>{% trans "إجراءات" %}</th>
+                        <th>الكود</th>
+                        <th>الدكتور</th>
+                        <th>العيادة</th>
+                        <th>التاريخ</th>
+                        <th>الوقت</th>
+                        <th>الحالة</th>
+                        <th>إجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for booking in upcoming_bookings %}
+                    {% for appt in upcoming_appointments %}
                     <tr>
-                        <td data-label="{% trans 'الكود' %}">
-                            <span class="booking-code-cell">#{{ booking.booking_code }}</span>
+                        <td><span class="code-cell">#{{ appt.booking_code }}</span></td>
+                        <td>
+                            <span class="doctor-cell">{{ appt.doctor.full_name }}</span><br>
+                            <small style="color:var(--text-muted);font-size:11px;">{{ appt.doctor.get_specialty_display }}</small>
                         </td>
-                        <td data-label="{% trans 'الملعب' %}">{{ booking.pitch.name }}</td>
-                        <td data-label="{% trans 'التاريخ' %}">{{ booking.date|date:"d/m/Y" }}</td>
-                        <td data-label="{% trans 'الساعة' %}">{{ booking.time }}</td>
-                        <td data-label="{% trans 'الحالة' %}">
-                            {% if booking.status == 'Confirmed' %}
-                                <span class="badge badge-success">✅ {% trans "مؤكد" %}</span>
-                            {% elif booking.status == 'Pending' %}
-                                <span class="badge badge-warning">⏳ {% trans "قيد المراجعة" %}</span>
+                        <td><span class="clinic-cell">{{ appt.doctor.clinic.name }}</span></td>
+                        <td>{{ appt.date|date:"d/m/Y" }}</td>
+                        <td style="font-family:'JetBrains Mono',monospace;font-weight:700;">{{ appt.time }}</td>
+                        <td>
+                            {% if appt.status == 'Confirmed' %}
+                                <span class="badge badge-confirmed">✅ مؤكد</span>
+                            {% elif appt.status == 'Pending' %}
+                                <span class="badge badge-pending">⏳ قيد المراجعة</span>
+                            {% elif appt.status == 'Attended' %}
+                                <span class="badge badge-attended">🏥 تم الكشف</span>
                             {% else %}
-                                <span class="badge badge-danger">❌ {% trans "ملغي" %}</span>
+                                <span class="badge badge-cancelled">❌ ملغي</span>
                             {% endif %}
                         </td>
-                        <td data-label="{% trans 'إجراءات' %}">
-                            {% if booking.status != 'Cancelled' %}
-                                <form method="POST" action="{% url 'cancel_booking' booking.id %}" style="display:inline;"
-                                      onsubmit="return confirm('{% trans "هل أنت متأكد من إلغاء هذا الحجز؟" %}')">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn-cancel">
-                                        🗑️ {% trans "إلغاء" %}
-                                    </button>
-                                </form>
+                        <td>
+                            {% if appt.status not in 'Cancelled,Attended,No-Show' %}
+                            <form method="POST" action="{% url 'cancel_appointment' appt.id %}"
+                                  style="display:inline;"
+                                  onsubmit="return confirm('هل أنت متأكد من إلغاء هذا الموعد؟')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-cancel">🗑️ إلغاء</button>
+                            </form>
                             {% else %}
-                                <span style="color:var(--text-muted); font-size:13px;">—</span>
+                                <span style="color:var(--text-muted);font-size:13px;">—</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -416,37 +301,53 @@
         {% else %}
         <div class="empty-state">
             <div class="empty-icon">📭</div>
-            <p>{% trans "لا توجد حجوزات قادمة." %}</p>
-            <a href="{% url 'home' %}" class="empty-link">{% trans "احجز ملعب الآن!" %} ⚽</a>
+            <p>لا توجد مواعيد قادمة.</p>
+            <a href="{% url 'home' %}" class="empty-link">احجز موعد مع دكتورك الآن! 🏥</a>
         </div>
         {% endif %}
     </div>
 
-    <!-- ══════════════════════════════════════════════
-         PAST BOOKINGS (ARCHIVE)
-         ══════════════════════════════════════════════ -->
+    <!-- ── Past Appointments ── -->
     <div class="section-block fade-up">
-        <h2 class="section-heading archive">📜 {% trans "الأرشيف (حجوزات سابقة)" %}</h2>
-        {% if past_bookings %}
+        <h2 class="section-heading archive">📜 الأرشيف (مواعيد سابقة)</h2>
+        {% if past_appointments %}
         <div class="table-wrap">
-            <table class="booking-table" style="opacity:0.85;">
+            <table style="opacity:.85;">
                 <thead>
                     <tr>
-                        <th>{% trans "الملعب" %}</th>
-                        <th>{% trans "التاريخ" %}</th>
-                        <th>{% trans "الحالة" %}</th>
+                        <th>الدكتور</th>
+                        <th>التاريخ</th>
+                        <th>الوقت</th>
+                        <th>الحالة</th>
+                        <th>تقييم</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for booking in past_bookings %}
+                    {% for appt in past_appointments %}
                     <tr>
-                        <td data-label="{% trans 'الملعب' %}">{{ booking.pitch.name }}</td>
-                        <td data-label="{% trans 'التاريخ' %}">{{ booking.date|date:"d/m/Y" }}</td>
-                        <td data-label="{% trans 'الحالة' %}">
-                            {% if booking.status == 'Confirmed' %}
-                                <span class="badge badge-success">✅ {% trans "تم بنجاح" %}</span>
+                        <td>
+                            <span class="doctor-cell">{{ appt.doctor.full_name }}</span><br>
+                            <small style="color:var(--text-muted);font-size:11px;">{{ appt.doctor.clinic.name }}</small>
+                        </td>
+                        <td>{{ appt.date|date:"d/m/Y" }}</td>
+                        <td style="font-family:'JetBrains Mono',monospace;font-weight:700;">{{ appt.time }}</td>
+                        <td>
+                            {% if appt.status == 'Attended' %}
+                                <span class="badge badge-attended">✅ تم الكشف</span>
+                            {% elif appt.status == 'No-Show' %}
+                                <span class="badge badge-noshow">❌ لم أحضر</span>
                             {% else %}
-                                <span class="badge badge-danger">{{ booking.get_status_display }}</span>
+                                <span class="badge badge-cancelled">{{ appt.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if appt.status == 'Attended' %}
+                                <a href="{% url 'doctor_detail' appt.doctor.id %}"
+                                   style="font-size:12px;color:#0ea5e9;font-weight:700;">
+                                    ⭐ قيّم الدكتور
+                                </a>
+                            {% else %}
+                                <span style="color:var(--text-muted);font-size:12px;">—</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -457,33 +358,32 @@
         {% else %}
         <div class="empty-state">
             <div class="empty-icon">🗂️</div>
-            <p>{% trans "الأرشيف فارغ حتى الآن." %}</p>
+            <p>الأرشيف فارغ حتى الآن.</p>
         </div>
         {% endif %}
     </div>
-    <!-- ══════════════════════════════════════════════
-         CUSTOM MODAL لتعديل البيانات
-         ══════════════════════════════════════════════ -->
+
+    <!-- ── Edit Modal ── -->
     <div class="modal-overlay" id="profileModal">
         <div class="custom-modal">
             <div class="modal-header">
-                <h3 class="modal-title">✏️ {% trans "تعديل بيانات الحساب" %}</h3>
+                <h3 class="modal-title">✏️ تعديل بيانات الحساب</h3>
                 <button type="button" class="btn-close-modal" onclick="closeProfileModal()">✕</button>
             </div>
             <form method="POST">
                 {% csrf_token %}
                 {% for field in form %}
-                    <div class="custom-form-group">
-                        <label>{{ field.label }}</label>
-                        {{ field }}
-                        {% if field.errors %}
-                            <div class="form-error">{{ field.errors|striptags }}</div>
-                        {% endif %}
-                    </div>
+                <div class="custom-form-group">
+                    <label>{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                        <div class="form-error">{{ field.errors|striptags }}</div>
+                    {% endif %}
+                </div>
                 {% endfor %}
                 <div class="modal-actions">
-                    <button type="submit" class="btn-modal btn-save">💾 {% trans "حفظ التعديلات" %}</button>
-                    <button type="button" class="btn-modal btn-cancel-modal" onclick="closeProfileModal()">❌ {% trans "إلغاء" %}</button>
+                    <button type="submit" class="btn-modal btn-save">💾 حفظ التعديلات</button>
+                    <button type="button" class="btn-modal btn-cancel-modal" onclick="closeProfileModal()">إلغاء</button>
                 </div>
             </form>
         </div>
@@ -491,20 +391,20 @@
 
 </div>
 
-<!-- إضافة كود JavaScript للتحكم في الـ Modal -->
 <script>
-    function openProfileModal() {
-        document.getElementById('profileModal').classList.add('show');
-        document.body.style.overflow = 'hidden'; // منع السكرول خلف الـ Modal
-    }
-    function closeProfileModal() {
-        document.getElementById('profileModal').classList.remove('show');
-        document.body.style.overflow = '';
-    }
-    // إغلاق الـ Modal عند الضغط خارجه
-    document.getElementById('profileModal').addEventListener('click', function(e) {
-        if (e.target === this) closeProfileModal();
-    });
+function openProfileModal() {
+    document.getElementById('profileModal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+function closeProfileModal() {
+    document.getElementById('profileModal').classList.remove('show');
+    document.body.style.overflow = '';
+}
+document.getElementById('profileModal').addEventListener('click', function(e) {
+    if (e.target === this) closeProfileModal();
+});
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeProfileModal();
+});
 </script>
-
 {% endblock %}

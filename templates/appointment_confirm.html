@@ -1,0 +1,508 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}تأكيد الموعد — {{ doctor.full_name }}{% endblock %}
+
+{% block breadcrumb %}
+    <a href="{% url 'home' %}">الرئيسية</a>
+    <span>›</span>
+    <a href="{% url 'clinic_detail' clinic.id %}">{{ clinic.name }}</a>
+    <span>›</span>
+    <a href="{% url 'doctor_detail' doctor.id %}">{{ doctor.full_name }}</a>
+    <span>›</span>
+    <span style="color:var(--text-2);">تأكيد الموعد</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── Layout ── */
+    .confirm-layout {
+        display: flex; align-items: flex-start; justify-content: center;
+        min-height: calc(100vh - var(--navbar-height));
+        padding: 32px 24px;
+    }
+    .confirm-wrapper { width: 100%; max-width: 600px; }
+
+    /* ── Page Title ── */
+    .page-title { text-align: center; margin-bottom: 28px; }
+    .page-title h1 { font-size: 26px; font-weight: 900; color: var(--text); margin-bottom: 6px; }
+    .page-title p  { font-size: 14px; color: var(--text-muted); }
+
+    /* ── Doctor Summary ── */
+    .doctor-summary {
+        display: flex; align-items: center; gap: 16px;
+        background: rgba(14,165,233,.08);
+        border: 1.5px solid rgba(14,165,233,.25);
+        border-radius: var(--radius-lg);
+        padding: 18px 22px; margin-bottom: 20px;
+    }
+    .doc-avatar {
+        width: 64px; height: 64px; border-radius: 50%;
+        object-fit: cover; object-position: top;
+        border: 2px solid rgba(14,165,233,.3);
+        flex-shrink: 0;
+    }
+    .doc-avatar-placeholder {
+        width: 64px; height: 64px; border-radius: 50%;
+        background: rgba(14,165,233,.1);
+        border: 2px solid rgba(14,165,233,.2);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 28px; flex-shrink: 0;
+    }
+    .doc-summary-info { flex: 1; }
+    .doc-summary-name { font-size: 17px; font-weight: 900; color: var(--text); margin-bottom: 4px; }
+    .doc-summary-spec { font-size: 13px; color: #0ea5e9; font-weight: 700; margin-bottom: 2px; }
+    .doc-summary-clinic { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+
+    /* ── Summary Box ── */
+    .summary-box {
+        background: rgba(14,165,233,.06);
+        border: 1.5px solid rgba(14,165,233,.2);
+        border-radius: var(--radius-lg);
+        padding: 20px 24px; margin-bottom: 24px;
+    }
+    .summary-row {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 8px 0; border-bottom: 1px solid rgba(14,165,233,.1);
+        font-size: 15px;
+    }
+    .summary-row:last-child { border-bottom: none; }
+    .summary-row span:first-child { color: var(--text-2); font-weight: 600; }
+    .summary-row strong { color: var(--text); font-weight: 800; }
+    .summary-total { font-size: 20px !important; color: #0ea5e9 !important; }
+
+    /* ── Form Card ── */
+    .form-card {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius-xl); padding: 28px;
+        box-shadow: var(--shadow-md);
+    }
+    .form-section-title {
+        font-size: 15px; font-weight: 800; color: var(--text);
+        display: flex; align-items: center; gap: 8px;
+        margin: 24px 0 14px; padding-bottom: 10px;
+        border-bottom: 1px solid var(--border);
+    }
+    .form-section-title:first-child { margin-top: 0; }
+    .step-num {
+        width: 26px; height: 26px;
+        background: #0ea5e9; color: white; border-radius: 50%;
+        font-size: 13px; font-weight: 900;
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+
+    /* ── Form Controls ── */
+    .form-group { margin-bottom: 16px; }
+    .form-label {
+        display: block; font-size: 13px; font-weight: 700;
+        color: var(--text-2); margin-bottom: 7px;
+    }
+    .form-input, .form-textarea {
+        width: 100%; padding: 13px 16px;
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius-md);
+        background: var(--surface-2); color: var(--text);
+        font-family: 'Cairo', sans-serif; font-size: 14px;
+        transition: border-color .2s, box-shadow .2s;
+    }
+    .form-input:focus, .form-textarea:focus {
+        outline: none; border-color: #0ea5e9;
+        box-shadow: 0 0 0 4px rgba(14,165,233,.1);
+        background: var(--surface);
+    }
+    .form-textarea { resize: vertical; min-height: 80px; }
+    .form-input::placeholder, .form-textarea::placeholder { color: var(--text-muted); }
+
+    /* ── Option Cards ── */
+    .option-card {
+        display: flex; align-items: center; gap: 14px;
+        padding: 14px 16px; border: 2px solid var(--border);
+        border-radius: var(--radius-md); margin-bottom: 10px;
+        cursor: pointer; transition: all .2s;
+        background: var(--surface-2); position: relative;
+    }
+    .option-card:hover { border-color: #0ea5e9; background: rgba(14,165,233,.06); }
+    .option-card:has(input:checked) {
+        border-color: #0ea5e9; background: rgba(14,165,233,.08);
+        box-shadow: 0 0 0 3px rgba(14,165,233,.1);
+    }
+    .option-card input[type="radio"] { transform: scale(1.2); accent-color: #0ea5e9; flex-shrink: 0; }
+    .option-icon { font-size: 24px; flex-shrink: 0; }
+    .option-text { display: flex; flex-direction: column; gap: 2px; }
+    .option-title { font-weight: 800; font-size: 15px; color: var(--text); }
+    .option-desc  { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+
+    /* ── Transfer Box ── */
+    .transfer-box {
+        display: none;
+        background: rgba(37,211,102,.06);
+        border: 1px solid rgba(37,211,102,.25);
+        border-radius: var(--radius-md);
+        padding: 18px; margin-top: 8px; margin-bottom: 10px;
+        animation: fadeIn .3s ease;
+    }
+    .transfer-number {
+        font-size: 22px; font-weight: 900;
+        color: var(--text); font-family: 'JetBrains Mono', monospace;
+        letter-spacing: 2px; margin: 6px 0;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .copy-btn {
+        font-size: 12px; font-weight: 700; color: #0ea5e9;
+        background: none; border: 1px solid rgba(14,165,233,.3);
+        padding: 3px 10px; border-radius: 20px; cursor: pointer;
+        transition: all .15s; font-family: 'Cairo', sans-serif;
+    }
+    .copy-btn:hover { background: #0ea5e9; color: white; }
+    .transfer-steps {
+        list-style: none; margin-top: 12px; padding: 0;
+    }
+    .transfer-steps li {
+        font-size: 13px; color: var(--text-2); font-weight: 600;
+        padding: 5px 0; display: flex; align-items: flex-start; gap: 8px;
+    }
+    .transfer-steps li .step-icon { flex-shrink: 0; margin-top: 1px; }
+
+    /* WhatsApp send box */
+    .wa-send-box {
+        display: none;
+        background: rgba(37,211,102,.06);
+        border: 1px solid rgba(37,211,102,.25);
+        border-radius: var(--radius-md);
+        padding: 16px; margin-top: 10px;
+        animation: fadeIn .3s ease;
+        text-align: center;
+    }
+    .wa-send-box p { font-size: 13px; color: var(--text-2); font-weight: 600; margin-bottom: 12px; }
+    .btn-wa {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: #25d366; color: white;
+        padding: 11px 22px; border-radius: var(--radius-md);
+        font-family: 'Cairo', sans-serif; font-size: 14px; font-weight: 800;
+        text-decoration: none; transition: all .2s;
+        box-shadow: 0 4px 14px rgba(37,211,102,.3);
+    }
+    .btn-wa:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
+    /* ── Warning Box ── */
+    .warning-box {
+        display: flex; align-items: flex-start; gap: 12px;
+        background: rgba(243,156,18,.08);
+        border: 1px solid rgba(243,156,18,.3);
+        border-radius: var(--radius-md);
+        padding: 14px 16px; margin-top: 20px;
+        font-size: 13px; color: var(--text-2);
+        font-weight: 600; line-height: 1.6;
+    }
+    .warn-icon { font-size: 20px; flex-shrink: 0; }
+
+    /* ── Submit ── */
+    .btn-pay {
+        width: 100%; padding: 16px;
+        background: linear-gradient(135deg, #0ea5e9, #0284c7);
+        color: white; border: none; border-radius: var(--radius-md);
+        font-size: 17px; font-weight: 900; margin-top: 20px;
+        cursor: pointer;
+        box-shadow: 0 6px 20px rgba(14,165,233,.35);
+        transition: all .25s;
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        font-family: 'Cairo', sans-serif;
+    }
+    .btn-pay:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(14,165,233,.45); }
+    .btn-pay:active { transform: translateY(0); }
+
+    /* ── Animations ── */
+    @keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+    .fade-up { opacity:0; transform:translateY(16px); animation:fadeUp .5s ease forwards; }
+    @keyframes fadeUp { to { opacity:1; transform:translateY(0); } }
+    .fade-up:nth-child(1) { animation-delay:.05s; }
+    .fade-up:nth-child(2) { animation-delay:.12s; }
+    .fade-up:nth-child(3) { animation-delay:.19s; }
+
+    @media (max-width: 480px) {
+        .confirm-layout { padding: 16px 14px; }
+        .form-card { padding: 20px; }
+        .doctor-summary { flex-direction: column; text-align: center; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="confirm-layout">
+<div class="confirm-wrapper">
+
+    <!-- ── Title ── -->
+    <div class="page-title fade-up">
+        <h1>📋 تأكيد الموعد</h1>
+        <p>راجع التفاصيل وأرسل إيصال الدفع للتأكيد</p>
+    </div>
+
+    <!-- ── Doctor Summary ── -->
+    <div class="doctor-summary fade-up">
+        {% if doctor.image %}
+            <img src="{{ doctor.image.url }}" alt="{{ doctor.full_name }}" class="doc-avatar">
+        {% else %}
+            <div class="doc-avatar-placeholder">👨‍⚕️</div>
+        {% endif %}
+        <div class="doc-summary-info">
+            <div class="doc-summary-name">{{ doctor.full_name }}</div>
+            <div class="doc-summary-spec">{{ doctor.get_specialty_display }}</div>
+            <div class="doc-summary-clinic">🏥 {{ clinic.name }} — {{ clinic.get_location_display }}</div>
+        </div>
+    </div>
+
+    <!-- ── Appointment Summary ── -->
+    <div class="summary-box fade-up">
+        <div class="summary-row">
+            <span>📅 التاريخ</span>
+            <strong>{{ date|date:"d/m/Y — l" }}</strong>
+        </div>
+        <div class="summary-row">
+            <span>⏰ الوقت</span>
+            <strong style="font-family:'JetBrains Mono',monospace;">{{ time_str }}</strong>
+        </div>
+        <div class="summary-row">
+            <span>⏱ مدة الكشف</span>
+            <strong>{{ doctor.slot_duration }} دقيقة</strong>
+        </div>
+        <div class="summary-row">
+            <span>💰 سعر الكشف</span>
+            <strong class="summary-total">{{ price|floatformat:0 }} ج.م</strong>
+        </div>
+    </div>
+
+    <!-- ── Form ── -->
+    <div class="form-card fade-up">
+        <form method="POST" id="appointmentForm">
+            {% csrf_token %}
+
+            <!-- Step 1: Complaint -->
+            <div class="form-section-title">
+                <span class="step-num">1</span> سبب الزيارة <span style="font-size:12px;color:var(--text-muted);font-weight:600;">(اختياري)</span>
+            </div>
+            <div class="form-group">
+                <textarea name="complaint" class="form-textarea"
+                    placeholder="مثال: ألم في الركبة منذ أسبوع، أو فحص دوري، أو متابعة علاج..."></textarea>
+            </div>
+
+            <!-- Step 2: Payment Type -->
+            <div class="form-section-title">
+                <span class="step-num">2</span> نظام الدفع
+            </div>
+
+            <!-- Full -->
+            <label class="option-card">
+                <input type="radio" name="payment_type" value="Full" checked
+                       onchange="selectPayType('full')">
+                <span class="option-icon">💳</span>
+                <div class="option-text">
+                    <span class="option-title">دفع كامل ({{ price|floatformat:0 }} ج.م)</span>
+                    <span class="option-desc">تأكيد فوري بعد التحقق من التحويل</span>
+                </div>
+            </label>
+
+            <!-- Deposit -->
+            <label class="option-card">
+                <input type="radio" name="payment_type" value="Deposit"
+                       onchange="selectPayType('deposit')">
+                <span class="option-icon">🪙</span>
+                <div class="option-text">
+                    <span class="option-title">دفع عربون (50 ج.م)</span>
+                    <span class="option-desc">والباقي {{ price|add:"-50"|floatformat:0 }} ج.م كاش في العيادة</span>
+                </div>
+            </label>
+
+            <!-- Pay At Clinic -->
+            <label class="option-card">
+                <input type="radio" name="payment_type" value="PayAtClinic"
+                       onchange="selectPayType('clinic')">
+                <span class="option-icon">🏥</span>
+                <div class="option-text">
+                    <span class="option-title">دفع في العيادة</span>
+                    <span class="option-desc">بدون دفع أونلاين — يتأكد الحجز يدوياً من الإدارة</span>
+                </div>
+            </label>
+
+            <!-- Step 3: Payment Method -->
+            <div id="online-methods">
+                <div class="form-section-title">
+                    <span class="step-num">3</span> وسيلة التحويل
+                </div>
+
+                <!-- فودافون كاش -->
+                <label class="option-card">
+                    <input type="radio" name="pay" value="voda"
+                           onchange="showTransfer('voda')">
+                    <span class="option-icon">📱</span>
+                    <div class="option-text">
+                        <span class="option-title">فودافون كاش</span>
+                        <span class="option-desc">تحويل على الرقم المخصص</span>
+                    </div>
+                </label>
+
+                <!-- Transfer Details Box -->
+                <div id="transfer-box" class="transfer-box">
+                    <div style="font-size:13px; color:var(--text-2); font-weight:700; margin-bottom:4px;">
+                        📲 حوّل المبلغ لرقم فودافون كاش:
+                    </div>
+                    <div class="transfer-number">
+                        {{ whatsapp }}
+                        <button type="button" class="copy-btn" onclick="copyNumber()">نسخ</button>
+                    </div>
+                    <ul class="transfer-steps">
+                        <li><span class="step-icon">1️⃣</span> افتح تطبيق فودافون كاش وحوّل المبلغ للرقم أعلاه</li>
+                        <li><span class="step-icon">2️⃣</span> خد صورة للإيصال</li>
+                        <li><span class="step-icon">3️⃣</span> ابعت الصورة على واتساب للتأكيد</li>
+                    </ul>
+                    <div id="wa-send-box" class="wa-send-box">
+                        <p>بعد التحويل ابعت صورة الإيصال هنا عشان نأكد موعدك 👇</p>
+                        <a href="https://wa.me/{{ whatsapp }}?text=مرحبا،%20حجزت%20موعد%20مع%20{{ doctor.full_name }}%20يوم%20{{ date|date:'Y-m-d' }}%20الساعة%20{{ time_str }}%20وحولت%20المبلغ.%20ارسل%20الإيصال:"
+                           target="_blank" class="btn-wa">
+                            <i class="fab fa-whatsapp"></i> ابعت الإيصال على واتساب
+                        </a>
+                    </div>
+                </div>
+
+                <!-- InstaPay -->
+                <label class="option-card">
+                    <input type="radio" name="pay" value="insta"
+                           onchange="showTransfer('insta')">
+                    <span class="option-icon">⚡</span>
+                    <div class="option-text">
+                        <span class="option-title">إنستا باي (InstaPay)</span>
+                        <span class="option-desc">تحويل من أي بنك أو محفظة</span>
+                    </div>
+                </label>
+
+                <!-- رقم عملية -->
+                <div id="txn-box" style="display:none; margin-bottom:10px; animation:fadeIn .3s ease;">
+                    <div class="form-group" style="margin:8px 0 0;">
+                        <label class="form-label">رقم عملية التحويل (اختياري):</label>
+                        <input type="text" name="transaction_id" class="form-input"
+                               placeholder="مثال: TXN123456789" style="direction:ltr;">
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Warning -->
+            <div class="warning-box">
+                <span class="warn-icon">⚠️</span>
+                <span>
+                    <strong>تنبيه هام:</strong>
+                    الموعد سيتحول لـ "قيد المراجعة" وسيتم التأكيد بعد التحقق من الدفع خلال
+                    <strong>30 دقيقة</strong>.
+                    في حال عدم التأكيد سيُلغى الموعد تلقائياً.
+                </span>
+            </div>
+
+            <!-- Submit -->
+            <button type="submit" class="btn-pay" id="submitBtn">
+                إتمام الحجز ✅
+            </button>
+
+        </form>
+    </div>
+
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var WHATSAPP = '{{ whatsapp }}';
+var DOCTOR   = '{{ doctor.full_name }}';
+var DATE_STR = '{{ date|date:"Y-m-d" }}';
+var TIME_STR = '{{ time_str }}';
+
+/* ── Payment Type ── */
+function selectPayType(mode) {
+    var methods = document.getElementById('online-methods');
+    var txnBox  = document.getElementById('txn-box');
+    var tBox    = document.getElementById('transfer-box');
+    var waBox   = document.getElementById('wa-send-box');
+
+    if (mode === 'clinic') {
+        methods.style.display = 'none';
+        document.querySelectorAll('input[name="pay"]').forEach(function(r){ r.checked = false; });
+        if(tBox)   tBox.style.display   = 'none';
+        if(txnBox) txnBox.style.display = 'none';
+        if(waBox)  waBox.style.display  = 'none';
+    } else {
+        methods.style.display = 'block';
+    }
+}
+
+/* ── Transfer Method ── */
+function showTransfer(method) {
+    var tBox   = document.getElementById('transfer-box');
+    var txnBox = document.getElementById('txn-box');
+    var waBox  = document.getElementById('wa-send-box');
+
+    if (method === 'voda') {
+        tBox.style.display   = 'block';
+        txnBox.style.display = 'none';
+        // ظهر الـ wa box بعد ثانية كأنه reminder
+        setTimeout(function(){ waBox.style.display = 'block'; }, 800);
+    } else if (method === 'insta') {
+        tBox.style.display   = 'none';
+        txnBox.style.display = 'block';
+        waBox.style.display  = 'none';
+    }
+}
+
+/* ── Copy Number ── */
+function copyNumber() {
+    navigator.clipboard.writeText(WHATSAPP).then(function(){
+        var btn = document.querySelector('.copy-btn');
+        btn.textContent = 'تم النسخ ✓';
+        btn.style.background = '#0ea5e9';
+        btn.style.color = 'white';
+        setTimeout(function(){
+            btn.textContent = 'نسخ';
+            btn.style.background = '';
+            btn.style.color = '';
+        }, 2000);
+    });
+}
+
+/* ── Validation ── */
+document.getElementById('appointmentForm').addEventListener('submit', function(e) {
+    var payType  = document.querySelector('input[name="payment_type"]:checked');
+    var payMethod = document.querySelector('input[name="pay"]:checked');
+
+    if (!payType) {
+        e.preventDefault();
+        showError('يرجى اختيار نظام الدفع أولاً ⚠️');
+        return;
+    }
+
+    if (payType.value !== 'PayAtClinic' && !payMethod) {
+        e.preventDefault();
+        showError('يرجى اختيار وسيلة التحويل ⚠️');
+        return;
+    }
+
+    /* Disable button to prevent double submit */
+    var btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '⏳ جاري الإرسال...';
+});
+
+function showError(msg) {
+    var existing = document.getElementById('inline-error');
+    if(existing) existing.remove();
+    var el = document.createElement('div');
+    el.id = 'inline-error';
+    el.style.cssText =
+        'background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.3);' +
+        'border-radius:8px;padding:12px 16px;margin-top:16px;' +
+        'font-size:13px;font-weight:700;color:#f85149;' +
+        'animation:fadeIn .3s ease;';
+    el.textContent = msg;
+    document.getElementById('submitBtn').before(el);
+    setTimeout(function(){ el.remove(); }, 4000);
+}
+</script>
+{% endblock %}

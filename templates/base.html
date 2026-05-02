@@ -1,12 +1,11 @@
 {% load static %}
 {% load i18n %}
+{% get_current_language as LANGUAGE_CODE %}
 
 <!DOCTYPE html>
-<html dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}" lang="{{ LANGUAGE_CODE }}">
+<html dir="rtl" lang="{{ LANGUAGE_CODE }}">
 <head>
-    <!-- ══════════════════════════════════════════════
-         THEME INIT — MUST be BEFORE any CSS to prevent flash
-         ══════════════════════════════════════════════ -->
+    <!-- Theme init — before CSS to prevent flash -->
     <script>
         (function(){
             var t = localStorage.getItem('theme') || 'light';
@@ -16,17 +15,17 @@
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Mal3ab Online{% endblock %}</title>
+    <title>{% block title %}كلينيك أونلاين{% endblock %}</title>
 
     <!-- SEO -->
-    <meta name="description" content="{% block meta_description %}{% trans 'أكبر منصة لحجز الملاعب الرياضية في مصر — احجز ملعبك في ثوانٍ' %}{% endblock %}">
-    <meta name="keywords"    content="{% block meta_keywords %}{% trans 'ملاعب, حجز ملعب, كرة قدم, مصر' %}{% endblock %}">
+    <meta name="description" content="{% block meta_description %}أسهل طريقة لحجز موعد مع دكتورك في مصر — اختر التخصص، احجز في ثوانٍ{% endblock %}">
+    <meta name="keywords"    content="{% block meta_keywords %}حجز دكتور, عيادة, طب, مواعيد, مصر{% endblock %}">
     <meta name="robots"      content="index, follow">
-    <meta name="author"      content="Mal3ab Online">
+    <meta name="author"      content="كلينيك أونلاين">
 
     <!-- Open Graph -->
-    <meta property="og:title"       content="{% block og_title %}Mal3ab Online{% endblock %}">
-    <meta property="og:description" content="{% block og_description %}{% trans 'أكبر منصة لحجز الملاعب في مصر' %}{% endblock %}">
+    <meta property="og:title"       content="{% block og_title %}كلينيك أونلاين{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}أسهل طريقة لحجز موعد مع دكتورك في مصر{% endblock %}">
     <meta property="og:image"       content="{% static 'img/logo.png' %}">
     <meta property="og:type"        content="website">
     <meta property="og:locale"      content="ar_EG">
@@ -37,67 +36,71 @@
     <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-Avb2QiuDEEvB4bZJYdft2mNjVShBftLdPG8FJ0V7irTLQ8Uo0qcPxh4Plq7G5tGm0rU+1SPhVotteLpBERwTkw==" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+          integrity="sha512-Avb2QiuDEEvB4bZJYdft2mNjVShBftLdPG8FJ0V7irTLQ8Uo0qcPxh4Plq7G5tGm0rU+1SPhVotteLpBERwTkw=="
+          crossorigin="anonymous" referrerpolicy="no-referrer">
 
-    <!-- ══════════════════════════════════════════════
-         GLOBAL CSS VARIABLES & BASE STYLES
-         ══════════════════════════════════════════════ -->
     <style>
-        /* ── Light Theme (default) ── */
+        /* ── Light Theme ── */
         :root {
-            --primary:       #27ae60;
-            --primary-light: #2ecc71;
-            --primary-dark:  #1e8449;
-            --primary-ghost: rgba(39, 174, 96, 0.12);
-            --accent:        #f39c12;
-            --danger:        #e74c3c;
-            --danger-ghost:  rgba(231, 76, 60, 0.1);
-            --bg:            #f0f4f2;
-            --surface:       #ffffff;
-            --surface-2:     #f7faf8;
-            --border:        #e2e8e4;
-            --text:          #1a2e23;
-            --text-2:        #4a6358;
-            --text-muted:    #8fa89c;
+            --primary:       #0ea5e9;
+            --primary-light: #38bdf8;
+            --primary-dark:  #0284c7;
+            --primary-ghost: rgba(14,165,233,0.10);
+            --accent:        #f59e0b;
+            --danger:        #ef4444;
+            --danger-ghost:  rgba(239,68,68,0.10);
+            --success:       #10b981;
+
+            --bg:        #f0f8ff;
+            --surface:   #ffffff;
+            --surface-2: #f5faff;
+            --border:    #e0eef8;
+            --text:      #0f2a40;
+            --text-2:    #3a6080;
+            --text-muted:#7aaabf;
+
             --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
             --shadow-md: 0 6px 24px rgba(0,0,0,0.09);
             --shadow-lg: 0 16px 48px rgba(0,0,0,0.12);
-            --sidebar-width: 260px;
-            --navbar-height: 64px;
-            --radius-sm: 8px;
-            --radius-md: 14px;
-            --radius-lg: 20px;
-            --radius-xl: 28px;
+
+            --sidebar-width:  260px;
+            --navbar-height:  64px;
+            --radius-sm:  8px;
+            --radius-md:  14px;
+            --radius-lg:  20px;
+            --radius-xl:  28px;
         }
 
         /* ── Dark Theme ── */
         [data-theme="dark"] {
-            --bg:        #0f1a14;
-            --surface:   #182318;
-            --surface-2: #1e2e1e;
-            --border:    #2a3d2a;
-            --text:      #e8f5e9;
-            --text-2:    #a5c8aa;
-            --text-muted:#5a7d5a;
+            --bg:        #0a1628;
+            --surface:   #0f1f38;
+            --surface-2: #132540;
+            --border:    #1e3a5f;
+            --text:      #e2f0ff;
+            --text-2:    #7aaabf;
+            --text-muted:#3a6080;
             --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
             --shadow-md: 0 6px 24px rgba(0,0,0,0.4);
             --shadow-lg: 0 16px 48px rgba(0,0,0,0.5);
         }
 
-        /* ── Reset & Base ── */
+        /* ── Reset ── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Cairo', sans-serif;
-            background: var(--bg);
-            color: var(--text);
+            background: var(--bg); color: var(--text);
             min-height: 100vh;
-            transition: background 0.3s, color 0.3s;
+            transition: background .3s, color .3s;
         }
         a { text-decoration: none; color: inherit; }
         button { font-family: 'Cairo', sans-serif; cursor: pointer; }
 
-        /* ── SIDEBAR ── */
+        /* ════════════════════════
+           SIDEBAR
+        ════════════════════════ */
         .sidebar {
             position: fixed; top: 0; right: 0;
             width: var(--sidebar-width); height: 100vh;
@@ -106,22 +109,25 @@
             box-shadow: var(--shadow-lg);
             z-index: 1000;
             display: flex; flex-direction: column;
-            transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+            transition: transform .35s cubic-bezier(.4,0,.2,1);
         }
         .sidebar.hidden { transform: translateX(100%); }
+
         .sidebar-logo {
-            padding: 24px 20px;
+            padding: 22px 20px;
             display: flex; align-items: center; gap: 12px;
             border-bottom: 1px solid var(--border);
         }
         .logo-icon {
             width: 44px; height: 44px;
             border-radius: var(--radius-md);
-            box-shadow: 0 4px 12px rgba(39,174,96,0.35);
+            box-shadow: 0 4px 12px rgba(14,165,233,.3);
             flex-shrink: 0; object-fit: cover;
         }
-        .logo-text { font-size: 20px; font-weight: 800; color: var(--text); }
+        .logo-text { font-size: 18px; font-weight: 900; color: var(--text); line-height: 1.2; }
         .logo-text span { color: var(--primary); }
+        .logo-tagline { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+
         .sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
         .nav-section-title {
             font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
@@ -132,62 +138,65 @@
             display: flex; align-items: center; gap: 12px;
             padding: 11px 14px; border-radius: var(--radius-sm);
             font-size: 14px; font-weight: 600; color: var(--text-2);
-            transition: all 0.2s; margin-bottom: 2px;
+            transition: all .2s; margin-bottom: 2px;
         }
         .nav-item:hover, .nav-item.active {
-            background: var(--primary-ghost);
-            color: var(--primary);
+            background: var(--primary-ghost); color: var(--primary);
         }
         .nav-icon { font-size: 18px; flex-shrink: 0; }
+
+        /* Theme Toggle */
         .sidebar-footer { padding: 16px 12px; border-top: 1px solid var(--border); }
         .theme-toggle-btn {
             width: 100%; display: flex; align-items: center; justify-content: space-between;
             padding: 11px 14px; border-radius: var(--radius-sm);
             background: var(--surface-2); border: 1px solid var(--border);
             color: var(--text-2); font-size: 14px; font-weight: 600;
-            transition: all 0.2s;
+            transition: all .2s;
         }
         .theme-toggle-btn:hover { border-color: var(--primary); color: var(--primary); }
         .toggle-track {
             width: 40px; height: 22px; background: var(--border);
-            border-radius: 11px; position: relative; transition: background 0.3s;
+            border-radius: 11px; position: relative; transition: background .3s;
         }
         [data-theme="dark"] .toggle-track { background: var(--primary); }
         .toggle-thumb {
             position: absolute; top: 3px; right: 3px;
             width: 16px; height: 16px; background: white; border-radius: 50%;
-            transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
-            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+            transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+            box-shadow: 0 1px 4px rgba(0,0,0,.2);
         }
         [data-theme="dark"] .toggle-thumb { transform: translateX(-18px); }
 
-        /* ── Language Switcher ── */
+        /* Language */
         .lang-select {
             width: 100%; padding: 9px 12px;
             border-radius: var(--radius-sm);
             border: 1px solid var(--border);
-            background: var(--surface-2);
-            color: var(--text-2);
+            background: var(--surface-2); color: var(--text-2);
             font-family: 'Cairo', sans-serif;
             font-size: 13px; font-weight: 600;
-            cursor: pointer; transition: all 0.2s;
+            cursor: pointer; transition: all .2s;
         }
         .lang-select:focus { outline: none; border-color: var(--primary); }
 
-        /* ── OVERLAY & NAVBAR ── */
+        /* ════════════════════════
+           OVERLAY & NAVBAR
+        ════════════════════════ */
         .sidebar-overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+            position: fixed; inset: 0; background: rgba(0,0,0,.5);
             backdrop-filter: blur(4px); z-index: 999;
-            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+            opacity: 0; pointer-events: none; transition: opacity .3s;
         }
         .sidebar-overlay.visible { opacity: 1; pointer-events: all; }
+
         .navbar {
             position: fixed; top: 0; left: 0; right: var(--sidebar-width);
             height: var(--navbar-height);
             background: var(--surface); border-bottom: 1px solid var(--border);
             display: flex; align-items: center; padding: 0 24px; gap: 12px;
             z-index: 900; box-shadow: var(--shadow-sm);
-            transition: right 0.35s cubic-bezier(0.4,0,0.2,1);
+            transition: right .35s cubic-bezier(.4,0,.2,1);
         }
         .navbar.sidebar-hidden { right: 0; }
         .menu-btn {
@@ -195,7 +204,7 @@
             background: transparent; border: 1px solid var(--border);
             color: var(--text-2); font-size: 18px;
             display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s;
+            transition: all .2s;
         }
         .menu-btn:hover {
             background: var(--primary-ghost);
@@ -206,40 +215,39 @@
             font-size: 14px; color: var(--text-muted);
         }
         .navbar-breadcrumb a { color: var(--primary); font-weight: 600; }
-        .navbar-actions {
-            margin-right: auto;
-            display: flex; align-items: center; gap: 10px;
-        }
+        .navbar-actions { margin-right: auto; display: flex; align-items: center; gap: 10px; }
+
+        /* Buttons */
         .btn {
             display: inline-flex; align-items: center; gap: 8px;
             padding: 9px 18px; border-radius: var(--radius-sm);
             font-size: 14px; font-weight: 700; border: none;
-            transition: all 0.2s;
+            transition: all .2s; font-family: 'Cairo', sans-serif;
         }
         .btn-primary {
             background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white; box-shadow: 0 4px 12px rgba(39,174,96,0.3);
+            color: white; box-shadow: 0 4px 12px rgba(14,165,233,.3);
         }
-        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(39,174,96,0.4); }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(14,165,233,.4); }
         .btn-ghost {
-            background: transparent; border: 1px solid var(--border);
-            color: var(--text-2);
+            background: transparent; border: 1px solid var(--border); color: var(--text-2);
         }
-        .btn-ghost:hover {
-            border-color: var(--primary); color: var(--primary);
-            background: var(--primary-ghost);
-        }
+        .btn-ghost:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-ghost); }
 
-        /* ── MAIN LAYOUT ── */
+        /* ════════════════════════
+           MAIN LAYOUT
+        ════════════════════════ */
         .main-content {
             margin-right: var(--sidebar-width);
             padding-top: var(--navbar-height);
             min-height: 100vh;
-            transition: margin-right 0.35s cubic-bezier(0.4,0,0.2,1);
+            transition: margin-right .35s cubic-bezier(.4,0,.2,1);
         }
         .main-content.sidebar-hidden { margin-right: 0; }
 
-        /* ── TOAST ── */
+        /* ════════════════════════
+           TOAST
+        ════════════════════════ */
         .toast-container {
             position: fixed; bottom: 24px; left: 24px; z-index: 2000;
             display: flex; flex-direction: column-reverse; gap: 10px;
@@ -250,9 +258,9 @@
             border-radius: var(--radius-md); padding: 14px 18px;
             box-shadow: var(--shadow-lg); font-size: 14px; font-weight: 600;
             color: var(--text); min-width: 260px; max-width: 360px;
-            animation: slideInToast 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
+            animation: slideInToast .4s cubic-bezier(.34,1.56,.64,1) forwards;
         }
-        .toast.success { border-right: 4px solid var(--primary); }
+        .toast.success { border-right: 4px solid var(--success); }
         .toast.error   { border-right: 4px solid var(--danger); }
         .toast.warning { border-right: 4px solid var(--accent); }
         .toast-close {
@@ -260,11 +268,13 @@
             color: var(--text-muted); font-size: 18px; cursor: pointer;
         }
         @keyframes slideInToast {
-            from { opacity: 0; transform: translateY(20px) scale(0.9); }
-            to   { opacity: 1; transform: translateY(0) scale(1); }
+            from { opacity:0; transform:translateY(20px) scale(.9); }
+            to   { opacity:1; transform:translateY(0)    scale(1); }
         }
 
-        /* ── RESPONSIVE ── */
+        /* ════════════════════════
+           RESPONSIVE
+        ════════════════════════ */
         @media (max-width: 768px) {
             :root { --sidebar-width: 0px; }
             .sidebar { width: 260px; transform: translateX(100%); }
@@ -278,208 +288,227 @@
 </head>
 <body>
 
-    <!-- ══════════════════════════════════════════════
-         SIDEBAR
-         ══════════════════════════════════════════════ -->
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-logo">
-            <img src="{% static 'img/logo.png' %}" alt="Mal3ab Online" class="logo-icon">
-            <div class="logo-text">Mal3ab<span>Online</span></div>
+<!-- ════════════════════════════
+     SIDEBAR
+════════════════════════════ -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+        <img src="{% static 'img/logo.png' %}" alt="كلينيك أونلاين" class="logo-icon">
+        <div>
+            <div class="logo-text">كلينيك<span>أونلاين</span></div>
+            <div class="logo-tagline">احجز موعدك في ثوانٍ</div>
         </div>
-
-        <nav class="sidebar-nav">
-            <!-- Main Nav -->
-            <div class="nav-section-title">{% trans "القائمة" %}</div>
-            <a href="{% url 'home' %}" class="nav-item {% block home_active %}{% endblock %}">
-                <span class="nav-icon">🏠</span> {% trans "الرئيسية" %}
-            </a>
-            <a href="{% url 'home' %}" class="nav-item {% block pitches_active %}{% endblock %}">
-                <span class="nav-icon">🏟️</span> {% trans "الملاعب" %}
-            </a>
-            <a href="{% url 'about_us' %}" class="nav-item {% block about_active %}{% endblock %}">
-                <span class="nav-icon">ℹ️</span> {% trans "من نحن" %}
-            </a>
-
-            <!-- Authenticated User Section -->
-            {% if user.is_authenticated %}
-                <div class="nav-section-title" style="margin-top:10px;">{% trans "حسابي" %}</div>
-                                <!-- 🆕 رابط داشبورد صاحب الملعب -->
-                {% if has_pitches %}
-                <a href="{% url 'owner_dashboard' %}" class="nav-item {% block owner_active %}{% endblock %}" style="color:var(--accent);">
-                    <span class="nav-icon">⚙️</span> {% trans "لوحة تحكم ملعبي" %}
-                </a>
-                {% endif %}
-                <a href="{% url 'user_profile' %}" class="nav-item {% block profile_active %}{% endblock %}">
-                    <span class="nav-icon">👤</span> {% trans "حسابي وحجوزاتي" %}
-                </a>
-
-                <!-- Logout via POST -->
-                <form id="logout-form" action="{% url 'logout' %}" method="POST" style="display:none;">
-                    {% csrf_token %}
-                </form>
-                <a href="#"
-                   onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
-                   class="nav-item" style="color:#e74c3c;">
-                    <span class="nav-icon">🚪</span> {% trans "تسجيل الخروج" %}
-                </a>
-            {% else %}
-                <div class="nav-section-title" style="margin-top:10px;">{% trans "الدخول" %}</div>
-                <a href="{% url 'login' %}" class="nav-item">
-                    <span class="nav-icon">🔑</span> {% trans "تسجيل الدخول" %}
-                </a>
-                <a href="{% url 'signup' %}" class="nav-item">
-                    <span class="nav-icon">📝</span> {% trans "إنشاء حساب" %}
-                </a>
-            {% endif %}
-
-            <!-- Language Switch -->
-            <div class="nav-section-title" style="margin-top:10px;">{% trans "اللغة" %}</div>
-            <form action="{% url 'set_language' %}" method="post" style="margin: 0 12px;">
-                {% csrf_token %}
-                <input type="hidden" name="next" value="{{ request.path }}">
-                <select name="language" onchange="this.form.submit()" class="lang-select">
-                    <option value="ar" {% if LANGUAGE_CODE == 'ar' %}selected{% endif %}>العربية</option>
-                    <option value="en" {% if LANGUAGE_CODE == 'en' %}selected{% endif %}>English</option>
-                </select>
-            </form>
-        </nav>
-
-        <div class="sidebar-footer">
-            <button class="theme-toggle-btn" onclick="toggleTheme()">
-                <span id="themeLabel">🌙 {% trans "الوضع الليلي" %}</span>
-                <div class="toggle-track"><div class="toggle-thumb"></div></div>
-            </button>
-        </div>
-    </aside>
-
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
-
-    <!-- ══════════════════════════════════════════════
-         NAVBAR
-         ══════════════════════════════════════════════ -->
-    <header class="navbar" id="navbar">
-        <button class="menu-btn" onclick="toggleSidebar()" title="{% trans 'القائمة' %}">☰</button>
-        <nav class="navbar-breadcrumb">
-            {% block breadcrumb %}
-                <a href="{% url 'home' %}">{% trans "الرئيسية" %}</a>
-            {% endblock %}
-        </nav>
-        <div class="navbar-actions">
-            {% if user.is_authenticated %}
-                {% if has_pitches %}
-                    <a href="{% url 'owner_dashboard' %}" class="btn" style="background:var(--accent); color:white; border:none; box-shadow:0 2px 8px rgba(243,156,18,0.3);">
-                        <i class="fas fa-cog"></i> {% trans "إدارة ملاعبي" %}
-                    </a>
-                {% endif %}
-                <a href="{% url 'user_profile' %}" class="btn btn-ghost">👤 {{ user.first_name|default:user.username }}</a>
-            {% else %}
-                <a href="{% url 'login' %}" class="btn btn-primary">🔑 {% trans "تسجيل الدخول" %}</a>
-            {% endif %}
-        </div>
-    </header>
-
-    <!-- ══════════════════════════════════════════════
-         MAIN CONTENT
-         ══════════════════════════════════════════════ -->
-    <main class="main-content" id="mainContent">
-        {% block content %}{% endblock %}
-    </main>
-
-    <!-- ══════════════════════════════════════════════
-         TOAST NOTIFICATIONS
-         ══════════════════════════════════════════════ -->
-    <div class="toast-container" id="toastContainer">
-        {% if messages %}
-            {% for message in messages %}
-            <div class="toast {{ message.tags }}" id="toast-{{ forloop.counter }}">
-                <span>{% if message.tags == 'success' %}✅{% elif message.tags == 'error' %}❌{% else %}ℹ️{% endif %}</span>
-                <span>{{ message }}</span>
-                <button class="toast-close" onclick="dismissToast('toast-{{ forloop.counter }}')">✕</button>
-            </div>
-            {% endfor %}
-        {% endif %}
     </div>
 
-    <!-- ══════════════════════════════════════════════
-         SHARED JAVASCRIPT
-         ══════════════════════════════════════════════ -->
-    <script>
-        /* ── Theme Init on Load ── */
-        updateThemeLabel(localStorage.getItem('theme') || 'light');
+    <nav class="sidebar-nav">
+        <!-- Main -->
+        <div class="nav-section-title">القائمة</div>
+        <a href="{% url 'home' %}" class="nav-item {% block home_active %}{% endblock %}">
+            <span class="nav-icon">🏠</span> الرئيسية
+        </a>
+        <a href="{% url 'home' %}" class="nav-item {% block clinics_active %}{% endblock %}">
+            <span class="nav-icon">🏥</span> العيادات والدكاترة
+        </a>
+        <a href="{% url 'about_us' %}" class="nav-item {% block about_active %}{% endblock %}">
+            <span class="nav-icon">ℹ️</span> من نحن
+        </a>
 
-        function toggleTheme(){
-            var c = document.documentElement.getAttribute('data-theme');
-            var n = c === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', n);
-            localStorage.setItem('theme', n);
-            updateThemeLabel(n);
-        }
+        {% if user.is_authenticated %}
+        <!-- حساب المستخدم -->
+        <div class="nav-section-title" style="margin-top:10px;">حسابي</div>
 
-        function updateThemeLabel(theme){
-            var el = document.getElementById('themeLabel');
-            if(el) el.textContent = theme === 'dark'
-                ? '☀️ {% trans "الوضع النهاري" %}'
-                : '🌙 {% trans "الوضع الليلي" %}';
-        }
+        {% if user.is_superuser %}
+        <a href="{% url 'admin:index' %}" class="nav-item" style="color:#f59e0b;">
+            <span class="nav-icon">🛠️</span> لوحة الإدارة
+        </a>
+        {% endif %}
 
-        /* ── Sidebar ── */
-        var sidebar = document.getElementById('sidebar');
-        var overlay = document.getElementById('sidebarOverlay');
-        var navbar  = document.getElementById('navbar');
-        var main    = document.getElementById('mainContent');
+        {% if has_clinics %}
+        <a href="{% url 'owner_dashboard' %}" class="nav-item {% block owner_active %}{% endblock %}" style="color:var(--accent);">
+            <span class="nav-icon">⚕️</span> داشبورد عيادتي
+        </a>
+        {% endif %}
 
-        function applyInitialSidebar(){
-            if(window.innerWidth <= 768){
-                sidebar.classList.add('hidden');
-                sidebar.classList.remove('open');
-                navbar.classList.add('sidebar-hidden');
-                main.classList.add('sidebar-hidden');
-            } else {
-                sidebar.classList.remove('hidden', 'open');
-                navbar.classList.remove('sidebar-hidden');
-                main.classList.remove('sidebar-hidden');
-            }
-        }
+        <a href="{% url 'user_profile' %}" class="nav-item {% block profile_active %}{% endblock %}">
+            <span class="nav-icon">👤</span> حسابي ومواعيدي
+        </a>
 
-        applyInitialSidebar();
-        window.addEventListener('resize', applyInitialSidebar);
+        <form id="logout-form" action="{% url 'logout' %}" method="POST" style="display:none;">
+            {% csrf_token %}
+        </form>
+        <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
+           class="nav-item" style="color:#ef4444;">
+            <span class="nav-icon">🚪</span> تسجيل الخروج
+        </a>
 
-        function toggleSidebar(){
-            if(window.innerWidth <= 768){
-                sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
-            } else {
-                sidebar.classList.toggle('hidden');
-                navbar.classList.toggle('sidebar-hidden');
-                main.classList.toggle('sidebar-hidden');
-            }
-        }
+        {% else %}
+        <div class="nav-section-title" style="margin-top:10px;">الدخول</div>
+        <a href="{% url 'login' %}" class="nav-item">
+            <span class="nav-icon">🔑</span> تسجيل الدخول
+        </a>
+        <a href="{% url 'signup' %}" class="nav-item">
+            <span class="nav-icon">📝</span> إنشاء حساب
+        </a>
+        {% endif %}
 
-        function openSidebar(){
-            sidebar.classList.add('open');
-            overlay.classList.add('visible');
-        }
+        <!-- Language -->
+        <div class="nav-section-title" style="margin-top:10px;">اللغة</div>
+        <form action="{% url 'set_language' %}" method="post" style="margin: 0 12px;">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <select name="language" onchange="this.form.submit()" class="lang-select">
+                <option value="ar" {% if LANGUAGE_CODE == 'ar' %}selected{% endif %}>العربية</option>
+                <option value="en" {% if LANGUAGE_CODE == 'en' %}selected{% endif %}>English</option>
+            </select>
+        </form>
+    </nav>
 
-        function closeSidebar(){
+    <div class="sidebar-footer">
+        <button class="theme-toggle-btn" onclick="toggleTheme()">
+            <span id="themeLabel">🌙 الوضع الليلي</span>
+            <div class="toggle-track"><div class="toggle-thumb"></div></div>
+        </button>
+    </div>
+</aside>
+
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- ════════════════════════════
+     NAVBAR
+════════════════════════════ -->
+<header class="navbar" id="navbar">
+    <button class="menu-btn" onclick="toggleSidebar()" title="القائمة">☰</button>
+
+    <nav class="navbar-breadcrumb">
+        {% block breadcrumb %}
+            <a href="{% url 'home' %}">الرئيسية</a>
+        {% endblock %}
+    </nav>
+
+    <div class="navbar-actions">
+        {% if user.is_authenticated %}
+            {% if has_clinics %}
+            <a href="{% url 'owner_dashboard' %}" class="btn"
+               style="background:var(--accent);color:white;border:none;box-shadow:0 2px 8px rgba(245,158,11,.3);">
+                <i class="fas fa-clinic-medical"></i> إدارة عيادتي
+            </a>
+            {% endif %}
+            <a href="{% url 'user_profile' %}" class="btn btn-ghost">
+                👤 {{ user.first_name|default:user.username }}
+            </a>
+        {% else %}
+            <a href="{% url 'login' %}" class="btn btn-primary">
+                🔑 تسجيل الدخول
+            </a>
+        {% endif %}
+    </div>
+</header>
+
+<!-- ════════════════════════════
+     MAIN CONTENT
+════════════════════════════ -->
+<main class="main-content" id="mainContent">
+    {% block content %}{% endblock %}
+</main>
+
+<!-- ════════════════════════════
+     TOAST NOTIFICATIONS
+════════════════════════════ -->
+<div class="toast-container" id="toastContainer">
+    {% if messages %}
+        {% for message in messages %}
+        <div class="toast {{ message.tags }}" id="toast-{{ forloop.counter }}">
+            <span>
+                {% if message.tags == 'success' %}✅
+                {% elif message.tags == 'error' %}❌
+                {% elif message.tags == 'warning' %}⚠️
+                {% else %}ℹ️{% endif %}
+            </span>
+            <span>{{ message }}</span>
+            <button class="toast-close" onclick="dismissToast('toast-{{ forloop.counter }}')">✕</button>
+        </div>
+        {% endfor %}
+    {% endif %}
+</div>
+
+<!-- ════════════════════════════
+     JAVASCRIPT
+════════════════════════════ -->
+<script>
+    /* ── Theme ── */
+    updateThemeLabel(localStorage.getItem('theme') || 'light');
+
+    function toggleTheme(){
+        var c = document.documentElement.getAttribute('data-theme');
+        var n = c === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', n);
+        localStorage.setItem('theme', n);
+        updateThemeLabel(n);
+    }
+    function updateThemeLabel(theme){
+        var el = document.getElementById('themeLabel');
+        if(el) el.textContent = theme === 'dark' ? '☀️ الوضع النهاري' : '🌙 الوضع الليلي';
+    }
+
+    /* ── Sidebar ── */
+    var sidebar = document.getElementById('sidebar');
+    var overlay = document.getElementById('sidebarOverlay');
+    var navbar  = document.getElementById('navbar');
+    var main    = document.getElementById('mainContent');
+
+    function applyInitialSidebar(){
+        if(window.innerWidth <= 768){
+            sidebar.classList.add('hidden');
             sidebar.classList.remove('open');
-            overlay.classList.remove('visible');
+            navbar.classList.add('sidebar-hidden');
+            main.classList.add('sidebar-hidden');
+        } else {
+            sidebar.classList.remove('hidden', 'open');
+            navbar.classList.remove('sidebar-hidden');
+            main.classList.remove('sidebar-hidden');
         }
+    }
+    applyInitialSidebar();
+    window.addEventListener('resize', applyInitialSidebar);
 
-        /* ── Toast Auto-Dismiss ── */
-        document.querySelectorAll('.toast').forEach(function(t){
-            setTimeout(function(){ dismissToast(t.id); }, 5000);
-        });
-
-        function dismissToast(id){
-            var el = document.getElementById(id);
-            if(!el) return;
-            el.style.opacity = '0';
-            el.style.transform = 'translateY(10px)';
-            el.style.transition = '0.3s';
-            setTimeout(function(){ el.remove(); }, 300);
+    function toggleSidebar(){
+        if(window.innerWidth <= 768){
+            sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+        } else {
+            sidebar.classList.toggle('hidden');
+            navbar.classList.toggle('sidebar-hidden');
+            main.classList.toggle('sidebar-hidden');
         }
-    </script>
+    }
+    function openSidebar(){
+        sidebar.classList.add('open');
+        overlay.classList.add('visible');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeSidebar(){
+        sidebar.classList.remove('open');
+        overlay.classList.remove('visible');
+        document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', function(e){
+        if(e.key === 'Escape') closeSidebar();
+    });
 
-    {% block extra_js %}{% endblock %}
+    /* ── Toast ── */
+    document.querySelectorAll('.toast').forEach(function(t){
+        setTimeout(function(){ dismissToast(t.id); }, 5000);
+    });
+    function dismissToast(id){
+        var el = document.getElementById(id);
+        if(!el) return;
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(10px)';
+        el.style.transition = '.3s';
+        setTimeout(function(){ el.remove(); }, 300);
+    }
+</script>
+
+{% block extra_js %}{% endblock %}
 
 </body>
 </html>

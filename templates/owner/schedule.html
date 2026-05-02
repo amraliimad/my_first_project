@@ -1,13 +1,10 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}{% trans "جدول حجوزات" %} — {{ pitch.name }}{% endblock %}
+{% block title %}جدول مواعيد — {{ doctor.full_name }}{% endblock %}
 
 {% block content %}
 <style>
-/* ═══════════════════════════════════════════════
-   SCHEDULE PAGE — OPERATIONAL CONTROL AESTHETIC
-   ═══════════════════════════════════════════════ */
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@500;700&display=swap');
 
 :root {
@@ -20,6 +17,10 @@
   --sch-text-2:     #8b949e;
   --sch-text-3:     #6e7681;
 
+  --sch-blue:       #388bfd;
+  --sch-blue-dim:   rgba(56,139,253,.12);
+  --sch-blue-glow:  rgba(56,139,253,.25);
+
   --sch-green:      #3fb950;
   --sch-green-dim:  rgba(63,185,80,.12);
   --sch-green-glow: rgba(63,185,80,.25);
@@ -30,8 +31,8 @@
   --sch-amber:      #d29922;
   --sch-amber-dim:  rgba(210,153,34,.12);
 
-  --sch-blue:       #388bfd;
-  --sch-blue-dim:   rgba(56,139,253,.12);
+  --sch-purple:     #a371f7;
+  --sch-purple-dim: rgba(163,113,247,.12);
 
   --sch-radius:     10px;
   --sch-radius-lg:  16px;
@@ -39,456 +40,284 @@
 
 /* ─── Layout ─── */
 .sch-wrap {
-  max-width: 1100px;
-  margin: 0 auto;
+  max-width: 1100px; margin: 0 auto;
   padding: 28px 20px 60px;
-  font-family: 'Cairo', sans-serif;
-  direction: rtl;
+  font-family: 'Cairo', sans-serif; direction: rtl;
 }
 
-/* ─── Back link ─── */
+/* ─── Back ─── */
 .sch-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--sch-text-2);
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 22px;
-  text-decoration: none;
-  transition: color .2s;
-  border: 1px solid var(--sch-border);
-  padding: 7px 14px;
-  border-radius: 30px;
-  background: var(--sch-surface);
+  display: inline-flex; align-items: center; gap: 8px;
+  color: var(--sch-text-2); font-size: 13px; font-weight: 600;
+  margin-bottom: 22px; text-decoration: none;
+  border: 1px solid var(--sch-border); padding: 7px 14px;
+  border-radius: 30px; background: var(--sch-surface); transition: color .2s, border-color .2s;
 }
-.sch-back:hover { color: var(--sch-green); border-color: var(--sch-green); }
-.sch-back svg { flex-shrink: 0; }
+.sch-back:hover { color: var(--sch-blue); border-color: var(--sch-blue); }
 
 /* ─── Header ─── */
 .sch-header {
-  background: var(--sch-surface);
-  border: 1px solid var(--sch-border);
-  border-radius: var(--sch-radius-lg);
-  padding: 24px 28px;
-  margin-bottom: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 14px;
-  position: relative;
-  overflow: hidden;
+  background: var(--sch-surface); border: 1px solid var(--sch-border);
+  border-radius: var(--sch-radius-lg); padding: 24px 28px; margin-bottom: 22px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 14px; position: relative; overflow: hidden;
 }
 .sch-header::before {
-  content: '';
-  position: absolute;
-  top: 0; right: 0;
-  width: 180px; height: 100%;
-  background: linear-gradient(270deg, var(--sch-green-dim), transparent);
+  content: ''; position: absolute; top: 0; right: 0; width: 180px; height: 100%;
+  background: linear-gradient(270deg, var(--sch-blue-dim), transparent);
   pointer-events: none;
 }
 .sch-header-title { font-size: 22px; font-weight: 900; color: var(--sch-text); margin: 0 0 4px; }
 .sch-header-sub { font-size: 13px; color: var(--sch-text-2); }
-.sch-header-sub span { color: var(--sch-green); font-weight: 700; }
+.sch-header-sub span { color: var(--sch-blue); font-weight: 700; }
 .sch-date-badge {
-  background: var(--sch-green-dim);
-  border: 1px solid var(--sch-green);
-  color: var(--sch-green);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 15px;
-  font-weight: 700;
-  padding: 8px 18px;
-  border-radius: var(--sch-radius);
-  letter-spacing: .5px;
-  white-space: nowrap;
+  background: var(--sch-blue-dim); border: 1px solid var(--sch-blue);
+  color: var(--sch-blue); font-family: 'JetBrains Mono', monospace;
+  font-size: 15px; font-weight: 700; padding: 8px 18px;
+  border-radius: var(--sch-radius); letter-spacing: .5px; white-space: nowrap;
 }
 
-/* ─── Stats Row ─── */
-.sch-stats {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 22px;
-  flex-wrap: wrap;
+/* ─── Doctor Off Banner ─── */
+.off-banner {
+  background: var(--sch-amber-dim); border: 1px solid rgba(210,153,34,.3);
+  border-radius: var(--sch-radius); padding: 14px 18px;
+  margin-bottom: 20px; font-size: 14px; font-weight: 700;
+  color: var(--sch-amber); display: flex; align-items: center; gap: 10px;
 }
+
+/* ─── Stats ─── */
+.sch-stats { display: flex; gap: 10px; margin-bottom: 22px; flex-wrap: wrap; }
 .sch-stat {
-  background: var(--sch-surface);
-  border: 1px solid var(--sch-border);
-  border-radius: var(--sch-radius);
-  padding: 14px 20px;
-  flex: 1;
-  min-width: 120px;
-  text-align: center;
+  background: var(--sch-surface); border: 1px solid var(--sch-border);
+  border-radius: var(--sch-radius); padding: 14px 20px;
+  flex: 1; min-width: 120px; text-align: center;
 }
 .sch-stat-num {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 26px;
-  font-weight: 700;
-  line-height: 1;
-  margin-bottom: 5px;
+  font-size: 26px; font-weight: 700; line-height: 1; margin-bottom: 5px;
 }
 .sch-stat-label { font-size: 12px; color: var(--sch-text-2); }
-.stat-total .sch-stat-num   { color: var(--sch-blue);  }
-.stat-booked .sch-stat-num  { color: var(--sch-red);   }
-.stat-free .sch-stat-num    { color: var(--sch-green); }
-.stat-manual .sch-stat-num  { color: var(--sch-amber); }
+.stat-total .sch-stat-num  { color: var(--sch-blue);  }
+.stat-booked .sch-stat-num { color: var(--sch-red);   }
+.stat-free .sch-stat-num   { color: var(--sch-green); }
+.stat-manual .sch-stat-num { color: var(--sch-amber); }
 
 /* ─── Days Bar ─── */
 .sch-days {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 6px;
-  margin-bottom: 24px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--sch-border) transparent;
+  display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px;
+  margin-bottom: 24px; scrollbar-width: thin; scrollbar-color: var(--sch-border) transparent;
 }
 .sch-days::-webkit-scrollbar { height: 3px; }
 .sch-days::-webkit-scrollbar-thumb { background: var(--sch-border); border-radius: 4px; }
 .day-pill {
-  flex-shrink: 0;
-  text-align: center;
-  padding: 9px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--sch-border);
-  background: var(--sch-surface);
-  color: var(--sch-text-2);
-  text-decoration: none;
-  font-size: 12px;
-  font-weight: 700;
-  min-width: 64px;
-  transition: all .18s;
-  line-height: 1.4;
+  flex-shrink: 0; text-align: center; padding: 9px 14px;
+  border-radius: 8px; border: 1px solid var(--sch-border);
+  background: var(--sch-surface); color: var(--sch-text-2);
+  text-decoration: none; font-size: 12px; font-weight: 700;
+  min-width: 64px; transition: all .18s; line-height: 1.4;
 }
 .day-pill strong { display: block; font-size: 14px; color: var(--sch-text); margin-bottom: 2px; }
-.day-pill:hover { border-color: var(--sch-green); color: var(--sch-green); }
-.day-pill:hover strong { color: var(--sch-green); }
+.day-pill small  { display: block; font-size: 9px; color: var(--sch-red); margin-top: 2px; font-weight: 800; }
+.day-pill:hover { border-color: var(--sch-blue); color: var(--sch-blue); }
+.day-pill:hover strong { color: var(--sch-blue); }
 .day-pill.active {
-  background: var(--sch-green);
-  border-color: var(--sch-green);
-  color: #fff;
-  box-shadow: 0 0 16px var(--sch-green-glow);
+  background: var(--sch-blue); border-color: var(--sch-blue); color: #fff;
+  box-shadow: 0 0 16px var(--sch-blue-glow);
 }
 .day-pill.active strong { color: #fff; }
+.day-pill.off { opacity: .45; }
 
 /* ─── Section Title ─── */
 .sch-section-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--sch-text-3);
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-  margin-bottom: 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  font-size: 13px; font-weight: 700; color: var(--sch-text-3);
+  text-transform: uppercase; letter-spacing: 1.2px;
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
 }
-.sch-section-title::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--sch-border);
+.sch-section-title::after { content: ''; flex: 1; height: 1px; background: var(--sch-border); }
+
+/* ─── Slots Grid ─── */
+.slots-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 10px; margin-bottom: 36px;
 }
 
-/* ─── Hours Grid ─── */
-.hours-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 10px;
-  margin-bottom: 36px;
-}
-
-.hour-card {
-  background: var(--sch-surface);
-  border: 1px solid var(--sch-border);
-  border-radius: var(--sch-radius);
-  padding: 14px 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  animation: cardIn .25s ease both;
-  position: relative;
-  overflow: hidden;
-  transition: border-color .2s, box-shadow .2s;
+.slot-card {
+  background: var(--sch-surface); border: 1px solid var(--sch-border);
+  border-radius: var(--sch-radius); padding: 14px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; animation: cardIn .25s ease both;
+  position: relative; overflow: hidden; transition: border-color .2s;
 }
 @keyframes cardIn {
   from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0);   }
+  to   { opacity: 1; transform: translateY(0); }
 }
-/* stagger */
-{% for h in hours_schedule %}.hour-card:nth-child({{ forloop.counter }}) { animation-delay: {{ forloop.counter0 }}0ms; }
-{% endfor %}
+{% for s in slots_schedule %}.slot-card:nth-child({{ forloop.counter }}) { animation-delay: {{ forloop.counter0 }}0ms; }{% endfor %}
 
-.hour-card::before {
-  content: '';
-  position: absolute;
-  right: 0; top: 0; bottom: 0;
-  width: 3px;
-  border-radius: 0 var(--sch-radius) var(--sch-radius) 0;
+.slot-card::before {
+  content: ''; position: absolute; right: 0; top: 0; bottom: 0;
+  width: 3px; border-radius: 0 var(--sch-radius) var(--sch-radius) 0;
 }
-.hour-card.available::before  { background: var(--sch-green); }
-.hour-card.booked::before     { background: var(--sch-red);   }
-.hour-card.manual-card::before{ background: var(--sch-amber); }
-.hour-card.played::before     { background: var(--sch-blue);  }
-.hour-card.noshow::before     { background: var(--sch-text-3);}
+.slot-card.available::before  { background: var(--sch-green); }
+.slot-card.booked::before     { background: var(--sch-red); }
+.slot-card.manual-card::before{ background: var(--sch-amber); }
+.slot-card.attended::before   { background: var(--sch-blue); }
+.slot-card.noshow::before     { background: var(--sch-text-3); }
+.slot-card.pending-pay::before{ background: var(--sch-purple); }
 
-.hour-card.available  { border-color: var(--sch-border); }
-.hour-card.booked     { background: var(--sch-red-dim);   border-color: rgba(248,81,73,.2); }
-.hour-card.manual-card{ background: var(--sch-amber-dim); border-color: rgba(210,153,34,.25); }
-.hour-card.played     { background: var(--sch-blue-dim);  border-color: rgba(56,139,253,.2); }
-.hour-card.noshow     { background: var(--sch-surface-2); border-color: var(--sch-border-2); opacity: .7; }
+.slot-card.available   { border-color: var(--sch-border); }
+.slot-card.booked      { background: var(--sch-red-dim);    border-color: rgba(248,81,73,.2); }
+.slot-card.manual-card { background: var(--sch-amber-dim);  border-color: rgba(210,153,34,.25); }
+.slot-card.attended    { background: var(--sch-blue-dim);   border-color: rgba(56,139,253,.2); }
+.slot-card.noshow      { background: var(--sch-surface-2);  border-color: var(--sch-border-2); opacity: .7; }
+.slot-card.pending-pay { background: var(--sch-purple-dim); border-color: rgba(163,113,247,.25); }
 
-/* Hour Info */
-.hour-info { flex: 1; min-width: 0; }
-.hour-time-mono {
+/* Slot Info */
+.slot-info { flex: 1; min-width: 0; }
+.slot-time-mono {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 21px;
-  font-weight: 700;
-  color: var(--sch-text);
-  line-height: 1;
-  margin-bottom: 5px;
+  font-size: 20px; font-weight: 700; color: var(--sch-text); line-height: 1; margin-bottom: 5px;
 }
-.hour-client {
-  font-size: 13px;
-  color: var(--sch-text-2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: flex;
-  align-items: center;
-  gap: 5px;
+.slot-client {
+  font-size: 13px; color: var(--sch-text-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.hour-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 20px;
-  margin-top: 5px;
+.slot-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 700; padding: 2px 8px;
+  border-radius: 20px; margin-top: 5px;
 }
-.badge-online  { background: var(--sch-blue-dim);  color: var(--sch-blue);  border: 1px solid rgba(56,139,253,.3); }
-.badge-manual  { background: var(--sch-amber-dim); color: var(--sch-amber); border: 1px solid rgba(210,153,34,.3); }
-.badge-cash    { background: var(--sch-green-dim); color: var(--sch-green); border: 1px solid rgba(63,185,80,.3); }
+.badge-online  { background: var(--sch-blue-dim);   color: var(--sch-blue);   border: 1px solid rgba(56,139,253,.3); }
+.badge-manual  { background: var(--sch-amber-dim);  color: var(--sch-amber);  border: 1px solid rgba(210,153,34,.3); }
+.badge-clinic  { background: var(--sch-green-dim);  color: var(--sch-green);  border: 1px solid rgba(63,185,80,.3); }
+.badge-deposit { background: var(--sch-purple-dim); color: var(--sch-purple); border: 1px solid rgba(163,113,247,.3); }
+.badge-pending-pay { background: var(--sch-purple-dim); color: var(--sch-purple); border: 1px solid rgba(163,113,247,.3); }
 
-/* Hour Actions */
-.hour-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: flex-end;
-}
-
-/* Buttons */
+/* Slot Actions */
+.slot-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
 .btn-act {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid transparent;
-  font-family: 'Cairo', sans-serif;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all .15s;
-  line-height: 1;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: 6px; border: 1px solid transparent;
+  font-family: 'Cairo', sans-serif; font-size: 12px; font-weight: 700;
+  cursor: pointer; white-space: nowrap; transition: all .15s; line-height: 1;
 }
-.btn-played  { background: var(--sch-green-dim); color: var(--sch-green); border-color: rgba(63,185,80,.3); }
-.btn-played:hover  { background: var(--sch-green); color: #fff; }
-.btn-noshow  { background: var(--sch-red-dim);   color: var(--sch-red);   border-color: rgba(248,81,73,.3); }
-.btn-noshow:hover  { background: var(--sch-red);   color: #fff; }
-.btn-unblock { background: var(--sch-surface-2); color: var(--sch-text-2); border-color: var(--sch-border); }
-.btn-unblock:hover { border-color: var(--sch-amber); color: var(--sch-amber); }
+.btn-attended { background: var(--sch-blue-dim);   color: var(--sch-blue);  border-color: rgba(56,139,253,.3); }
+.btn-attended:hover  { background: var(--sch-blue);  color: #fff; }
+.btn-noshow   { background: var(--sch-red-dim);    color: var(--sch-red);   border-color: rgba(248,81,73,.3); }
+.btn-noshow:hover    { background: var(--sch-red);   color: #fff; }
+.btn-confirm-pay { background: var(--sch-green-dim); color: var(--sch-green); border-color: rgba(63,185,80,.3); }
+.btn-confirm-pay:hover { background: var(--sch-green); color: #fff; box-shadow: 0 0 10px var(--sch-green-glow); }
+.btn-unblock  { background: var(--sch-surface-2);  color: var(--sch-text-2); border-color: var(--sch-border); }
+.btn-unblock:hover   { border-color: var(--sch-amber); color: var(--sch-amber); }
 .btn-manual-add {
-  background: var(--sch-green-dim);
-  color: var(--sch-green);
-  border-color: rgba(63,185,80,.3);
-  width: 100%;
+  background: var(--sch-green-dim); color: var(--sch-green);
+  border-color: rgba(63,185,80,.3); width: 100%;
 }
 .btn-manual-add:hover { background: var(--sch-green); color: #fff; box-shadow: 0 0 10px var(--sch-green-glow); }
 
-/* Status Tags */
 .status-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 6px;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 6px;
 }
-.tag-played { background: var(--sch-blue-dim);  color: var(--sch-blue); }
-.tag-noshow { background: var(--sch-surface-2); color: var(--sch-text-3); }
+.tag-attended { background: var(--sch-blue-dim);  color: var(--sch-blue); }
+.tag-noshow   { background: var(--sch-surface-2); color: var(--sch-text-3); }
 
-/* ─── Payment Details Table ─── */
+/* ─── Empty ─── */
+.empty-day {
+  text-align: center; padding: 60px 20px;
+  background: var(--sch-surface); border: 1px dashed var(--sch-border);
+  border-radius: var(--sch-radius-lg); margin-bottom: 30px;
+}
+.empty-day .icon { font-size: 48px; margin-bottom: 14px; }
+.empty-day h3 { font-size: 18px; color: var(--sch-text); margin-bottom: 6px; }
+.empty-day p { font-size: 13px; color: var(--sch-text-2); }
+
+/* ─── Payment Table ─── */
 .pay-table-wrap {
-  background: var(--sch-surface);
-  border: 1px solid var(--sch-border);
-  border-radius: var(--sch-radius-lg);
-  overflow: hidden;
-  margin-bottom: 30px;
+  background: var(--sch-surface); border: 1px solid var(--sch-border);
+  border-radius: var(--sch-radius-lg); overflow: hidden; margin-bottom: 30px;
 }
-.pay-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
+.pay-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .pay-table thead th {
-  background: var(--sch-surface-2);
-  color: var(--sch-text-3);
-  font-weight: 700;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: .8px;
-  padding: 12px 16px;
-  text-align: right;
-  border-bottom: 1px solid var(--sch-border);
-  white-space: nowrap;
+  background: var(--sch-surface-2); color: var(--sch-text-3);
+  font-weight: 700; font-size: 11px; text-transform: uppercase;
+  letter-spacing: .8px; padding: 12px 16px; text-align: right;
+  border-bottom: 1px solid var(--sch-border); white-space: nowrap;
 }
-.pay-table tbody tr {
-  border-bottom: 1px solid var(--sch-border-2);
-  transition: background .15s;
-}
+.pay-table tbody tr { border-bottom: 1px solid var(--sch-border-2); transition: background .15s; }
 .pay-table tbody tr:last-child { border-bottom: none; }
 .pay-table tbody tr:hover { background: var(--sch-surface-2); }
 .pay-table td { padding: 13px 16px; color: var(--sch-text); vertical-align: middle; }
-.pay-table .time-cell {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 700;
-  font-size: 14px;
-  color: var(--sch-green);
-}
-.pay-table .paid-cell { color: var(--sch-green); font-weight: 700; }
-.pay-table .remain-cell { color: var(--sch-red); font-weight: 700; }
-.pay-table .zero { color: var(--sch-text-3); font-weight: 400; }
-
-/* ─── Empty State ─── */
-.empty-day {
-  text-align: center;
-  padding: 60px 20px;
-  background: var(--sch-surface);
-  border: 1px dashed var(--sch-border);
-  border-radius: var(--sch-radius-lg);
-  margin-bottom: 30px;
-}
-.empty-day .empty-icon { font-size: 48px; margin-bottom: 14px; }
-.empty-day h3 { font-size: 18px; color: var(--sch-text); margin-bottom: 6px; }
-.empty-day p  { font-size: 13px; color: var(--sch-text-2); }
+.time-cell { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 14px; color: var(--sch-blue); }
+.paid-cell  { color: var(--sch-green); font-weight: 700; }
+.remain-cell{ color: var(--sch-red);   font-weight: 700; }
+.zero { color: var(--sch-text-3); font-weight: 400; }
 
 /* ─── Modal ─── */
 .modal-overlay {
-  display: none;
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,.7);
-  backdrop-filter: blur(6px);
-  z-index: 9000;
-  justify-content: center;
-  align-items: center;
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.7); backdrop-filter: blur(6px);
+  z-index: 9000; justify-content: center; align-items: center;
 }
 .modal-overlay.show { display: flex; }
 .modal-box {
-  background: var(--sch-surface);
-  border: 1px solid var(--sch-border);
-  border-radius: var(--sch-radius-lg);
-  padding: 32px;
-  width: 90%;
-  max-width: 440px;
-  box-shadow: 0 24px 64px rgba(0,0,0,.6);
-  animation: modalIn .2s ease;
+  background: var(--sch-surface); border: 1px solid var(--sch-border);
+  border-radius: var(--sch-radius-lg); padding: 32px; width: 90%; max-width: 440px;
+  box-shadow: 0 24px 64px rgba(0,0,0,.6); animation: modalIn .2s ease;
 }
 @keyframes modalIn {
-  from { opacity: 0; transform: scale(.94) translateY(-10px); }
-  to   { opacity: 1; transform: scale(1)   translateY(0);     }
+  from { opacity:0; transform:scale(.94) translateY(-10px); }
+  to   { opacity:1; transform:scale(1)   translateY(0);     }
 }
 .modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;
 }
 .modal-header h3 { font-size: 18px; font-weight: 900; color: var(--sch-text); margin: 0; }
 .modal-close {
   width: 30px; height: 30px; border-radius: 50%;
   background: var(--sch-surface-2); border: 1px solid var(--sch-border);
   color: var(--sch-text-2); cursor: pointer; font-size: 16px;
-  display: flex; align-items: center; justify-content: center;
-  transition: all .15s;
+  display: flex; align-items: center; justify-content: center; transition: all .15s;
 }
 .modal-close:hover { border-color: var(--sch-red); color: var(--sch-red); }
-
 .modal-slot {
-  background: var(--sch-green-dim);
-  border: 1px solid rgba(63,185,80,.3);
-  border-radius: var(--sch-radius);
-  padding: 12px 16px;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  background: var(--sch-blue-dim); border: 1px solid rgba(56,139,253,.3);
+  border-radius: var(--sch-radius); padding: 12px 16px; margin-bottom: 20px;
 }
 .modal-slot-time {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--sch-green);
+  font-size: 22px; font-weight: 700; color: var(--sch-blue);
 }
-.modal-slot-date { font-size: 12px; color: var(--sch-text-2); }
-
+.modal-slot-date { font-size: 12px; color: var(--sch-text-2); margin-top: 3px; }
 .modal-field { margin-bottom: 12px; }
 .modal-label { font-size: 12px; font-weight: 700; color: var(--sch-text-2); margin-bottom: 6px; display: block; }
 .modal-input {
-  width: 100%;
-  padding: 11px 14px;
-  background: var(--sch-surface-2);
-  border: 1px solid var(--sch-border);
-  border-radius: var(--sch-radius);
-  color: var(--sch-text);
-  font-family: 'Cairo', sans-serif;
-  font-size: 14px;
-  direction: rtl;
-  transition: border-color .15s;
-  box-sizing: border-box;
+  width: 100%; padding: 11px 14px; background: var(--sch-surface-2);
+  border: 1px solid var(--sch-border); border-radius: var(--sch-radius);
+  color: var(--sch-text); font-family: 'Cairo', sans-serif; font-size: 14px;
+  direction: rtl; transition: border-color .15s; box-sizing: border-box;
 }
-.modal-input:focus { outline: none; border-color: var(--sch-green); }
+.modal-input:focus { outline: none; border-color: var(--sch-blue); }
 .modal-input::placeholder { color: var(--sch-text-3); }
-
 .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
 .modal-btn {
-  flex: 1;
-  padding: 12px;
-  border-radius: var(--sch-radius);
-  border: 1px solid transparent;
-  font-family: 'Cairo', sans-serif;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all .15s;
+  flex: 1; padding: 12px; border-radius: var(--sch-radius);
+  border: 1px solid transparent; font-family: 'Cairo', sans-serif;
+  font-size: 14px; font-weight: 700; cursor: pointer; transition: all .15s;
 }
-.modal-btn-confirm {
-  background: var(--sch-green);
-  color: #fff;
-  border-color: var(--sch-green);
-}
-.modal-btn-confirm:hover { box-shadow: 0 0 16px var(--sch-green-glow); filter: brightness(1.1); }
-.modal-btn-cancel {
-  background: var(--sch-surface-2);
-  color: var(--sch-text-2);
-  border-color: var(--sch-border);
-}
+.modal-btn-confirm { background: var(--sch-blue); color: #fff; border-color: var(--sch-blue); }
+.modal-btn-confirm:hover { box-shadow: 0 0 16px var(--sch-blue-glow); filter: brightness(1.1); }
+.modal-btn-cancel { background: var(--sch-surface-2); color: var(--sch-text-2); border-color: var(--sch-border); }
 .modal-btn-cancel:hover { border-color: var(--sch-red); color: var(--sch-red); }
 
 /* ─── Responsive ─── */
 @media (max-width: 600px) {
   .sch-header { padding: 18px; }
   .sch-header-title { font-size: 18px; }
-  .hours-grid { grid-template-columns: 1fr; }
+  .slots-grid { grid-template-columns: 1fr; }
   .sch-stats { display: grid; grid-template-columns: 1fr 1fr; }
   .pay-table { font-size: 12px; }
-  .pay-table thead th, .pay-table td { padding: 10px 10px; }
+  .pay-table thead th, .pay-table td { padding: 10px; }
 }
 </style>
 
@@ -499,145 +328,166 @@
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
       <path d="M19 12H5M12 5l7 7-7 7"/>
     </svg>
-    {% trans "رجوع للداشبورد" %}
+    رجوع للداشبورد
   </a>
 
   <!-- Header -->
   <div class="sch-header">
     <div>
-      <h1 class="sch-header-title">📋 {{ pitch.name }}</h1>
+      <h1 class="sch-header-title">🩺 {{ doctor.full_name }}</h1>
       <p class="sch-header-sub">
-        📍 {{ pitch.get_location_display }} &nbsp;·&nbsp;
-        ⏰ {{ pitch.opening_hour }}:00 – {{ pitch.closing_hour }}:00 &nbsp;·&nbsp;
-        <span>{{ selected_date }}</span>
+        {{ doctor.get_specialty_display }} &nbsp;·&nbsp;
+        🏥 <span>{{ clinic.name }}</span> &nbsp;·&nbsp;
+        ⏰ {{ doctor.opening_hour }}:00 – {{ doctor.closing_hour }}:00 &nbsp;·&nbsp;
+        كل {{ doctor.slot_duration }} دقيقة
       </p>
     </div>
     <div class="sch-date-badge">{{ selected_date }}</div>
   </div>
 
+  <!-- Doctor Off Banner -->
+  {% if not doctor_works %}
+  <div class="off-banner">
+    😴 الدكتور {{ doctor.full_name }} لا يعمل في هذا اليوم — يمكنك إضافة حجز يدوي استثنائي إذا لزم
+  </div>
+  {% endif %}
+
   <!-- Stats -->
-  {% with total=hours_schedule|length booked_count=bookings_with_details|length %}
   <div class="sch-stats">
     <div class="sch-stat stat-total">
-      <div class="sch-stat-num">{{ total }}</div>
-      <div class="sch-stat-label">إجمالي الساعات</div>
+      <div class="sch-stat-num">{{ slots_schedule|length }}</div>
+      <div class="sch-stat-label">إجمالي السلوتات</div>
     </div>
     <div class="sch-stat stat-booked">
-      <div class="sch-stat-num">{{ booked_count }}</div>
+      <div class="sch-stat-num">{{ appointments_with_details|length }}</div>
       <div class="sch-stat-label">محجوز</div>
     </div>
     <div class="sch-stat stat-free">
-      <div class="sch-stat-num">{{ total|add:booked_count|add:"-"|add:booked_count }}</div>
+      <div class="sch-stat-num" id="freeCount">—</div>
       <div class="sch-stat-label">متاح</div>
     </div>
     <div class="sch-stat stat-manual">
-      {% with mc=0 %}
       <div class="sch-stat-num" id="manualCount">—</div>
-      {% endwith %}
       <div class="sch-stat-label">حجوزات يدوية</div>
     </div>
   </div>
-  {% endwith %}
 
   <!-- Days Bar -->
   <div class="sch-days">
     {% for day in days_list %}
     <a href="?date={{ day.full_date }}"
-       class="day-pill {% if day.full_date == selected_date %}active{% endif %}">
+       class="day-pill {% if day.full_date == selected_date %}active{% endif %} {% if not day.works %}off{% endif %}">
       <strong>{{ day.display }}</strong>
       {{ day.day_name }}
+      {% if not day.works %}<small>إجازة</small>{% endif %}
     </a>
     {% endfor %}
   </div>
 
-  <!-- Hours Section -->
-  <div class="sch-section-title">جدول الساعات</div>
+  <!-- Slots Section -->
+  <div class="sch-section-title">جدول السلوتات</div>
 
-  {% if hours_schedule %}
-  <div class="hours-grid">
-    {% for hour in hours_schedule %}
-
-    <div class="hour-card
-      {% if not hour.is_booked %}available
-      {% elif hour.booking.status == 'Played' %}played
-      {% elif hour.booking.status == 'No-Show' %}noshow
-      {% elif hour.is_manual %}manual-card
+  {% if slots_schedule %}
+  <div class="slots-grid">
+    {% for slot in slots_schedule %}
+    <div class="slot-card
+      {% if not slot.is_booked %}available
+      {% elif slot.appointment.status == 'Attended' %}attended
+      {% elif slot.appointment.status == 'No-Show' %}noshow
+      {% elif slot.is_manual %}manual-card
+      {% elif slot.appointment.status == 'Pending' %}pending-pay
       {% else %}booked{% endif %}">
 
-      <!-- Time + Info -->
-      <div class="hour-info">
-        <div class="hour-time-mono">{{ hour.hour_display }}</div>
-        <div class="hour-client">
-          {% if hour.is_booked %}
-            {% if hour.is_manual %}
-              📞 {{ hour.booking.customer_name|default:"حجز يدوي" }}
+      <!-- Info -->
+      <div class="slot-info">
+        <div class="slot-time-mono">{{ slot.display }}</div>
+        <div class="slot-client">
+          {% if slot.is_booked %}
+            {% if slot.is_manual %}
+              📞 {{ slot.appointment.patient_name|default:"حجز يدوي" }}
             {% else %}
-              🌐 {{ hour.booking.user.get_full_name|default:hour.booking.user.username }}
+              🌐 {{ slot.appointment.patient.get_full_name|default:slot.appointment.patient.username }}
             {% endif %}
           {% else %}
             <span style="color:var(--sch-green);">✅ متاح</span>
           {% endif %}
         </div>
-        {% if hour.is_booked %}
-          <div style="margin-top:5px;">
-            {% if hour.is_manual %}
-              <span class="hour-badge badge-manual">يدوي</span>
-            {% elif hour.booking.payment_type == 'PayAtPitch' %}
-              <span class="hour-badge badge-cash">كاش في الملعب</span>
-            {% else %}
-              <span class="hour-badge badge-online">
-                {% if hour.booking.payment_type == 'Deposit' %}عربون{% else %}أونلاين{% endif %}
-              </span>
-            {% endif %}
-            {% if hour.booking.customer_phone %}
-              <span style="font-size:11px;color:var(--sch-text-3);margin-right:4px;">📱 {{ hour.booking.customer_phone }}</span>
-            {% endif %}
-          </div>
+
+        {% if slot.is_booked %}
+        <div style="margin-top:5px;">
+          {% if slot.is_manual %}
+            <span class="slot-badge badge-manual">يدوي</span>
+          {% elif slot.appointment.payment_type == 'PayAtClinic' %}
+            <span class="slot-badge badge-clinic">كاش في العيادة</span>
+          {% elif slot.appointment.payment_type == 'Deposit' %}
+            <span class="slot-badge badge-deposit">عربون</span>
+          {% else %}
+            <span class="slot-badge badge-online">أونلاين</span>
+          {% endif %}
+
+          {% if slot.appointment.status == 'Pending' %}
+            <span class="slot-badge badge-pending-pay" style="margin-right:4px;">⏳ انتظار دفع</span>
+          {% endif %}
+
+          {% if slot.appointment.patient_phone %}
+            <span style="font-size:11px;color:var(--sch-text-3);margin-right:4px;font-family:'JetBrains Mono',monospace;">
+              📱 {{ slot.appointment.patient_phone }}
+            </span>
+          {% endif %}
+        </div>
         {% endif %}
       </div>
 
       <!-- Actions -->
-      <div class="hour-actions">
-        {% if hour.is_booked %}
-          {% if hour.booking.status == 'Confirmed' or hour.booking.status == 'Pending' %}
+      <div class="slot-actions">
+        {% if slot.is_booked %}
 
-            <!-- ✅ اكتمل -->
-            <form method="post" action="{% url 'owner_update_booking_status' hour.booking.id %}" style="display:contents;">
+          {% if slot.appointment.status == 'Pending' %}
+            <!-- ✅ تأكيد الدفع -->
+            <form method="post" action="{% url 'owner_confirm_payment' slot.appointment.id %}" style="display:contents;">
               {% csrf_token %}
-              <input type="hidden" name="status" value="Played">
-              <button type="submit" class="btn-act btn-played">✅ اكتمل</button>
+              <button type="submit" class="btn-act btn-confirm-pay"
+                      title="تأكيد استلام الدفع وتحويل الموعد لمؤكد">
+                💰 تأكيد الدفع
+              </button>
             </form>
 
+          {% elif slot.appointment.status == 'Confirmed' %}
+            <!-- ✅ حضر -->
+            <form method="post" action="{% url 'owner_update_appointment_status' slot.appointment.id %}" style="display:contents;">
+              {% csrf_token %}
+              <input type="hidden" name="status" value="Attended">
+              <button type="submit" class="btn-act btn-attended">✅ حضر</button>
+            </form>
             <!-- ❌ غياب -->
-            <form method="post" action="{% url 'owner_update_booking_status' hour.booking.id %}"
+            <form method="post" action="{% url 'owner_update_appointment_status' slot.appointment.id %}"
                   style="display:contents;"
-                  onsubmit="return confirm('هل أنت متأكد أن العميل لم يحضر؟')">
+                  onsubmit="return confirm('هل أنت متأكد أن المريض لم يحضر؟')">
               {% csrf_token %}
               <input type="hidden" name="status" value="No-Show">
               <button type="submit" class="btn-act btn-noshow">❌ غياب</button>
             </form>
-
             <!-- 🔓 فتح (يدوي فقط) -->
-            {% if hour.is_manual %}
-            <form method="post" action="{% url 'owner_unblock_hour' hour.booking.id %}"
+            {% if slot.is_manual %}
+            <form method="post" action="{% url 'owner_unblock_slot' slot.appointment.id %}"
                   style="display:contents;"
-                  onsubmit="return confirm('{% trans "متأكد تفتح الميعاد ده؟" %}')">
+                  onsubmit="return confirm('متأكد تفتح الموعد ده؟')">
               {% csrf_token %}
               <button type="submit" class="btn-act btn-unblock">🔓 فتح</button>
             </form>
             {% endif %}
 
-          {% elif hour.booking.status == 'Played' %}
-            <span class="status-tag tag-played">✅ تم اللعب</span>
+          {% elif slot.appointment.status == 'Attended' %}
+            <span class="status-tag tag-attended">✅ حضر</span>
 
-          {% elif hour.booking.status == 'No-Show' %}
+          {% elif slot.appointment.status == 'No-Show' %}
             <span class="status-tag tag-noshow">❌ لم يحضر</span>
           {% endif %}
 
         {% else %}
           <!-- متاح → حجز يدوي -->
           <button class="btn-act btn-manual-add"
-                  onclick="openBlockModal('{{ hour.hour_value }}', '{{ hour.hour_display }}')">
+                  onclick="openModal('{{ slot.time_str }}', '{{ slot.display }}')">
             🔒 حجز يدوي
           </button>
         {% endif %}
@@ -649,54 +499,53 @@
 
   {% else %}
   <div class="empty-day">
-    <div class="empty-icon">📅</div>
-    <h3>لا توجد ساعات عمل لهذا اليوم</h3>
-    <p>تحقق من إعدادات ساعات الفتح والغلق للملعب</p>
+    <div class="icon">📅</div>
+    <h3>لا توجد سلوتات في هذا اليوم</h3>
+    <p>تحقق من ساعات عمل الدكتور أو أضف حجزاً يدوياً</p>
   </div>
   {% endif %}
 
-
   <!-- Payment Details Table -->
-  {% if bookings_with_details %}
+  {% if appointments_with_details %}
   <div class="sch-section-title">تفاصيل الدفع اليوم</div>
   <div class="pay-table-wrap">
     <table class="pay-table">
       <thead>
         <tr>
           <th>الوقت</th>
-          <th>العميل</th>
+          <th>المريض</th>
           <th>نوع الدفع</th>
-          <th>حالة الحجز</th>
-          <th>المدفوع أونلاين</th>
-          <th>المتبقي (كاش)</th>
+          <th>الحالة</th>
+          <th>المدفوع</th>
+          <th>المتبقي</th>
         </tr>
       </thead>
       <tbody>
-        {% for item in bookings_with_details %}
+        {% for item in appointments_with_details %}
         <tr>
-          <td class="time-cell">{{ item.booking.time }}</td>
+          <td class="time-cell">{{ item.appointment.time }}</td>
           <td>
-            {% if item.booking.is_manual %}
+            {% if item.appointment.is_manual %}
               <span style="color:var(--sch-amber);">📞</span>
-              {{ item.booking.customer_name|default:"—" }}
-              {% if item.booking.customer_phone %}
-              <br><small style="color:var(--sch-text-3);">{{ item.booking.customer_phone }}</small>
+              {{ item.appointment.patient_name|default:"—" }}
+              {% if item.appointment.patient_phone %}
+              <br><small style="color:var(--sch-text-3);font-family:'JetBrains Mono',monospace;">{{ item.appointment.patient_phone }}</small>
               {% endif %}
             {% else %}
               <span style="color:var(--sch-blue);">🌐</span>
-              {{ item.booking.user.get_full_name|default:item.booking.user.username }}
+              {{ item.appointment.patient.get_full_name|default:item.appointment.patient.username }}
             {% endif %}
           </td>
-          <td>{{ item.booking.get_payment_type_display }}</td>
+          <td style="font-family:'Cairo',sans-serif;">{{ item.appointment.get_payment_type_display }}</td>
           <td>
-            {% if item.booking.status == 'Played' %}
-              <span class="status-tag tag-played">✅ لعب</span>
-            {% elif item.booking.status == 'Confirmed' %}
-              <span class="hour-badge badge-online">مؤكد</span>
-            {% elif item.booking.status == 'No-Show' %}
+            {% if item.appointment.status == 'Attended' %}
+              <span class="status-tag tag-attended">✅ حضر</span>
+            {% elif item.appointment.status == 'Confirmed' %}
+              <span class="slot-badge badge-online">مؤكد</span>
+            {% elif item.appointment.status == 'Pending' %}
+              <span class="slot-badge badge-pending-pay">⏳ انتظار</span>
+            {% elif item.appointment.status == 'No-Show' %}
               <span class="status-tag tag-noshow">❌ غياب</span>
-            {% else %}
-              <span style="color:var(--sch-text-3);">{{ item.booking.status }}</span>
             {% endif %}
           </td>
           <td class="paid-cell">
@@ -721,85 +570,75 @@
   </div>
   {% endif %}
 
-</div><!-- /.sch-wrap -->
-
+</div>
 
 <!-- ═══ Modal: حجز يدوي ═══ -->
 <div class="modal-overlay" id="blockModal">
   <div class="modal-box">
     <div class="modal-header">
       <h3>🔒 حجز يدوي</h3>
-      <button class="modal-close" onclick="closeBlockModal()">✕</button>
+      <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-
     <div class="modal-slot">
-      <div>
-        <div class="modal-slot-time" id="modalHourDisplay">—</div>
-        <div class="modal-slot-date">{{ selected_date }} &nbsp;·&nbsp; {{ pitch.name }}</div>
-      </div>
+      <div class="modal-slot-time" id="modalTimeDisplay">—</div>
+      <div class="modal-slot-date">{{ selected_date }} &nbsp;·&nbsp; {{ doctor.full_name }}</div>
     </div>
-
-    <form method="post" action="{% url 'owner_block_hour' pitch.id %}">
+    <form method="post" action="{% url 'owner_block_slot' doctor.id %}">
       {% csrf_token %}
-      <input type="hidden" name="date"  value="{{ selected_date }}">
-      <input type="hidden" name="hour"  id="modalHourValue">
+      <input type="hidden" name="date"     value="{{ selected_date }}">
+      <input type="hidden" name="time_str" id="modalTimeValue">
 
       <div class="modal-field">
-        <label class="modal-label">اسم العميل <small style="color:var(--sch-text-3);">(اختياري)</small></label>
-        <input type="text" name="customer_name" class="modal-input"
+        <label class="modal-label">اسم المريض <small style="color:var(--sch-text-3);">(اختياري)</small></label>
+        <input type="text" name="patient_name" class="modal-input"
                placeholder="مثال: أحمد محمد" autocomplete="off">
       </div>
-
       <div class="modal-field">
         <label class="modal-label">رقم التليفون <small style="color:var(--sch-text-3);">(اختياري)</small></label>
-        <input type="tel" name="customer_phone" class="modal-input"
+        <input type="tel" name="patient_phone" class="modal-input"
                placeholder="01XXXXXXXXX"
                pattern="^01[0125][0-9]{8}$"
-               title="رقم موبايل مصري صحيح مكوّن من 11 رقم"
+               title="رقم موبايل مصري صحيح (11 رقم)"
                inputmode="numeric" dir="ltr">
       </div>
-
       <div class="modal-actions">
         <button type="submit" class="modal-btn modal-btn-confirm">✅ تأكيد الحجز</button>
-        <button type="button" class="modal-btn modal-btn-cancel" onclick="closeBlockModal()">إلغاء</button>
+        <button type="button" class="modal-btn modal-btn-cancel" onclick="closeModal()">إلغاء</button>
       </div>
     </form>
   </div>
 </div>
 
-
 <script>
 /* ─── Modal ─── */
-function openBlockModal(hourValue, hourDisplay) {
-  document.getElementById('modalHourValue').value   = hourValue;
-  document.getElementById('modalHourDisplay').textContent = hourDisplay;
+function openModal(timeStr, timeDisplay) {
+  document.getElementById('modalTimeValue').value    = timeStr;
+  document.getElementById('modalTimeDisplay').textContent = timeDisplay;
   document.getElementById('blockModal').classList.add('show');
   document.body.style.overflow = 'hidden';
 }
-function closeBlockModal() {
+function closeModal() {
   document.getElementById('blockModal').classList.remove('show');
   document.body.style.overflow = '';
 }
 document.getElementById('blockModal').addEventListener('click', function(e) {
-  if (e.target === this) closeBlockModal();
+  if (e.target === this) closeModal();
 });
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeBlockModal();
+  if (e.key === 'Escape') closeModal();
 });
 
-/* ─── Manual Count Stat ─── */
+/* ─── Stats ─── */
 (function() {
-  const manualCards = document.querySelectorAll('.hour-card.manual-card');
-  document.getElementById('manualCount').textContent = manualCards.length;
-})();
-
-/* ─── Free Count Fix ─── */
-(function() {
-  const total   = document.querySelectorAll('.hour-card').length;
-  const booked  = document.querySelectorAll('.hour-card.booked, .hour-card.manual-card, .hour-card.played, .hour-card.noshow').length;
-  // عدد الساعات المتاحة فعلاً
-  const freeEl = document.querySelector('.stat-free .sch-stat-num');
-  if (freeEl) freeEl.textContent = total - booked;
+  var total  = document.querySelectorAll('.slot-card').length;
+  var booked = document.querySelectorAll(
+    '.slot-card.booked,.slot-card.manual-card,.slot-card.attended,.slot-card.noshow,.slot-card.pending-pay'
+  ).length;
+  var manual = document.querySelectorAll('.slot-card.manual-card').length;
+  var freeEl = document.getElementById('freeCount');
+  var manEl  = document.getElementById('manualCount');
+  if(freeEl) freeEl.textContent = total - booked;
+  if(manEl)  manEl.textContent  = manual;
 })();
 </script>
 

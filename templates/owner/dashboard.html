@@ -1,184 +1,398 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}{% trans "لوحة تحكم صاحب الملعب" %}{% endblock %}
+{% block title %}داشبورد — {{ user.first_name|default:user.username }}{% endblock %}
 
 {% block content %}
 <style>
-    .owner-container { max-width: 1100px; margin: 0 auto; padding: 30px 20px; }
-    .owner-header {
-        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-        border-radius: var(--radius-lg); padding: 30px;
-        color: white; margin-bottom: 24px;
-    }
-    .owner-header h1 { font-size: 26px; margin-bottom: 6px; }
-    .owner-header p { opacity: 0.85; font-size: 15px; }
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@500;700&display=swap');
 
-    /* الإحصائيات */
-    .stats-grid {
-        display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 16px; margin-bottom: 30px;
-    }
-    .stat-card {
-        background: var(--surface); border: 1px solid var(--border);
-        border-radius: var(--radius-md); padding: 22px; text-align: center;
-        box-shadow: var(--shadow-sm); transition: transform 0.2s;
-    }
-    .stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
-    .stat-icon { font-size: 32px; margin-bottom: 8px; }
-    .stat-number { font-size: 28px; font-weight: 800; color: var(--primary); }
-    .stat-label { font-size: 13px; color: var(--text-2); margin-top: 4px; }
+:root {
+  --d-bg:           #0d1117;
+  --d-surface:      #161b22;
+  --d-surface-2:    #1c2128;
+  --d-surface-3:    #21262d;
+  --d-border:       #30363d;
+  --d-border-2:     #21262d;
+  --d-text:         #e6edf3;
+  --d-text-2:       #8b949e;
+  --d-text-3:       #6e7681;
 
-    /* ملاعبي */
-    .pitches-section h2 {
-        font-size: 20px; margin-bottom: 16px;
-        padding-bottom: 10px; border-bottom: 2px solid var(--border);
-    }
-    .pitch-owner-card {
-        background: var(--surface); border: 1px solid var(--border);
-        border-radius: var(--radius-md); padding: 20px;
-        margin-bottom: 14px; display: flex; align-items: center;
-        justify-content: space-between; flex-wrap: wrap; gap: 12px;
-        box-shadow: var(--shadow-sm); transition: all 0.2s;
-    }
-    .pitch-owner-card:hover { border-color: var(--primary); box-shadow: var(--shadow-md); }
-    .pitch-info h3 { font-size: 17px; margin-bottom: 4px; }
-    .pitch-info p { font-size: 13px; color: var(--text-2); }
-    .pitch-meta { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--text-muted); }
-    .pitch-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    .btn-sm {
-        padding: 8px 16px; border-radius: var(--radius-sm);
-        font-size: 13px; font-weight: 700; border: none;
-        display: inline-flex; align-items: center; gap: 6px;
-        transition: all 0.2s; cursor: pointer;
-    }
-    .btn-green { background: var(--primary-ghost); color: var(--primary); }
-    .btn-green:hover { background: var(--primary); color: white; }
-    .btn-blue { background: rgba(52,152,219,0.1); color: #3498db; }
-    .btn-blue:hover { background: #3498db; color: white; }
+  --d-blue:         #388bfd;
+  --d-blue-dim:     rgba(56,139,253,.12);
+  --d-blue-glow:    rgba(56,139,253,.3);
 
-    /* حجوزات اليوم */
-    .today-section { margin-top: 30px; }
-    .today-pitch { margin-bottom: 20px; }
-    .today-pitch h3 { font-size: 16px; margin-bottom: 10px; color: var(--text); }
-    .today-bookings-list {
-        display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-        gap: 10px;
-    }
-    .today-booking-item {
-        background: var(--surface-2); border: 1px solid var(--border);
-        border-radius: var(--radius-sm); padding: 12px;
-        border-right: 4px solid var(--primary);
-    }
-    .today-booking-item .time { font-weight: 800; color: var(--primary); font-size: 16px; }
-    .today-booking-item .name { font-size: 14px; color: var(--text); margin-top: 4px; }
-    .today-booking-item .badge {
-        display: inline-block; padding: 2px 8px; border-radius: 20px;
-        font-size: 11px; font-weight: 700; margin-top: 6px;
-    }
-    .badge-manual { background: rgba(243,156,18,0.15); color: #f39c12; }
-    .badge-online { background: var(--primary-ghost); color: var(--primary); }
-    .empty-state {
-        text-align: center; padding: 40px; color: var(--text-muted);
-        font-size: 15px;
-    }
-    .empty-state span { font-size: 40px; display: block; margin-bottom: 10px; }
+  --d-green:        #3fb950;
+  --d-green-dim:    rgba(63,185,80,.12);
+  --d-green-glow:   rgba(63,185,80,.3);
+
+  --d-amber:        #d29922;
+  --d-amber-dim:    rgba(210,153,34,.12);
+
+  --d-red:          #f85149;
+  --d-red-dim:      rgba(248,81,73,.10);
+
+  --d-purple:       #a371f7;
+  --d-purple-dim:   rgba(163,113,247,.12);
+
+  --d-radius:       10px;
+  --d-radius-lg:    16px;
+  --d-radius-xl:    22px;
+}
+
+.dash-wrap {
+  max-width: 1100px; margin: 0 auto;
+  padding: 28px 20px 70px;
+  font-family: 'Cairo', sans-serif; direction: rtl;
+}
+
+/* ─── Hero ─── */
+.dash-hero {
+  position: relative;
+  background: var(--d-surface); border: 1px solid var(--d-border);
+  border-radius: var(--d-radius-xl); padding: 32px 36px; margin-bottom: 24px; overflow: hidden;
+}
+.dash-hero::before {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 80% at 0% 50%, rgba(56,139,253,.07) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 60% at 100% 20%, rgba(63,185,80,.05) 0%, transparent 60%);
+  pointer-events: none;
+}
+.dash-hero-grid {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 20px; flex-wrap: wrap; position: relative;
+}
+.dash-hero-badge {
+  font-size: 13px; font-weight: 700; color: var(--d-blue);
+  letter-spacing: .8px; text-transform: uppercase; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 8px;
+}
+.dash-hero-badge::before {
+  content: ''; display: inline-block; width: 8px; height: 8px;
+  background: var(--d-blue); border-radius: 50%;
+  box-shadow: 0 0 8px var(--d-blue-glow); animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.5;transform:scale(1.4);} }
+.dash-hero-name { font-size: 26px; font-weight: 900; color: var(--d-text); margin-bottom: 6px; }
+.dash-hero-sub  { font-size: 14px; color: var(--d-text-2); }
+.dash-hero-date { text-align: center; flex-shrink: 0; }
+.dash-hero-date-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 42px; font-weight: 700; color: var(--d-blue); line-height: 1;
+}
+.dash-hero-date-label { font-size: 12px; color: var(--d-text-3); margin-top: 4px; }
+
+/* ─── KPI Strip ─── */
+.kpi-strip {
+  display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 28px;
+}
+@media(max-width:700px){ .kpi-strip { grid-template-columns: repeat(2,1fr); } }
+@media(max-width:380px){ .kpi-strip { grid-template-columns: 1fr; } }
+
+.kpi-card {
+  background: var(--d-surface); border: 1px solid var(--d-border);
+  border-radius: var(--d-radius-lg); padding: 20px 18px;
+  position: relative; overflow: hidden;
+  transition: border-color .2s, transform .2s;
+  animation: kpiIn .3s ease both;
+}
+.kpi-card:hover { border-color: var(--kpi-color, var(--d-blue)); transform: translateY(-2px); }
+@keyframes kpiIn { from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }
+.kpi-card:nth-child(1){ animation-delay:.05s; --kpi-color:var(--d-blue);   }
+.kpi-card:nth-child(2){ animation-delay:.10s; --kpi-color:var(--d-green);  }
+.kpi-card:nth-child(3){ animation-delay:.15s; --kpi-color:var(--d-amber);  }
+.kpi-card:nth-child(4){ animation-delay:.20s; --kpi-color:var(--d-purple); }
+.kpi-card::after {
+  content: ''; position: absolute; top: 0; right: 0; width: 3px; height: 100%;
+  background: var(--kpi-color, var(--d-blue));
+  border-radius: 0 var(--d-radius-lg) var(--d-radius-lg) 0;
+}
+.kpi-icon  { font-size: 20px; margin-bottom: 12px; display: block; }
+.kpi-num   {
+  font-family: 'JetBrains Mono', monospace; font-size: 30px; font-weight: 700;
+  color: var(--kpi-color, var(--d-blue)); line-height: 1; margin-bottom: 6px;
+}
+.kpi-num small { font-size: 14px; font-weight: 500; margin-right: 3px; opacity: .7; }
+.kpi-label { font-size: 12px; color: var(--d-text-2); font-weight: 600; }
+
+/* ─── Section Title ─── */
+.dash-section-title {
+  font-size: 12px; font-weight: 700; color: var(--d-text-3);
+  text-transform: uppercase; letter-spacing: 1.2px;
+  margin-bottom: 14px; display: flex; align-items: center; gap: 10px;
+}
+.dash-section-title::after { content: ''; flex: 1; height: 1px; background: var(--d-border); }
+
+/* ─── Quick Links ─── */
+.quick-links { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 28px; }
+.quick-link {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 18px; background: var(--d-surface);
+  border: 1px solid var(--d-border); border-radius: var(--d-radius);
+  color: var(--d-text-2); font-size: 13px; font-weight: 700;
+  text-decoration: none; transition: all .15s;
+}
+.quick-link:hover { border-color: var(--d-blue); color: var(--d-blue); }
+
+/* ─── Clinics Grid ─── */
+.clinics-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px; margin-bottom: 36px;
+}
+.clinic-card {
+  background: var(--d-surface); border: 1px solid var(--d-border);
+  border-radius: var(--d-radius-lg); overflow: hidden;
+  transition: border-color .2s, box-shadow .2s; animation: kpiIn .35s ease both;
+}
+.clinic-card:hover { border-color: var(--d-blue); box-shadow: 0 0 24px rgba(56,139,253,.08); }
+.clinic-card-top {
+  padding: 18px 20px 14px; border-bottom: 1px solid var(--d-border-2);
+}
+.clinic-card-name { font-size: 16px; font-weight: 900; color: var(--d-text); margin-bottom: 6px; }
+.clinic-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.clinic-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--d-surface-3); border: 1px solid var(--d-border);
+  padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; color: var(--d-text-2);
+}
+.clinic-tag.multi { background: var(--d-purple-dim); border-color: rgba(163,113,247,.3); color: var(--d-purple); }
+
+/* Doctors mini list */
+.clinic-doctors {
+  padding: 12px 20px; border-bottom: 1px solid var(--d-border-2);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.doctor-mini {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; color: var(--d-text-2);
+}
+.doctor-mini-name { font-weight: 700; color: var(--d-text); }
+.doctor-mini-spec { color: var(--d-text-3); font-size: 11px; }
+.doctor-mini-hours {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--d-blue);
+}
+
+.clinic-card-bottom { padding: 12px 16px; display: flex; gap: 8px; }
+.btn-dash {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px; padding: 10px 12px; border-radius: var(--d-radius);
+  border: 1px solid transparent; font-family: 'Cairo', sans-serif;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  text-decoration: none; transition: all .15s; white-space: nowrap;
+}
+.btn-sched { background: var(--d-blue-dim); color: var(--d-blue); border-color: rgba(56,139,253,.25); }
+.btn-sched:hover { background: var(--d-blue); color: #fff; box-shadow: 0 0 12px var(--d-blue-glow); }
+.btn-earn  { background: var(--d-green-dim); color: var(--d-green); border-color: rgba(63,185,80,.25); }
+.btn-earn:hover  { background: var(--d-green); color: #fff; }
+
+/* ─── Today ─── */
+.today-wrap { margin-bottom: 40px; }
+.today-clinic-block { margin-bottom: 28px; }
+.today-clinic-label {
+  font-size: 14px; font-weight: 800; color: var(--d-text);
+  margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+}
+.today-count-badge {
+  background: var(--d-blue-dim); color: var(--d-blue);
+  border: 1px solid rgba(56,139,253,.25); font-size: 11px; font-weight: 700;
+  padding: 2px 10px; border-radius: 20px; font-family: 'JetBrains Mono', monospace;
+}
+.today-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(210px,1fr)); gap: 10px;
+}
+.today-item {
+  background: var(--d-surface); border: 1px solid var(--d-border);
+  border-radius: var(--d-radius); padding: 14px 16px;
+  position: relative; overflow: hidden; transition: border-color .15s;
+  animation: kpiIn .25s ease both;
+}
+.today-item::before {
+  content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 3px;
+}
+.today-item.online::before  { background: var(--d-blue); }
+.today-item.manual::before  { background: var(--d-amber); }
+.today-item.pending::before { background: var(--d-purple); }
+.today-item:hover { border-color: var(--d-blue); }
+
+.today-item-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px; font-weight: 700; color: var(--d-text); margin-bottom: 4px;
+}
+.today-item-doctor { font-size: 11px; color: var(--d-blue); font-weight: 700; margin-bottom: 4px; }
+.today-item-name { font-size: 13px; color: var(--d-text-2); margin-bottom: 6px; }
+.today-item-phone {
+  font-size: 11px; color: var(--d-text-3); font-family: 'JetBrains Mono', monospace;
+  direction: ltr; text-align: right; margin-bottom: 6px;
+}
+.today-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px;
+}
+.chip-online  { background: var(--d-blue-dim);   color: var(--d-blue);   border: 1px solid rgba(56,139,253,.25); }
+.chip-manual  { background: var(--d-amber-dim);  color: var(--d-amber);  border: 1px solid rgba(210,153,34,.25); }
+.chip-clinic  { background: var(--d-green-dim);  color: var(--d-green);  border: 1px solid rgba(63,185,80,.25); }
+.chip-pending { background: var(--d-purple-dim); color: var(--d-purple); border: 1px solid rgba(163,113,247,.25); }
+
+.today-empty {
+  grid-column: 1/-1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; padding: 40px;
+  background: var(--d-surface); border: 1px dashed var(--d-border);
+  border-radius: var(--d-radius-lg); color: var(--d-text-3); font-size: 14px; gap: 8px;
+}
+
+/* ─── Responsive ─── */
+@media(max-width:600px){
+  .dash-hero { padding: 22px 18px; }
+  .dash-hero-name { font-size: 20px; }
+  .dash-hero-date-num { font-size: 32px; }
+  .clinics-grid { grid-template-columns: 1fr; }
+  .today-grid { grid-template-columns: 1fr 1fr; }
+}
+@media(max-width:400px){ .today-grid { grid-template-columns: 1fr; } }
 </style>
 
-<div class="owner-container">
+<div class="dash-wrap">
 
-    <!-- الهيدر -->
-    <div class="owner-header">
-       <h1>👋 {% trans "أهلاً" %} {{ user.first_name|default:user.username }}</h1>
-        <p>{% trans "لوحة تحكم ملاعبك — كل حاجة في مكان واحد" %}</p>
+  <!-- ═══ Hero ═══ -->
+  <div class="dash-hero">
+    <div class="dash-hero-grid">
+      <div>
+        <div class="dash-hero-badge">نظام إدارة العيادة</div>
+        <div class="dash-hero-name">👋 أهلاً، {{ user.first_name|default:user.username }}</div>
+        <div class="dash-hero-sub">لوحة التحكم الكاملة لعياداتك — كل حاجة في مكان واحد</div>
+      </div>
+      <div class="dash-hero-date">
+        <div class="dash-hero-date-num">{{ today|date:"d" }}</div>
+        <div class="dash-hero-date-label">{{ today|date:"M Y" }}</div>
+      </div>
     </div>
+  </div>
 
-    <!-- الإحصائيات -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-icon">🏟️</div>
-            <div class="stat-number">{{ stats.total_pitches }}</div>
-            <div class="stat-label">{% trans "ملاعبي" %}</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon">📅</div>
-            <div class="stat-number">{{ stats.today_bookings }}</div>
-            <div class="stat-label">{% trans "حجوزات النهاردة" %}</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon">⏳</div>
-            <div class="stat-number">{{ stats.pending_bookings }}</div>
-            <div class="stat-label">{% trans "حجوزات قادمة مؤكدة" %}</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon">💰</div>
-            <div class="stat-number">{{ stats.weekly_earnings }} {% trans "ج.م" %}</div>
-            <div class="stat-label">{% trans "أرباح الأسبوع (إجمالي)" %}</div>
-        </div>
+  <!-- ═══ KPI Strip ═══ -->
+  <div class="kpi-strip">
+    <div class="kpi-card">
+      <span class="kpi-icon">🏥</span>
+      <div class="kpi-num">{{ stats.total_clinics }}</div>
+      <div class="kpi-label">عياداتي</div>
     </div>
+    <div class="kpi-card">
+      <span class="kpi-icon">👨‍⚕️</span>
+      <div class="kpi-num">{{ stats.total_doctors }}</div>
+      <div class="kpi-label">إجمالي الدكاترة</div>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-icon">📅</span>
+      <div class="kpi-num">{{ stats.today_appointments }}</div>
+      <div class="kpi-label">مواعيد النهاردة</div>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-icon">⏳</span>
+      <div class="kpi-num">{{ stats.pending_count }}</div>
+      <div class="kpi-label">تنتظر تأكيد الدفع</div>
+    </div>
+  </div>
 
-    <!-- ملاعبي -->
-    <div class="pitches-section">
-        <h2>🏟️ {% trans "ملاعبي" %}</h2>
-        {% for pitch in pitches %}
-        <div class="pitch-owner-card">
-            <div class="pitch-info">
-                <h3>{{ pitch.name }}</h3>
-                <p>📍 {{ pitch.get_location_display }} — {{ pitch.address }}</p>
-                <div class="pitch-meta">
-                    <span>⚽ {{ pitch.get_size_display }}</span>
-                    <span>•</span>
-                    <span>🕐 {{ pitch.opening_hour }}:00 → {{ pitch.closing_hour }}:00</span>
-                    <span>•</span>
-                    <span>💲 {{ pitch.price_per_hour }} {% trans "ج.م/ساعة" %}</span>
-                </div>
-            </div>
-            <div class="pitch-actions">
-                <a href="{% url 'owner_schedule' pitch.id %}?date={{ today|date:'Y-m-d' }}" class="btn-sm btn-green">
-                    📋 {% trans "جدول الحجوزات" %}
-                </a>
-                <a href="{% url 'owner_earnings' %}" class="btn-sm btn-blue">
-                    💰 {% trans "الأرباح" %}
-                </a>
-            </div>
+  <!-- ═══ Quick Links ═══ -->
+  <div class="quick-links">
+    {% for clinic in clinics %}
+      {% for doctor in clinic.doctors.all %}
+      <a href="{% url 'owner_schedule' doctor.id %}?date={{ today|date:'Y-m-d' }}" class="quick-link">
+        🩺 جدول {{ doctor.full_name }}
+      </a>
+      {% endfor %}
+    {% endfor %}
+    <a href="{% url 'owner_earnings' %}" class="quick-link">💰 الأرباح والعمولة</a>
+  </div>
+
+  <!-- ═══ Clinics ═══ -->
+  <div class="dash-section-title">عياداتي</div>
+  <div class="clinics-grid">
+    {% for clinic in clinics %}
+    <div class="clinic-card">
+      <div class="clinic-card-top">
+        <div class="clinic-card-name">{{ clinic.name }}</div>
+        <div class="clinic-tags">
+          <span class="clinic-tag">📍 {{ clinic.get_location_display }}</span>
+          {% if clinic.is_multi_specialty %}
+            <span class="clinic-tag multi">🏥 متعدد التخصصات</span>
+          {% endif %}
+          <span class="clinic-tag">👨‍⚕️ {{ clinic.doctors.count }} دكتور</span>
+        </div>
+      </div>
+
+      <!-- دكاترة العيادة -->
+      {% if clinic.doctors.all %}
+      <div class="clinic-doctors">
+        {% for doctor in clinic.doctors.all %}
+        <div class="doctor-mini">
+          <div>
+            <span class="doctor-mini-name">{{ doctor.full_name }}</span>
+            <span class="doctor-mini-spec"> — {{ doctor.get_specialty_display }}</span>
+          </div>
+          <span class="doctor-mini-hours">{{ doctor.opening_hour }}:00–{{ doctor.closing_hour }}:00</span>
         </div>
         {% endfor %}
-    </div>
+      </div>
+      {% endif %}
 
-    <!-- حجوزات اليوم -->
-    <div class="today-section">
-        <h2>📅 {% trans "حجوزات النهاردة" %} ({{ today|date:"d/m/Y" }})</h2>
-        {% for item in today_schedule %}
-        <div class="today-pitch">
-            <h3>{{ item.pitch.name }} ({{ item.count }} {% trans "حجز" %})</h3>
-            {% if item.bookings %}
-            <div class="today-bookings-list">
-                {% for booking in item.bookings %}
-                <div class="today-booking-item">
-                    <div class="time">🕐 {{ booking.time }}</div>
-                    <div class="name">
-                        {% if booking.is_manual %}
-                            👤 {{ booking.customer_name|default:"بدون اسم" }}
-                            {% if booking.customer_phone %}<br>📱 {{ booking.customer_phone }}{% endif %}
-                        {% else %}
-                            👤 {{ booking.user.username }}
-                        {% endif %}
-                    </div>
-                    <span class="badge {% if booking.is_manual %}badge-manual{% else %}badge-online{% endif %}">
-                        {% if booking.is_manual %}📞 {% trans "حجز تليفون" %}{% else %}🌐 {% trans "حجز أونلاين" %}{% endif %}
-                    </span>
-                </div>
-                {% endfor %}
+      <div class="clinic-card-bottom">
+        {% with doctor=clinic.doctors.first %}
+        {% if doctor %}
+        <a href="{% url 'owner_schedule' doctor.id %}?date={{ today|date:'Y-m-d' }}"
+           class="btn-dash btn-sched">📋 جدول اليوم</a>
+        {% endif %}
+        {% endwith %}
+        <a href="{% url 'owner_earnings' %}" class="btn-dash btn-earn">💰 الأرباح</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- ═══ Today ═══ -->
+  <div class="dash-section-title">مواعيد النهاردة — {{ today|date:"d/m/Y" }}</div>
+  <div class="today-wrap">
+    {% for item in today_schedule %}
+    <div class="today-clinic-block">
+      <div class="today-clinic-label">
+        🏥 {{ item.clinic.name }}
+        <span class="today-count-badge">{{ item.count }} موعد</span>
+      </div>
+      <div class="today-grid">
+        {% if item.appointments %}
+          {% for appt in item.appointments %}
+          <div class="today-item {% if appt.is_manual %}manual{% elif appt.status == 'Pending' %}pending{% else %}online{% endif %}">
+            <div class="today-item-time">{{ appt.time }}</div>
+            <div class="today-item-doctor">{{ appt.doctor.full_name }}</div>
+            <div class="today-item-name">
+              {% if appt.is_manual %}{{ appt.patient_name|default:"بدون اسم" }}
+              {% else %}{{ appt.patient.get_full_name|default:appt.patient.username }}{% endif %}
             </div>
-            {% else %}
-            <div class="empty-state">
-                <span>😴</span>
-                {% trans "مفيش حجوزات النهاردة لهذا الملعب" %}
-            </div>
+            {% if appt.patient_phone or appt.is_manual and appt.patient_phone %}
+            <div class="today-item-phone">📱 {{ appt.patient_phone }}</div>
             {% endif %}
-        </div>
-        {% endfor %}
+            {% if appt.is_manual %}
+              <span class="today-chip chip-manual">📞 يدوي</span>
+            {% elif appt.status == 'Pending' %}
+              <span class="today-chip chip-pending">⏳ انتظار دفع</span>
+            {% elif appt.payment_type == 'PayAtClinic' %}
+              <span class="today-chip chip-clinic">💵 في العيادة</span>
+            {% else %}
+              <span class="today-chip chip-online">🌐 أونلاين</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="today-empty">
+            <div style="font-size:32px;">😴</div>
+            مفيش مواعيد النهاردة لهذه العيادة
+          </div>
+        {% endif %}
+      </div>
     </div>
+    {% endfor %}
+  </div>
 
 </div>
 {% endblock %}

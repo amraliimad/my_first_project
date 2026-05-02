@@ -1,0 +1,535 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{{ clinic.name }} — كلينيك أونلاين{% endblock %}
+
+{% block content %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@500;700&display=swap');
+
+:root {
+  --c-bg:         #0d1117;
+  --c-surface:    #161b22;
+  --c-surface-2:  #1c2128;
+  --c-surface-3:  #21262d;
+  --c-border:     #30363d;
+  --c-border-2:   #21262d;
+  --c-text:       #e6edf3;
+  --c-text-2:     #8b949e;
+  --c-text-3:     #6e7681;
+
+  --c-blue:       #388bfd;
+  --c-blue-dim:   rgba(56,139,253,.12);
+  --c-blue-glow:  rgba(56,139,253,.25);
+
+  --c-green:      #3fb950;
+  --c-green-dim:  rgba(63,185,80,.10);
+
+  --c-amber:      #d29922;
+  --c-amber-dim:  rgba(210,153,34,.10);
+
+  --c-red:        #f85149;
+  --c-red-dim:    rgba(248,81,73,.10);
+
+  --c-purple:     #a371f7;
+  --c-purple-dim: rgba(163,113,247,.10);
+
+  --c-radius:     10px;
+  --c-radius-lg:  16px;
+  --c-radius-xl:  22px;
+}
+
+.clinic-wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 20px 80px;
+  font-family: 'Cairo', sans-serif;
+  direction: rtl;
+}
+
+/* ─── Back ─── */
+.back-link {
+  display: inline-flex; align-items: center; gap: 8px;
+  color: var(--c-text-2); font-size: 13px; font-weight: 700;
+  border: 1px solid var(--c-border); padding: 7px 16px;
+  border-radius: 30px; background: var(--c-surface);
+  text-decoration: none; margin-bottom: 22px;
+  transition: all .2s;
+}
+.back-link:hover { color: var(--c-blue); border-color: var(--c-blue); }
+
+/* ─── Hero Card ─── */
+.clinic-hero {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--c-radius-xl);
+  overflow: hidden;
+  margin-bottom: 24px;
+  position: relative;
+}
+.clinic-cover {
+  width: 100%; height: 220px;
+  background: linear-gradient(135deg, #0c1f3a, #0a2040);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 72px; position: relative; overflow: hidden;
+}
+.clinic-cover::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, transparent 40%, var(--c-surface) 100%);
+}
+.clinic-cover img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+.clinic-cover-overlay {
+  position: absolute; bottom: 0; right: 0; left: 0;
+  padding: 20px 28px; z-index: 2;
+  background: linear-gradient(to top, rgba(22,27,34,.95) 0%, transparent 100%);
+}
+
+.clinic-hero-body { padding: 0 28px 24px; }
+
+.clinic-name {
+  font-size: 26px; font-weight: 900;
+  color: var(--c-text); margin-bottom: 10px;
+  line-height: 1.2;
+}
+.clinic-meta-row {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  margin-bottom: 16px;
+}
+.clinic-tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--c-surface-2); border: 1px solid var(--c-border);
+  color: var(--c-text-2); font-size: 12px; font-weight: 700;
+  padding: 5px 12px; border-radius: 20px;
+}
+.clinic-tag.blue   { background: var(--c-blue-dim);   border-color: rgba(56,139,253,.25); color: var(--c-blue); }
+.clinic-tag.green  { background: var(--c-green-dim);  border-color: rgba(63,185,80,.25);  color: var(--c-green); }
+.clinic-tag.amber  { background: var(--c-amber-dim);  border-color: rgba(210,153,34,.25); color: var(--c-amber); }
+.clinic-tag.purple { background: var(--c-purple-dim); border-color: rgba(163,113,247,.25);color: var(--c-purple); }
+
+.clinic-desc {
+  font-size: 14px; color: var(--c-text-2);
+  line-height: 1.8; max-width: 700px;
+  margin-bottom: 20px;
+}
+
+/* Info Grid */
+.clinic-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.info-item {
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border-2);
+  border-radius: var(--c-radius);
+  padding: 14px 16px;
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.info-icon {
+  font-size: 20px; flex-shrink: 0;
+  margin-top: 2px;
+}
+.info-label { font-size: 11px; color: var(--c-text-3); font-weight: 700; margin-bottom: 3px; }
+.info-value { font-size: 13px; color: var(--c-text); font-weight: 700; }
+.info-value a { color: var(--c-blue); text-decoration: none; }
+.info-value a:hover { text-decoration: underline; }
+
+/* CTA Buttons */
+.clinic-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn-action {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 20px; border-radius: var(--c-radius);
+  font-family: 'Cairo', sans-serif; font-size: 13px;
+  font-weight: 700; cursor: pointer; border: 1px solid transparent;
+  text-decoration: none; transition: all .15s;
+}
+.btn-wa {
+  background: rgba(37,211,102,.12);
+  color: #25d366; border-color: rgba(37,211,102,.25);
+}
+.btn-wa:hover { background: #25d366; color: #fff; }
+.btn-map {
+  background: var(--c-blue-dim);
+  color: var(--c-blue); border-color: rgba(56,139,253,.25);
+}
+.btn-map:hover { background: var(--c-blue); color: #fff; }
+
+/* ─── Specialties Tabs (للمجمع الطبي) ─── */
+.spec-tabs {
+  display: flex; gap: 8px; overflow-x: auto;
+  padding-bottom: 4px; margin-bottom: 24px;
+  scrollbar-width: thin; scrollbar-color: var(--c-border) transparent;
+}
+.spec-tabs::-webkit-scrollbar { height: 3px; }
+.spec-tab {
+  flex-shrink: 0; padding: 9px 18px;
+  background: var(--c-surface); border: 1px solid var(--c-border);
+  border-radius: 30px; color: var(--c-text-2);
+  font-size: 13px; font-weight: 700;
+  text-decoration: none; white-space: nowrap;
+  transition: all .15s;
+}
+.spec-tab:hover { border-color: var(--c-blue); color: var(--c-blue); }
+.spec-tab.active {
+  background: var(--c-blue); border-color: var(--c-blue);
+  color: #fff; box-shadow: 0 0 16px var(--c-blue-glow);
+}
+
+/* ─── Section Title ─── */
+.section-title {
+  font-size: 12px; font-weight: 700;
+  color: var(--c-text-3); text-transform: uppercase;
+  letter-spacing: 1.2px; margin-bottom: 16px;
+  display: flex; align-items: center; gap: 10px;
+}
+.section-title::after { content: ''; flex: 1; height: 1px; background: var(--c-border); }
+
+/* ─── Doctors Grid ─── */
+.doctors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+  margin-bottom: 40px;
+}
+
+.doctor-card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--c-radius-lg);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  transition: border-color .2s, box-shadow .2s, transform .2s;
+  text-decoration: none;
+  animation: cardIn .3s ease both;
+}
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+{% for d in doctors %}.doctor-card:nth-child({{ forloop.counter }}) { animation-delay: {{ forloop.counter0 }}0ms; }{% endfor %}
+.doctor-card:hover {
+  border-color: var(--c-blue);
+  box-shadow: 0 8px 32px rgba(56,139,253,.08);
+  transform: translateY(-3px);
+}
+
+/* Card Image */
+.doc-img {
+  width: 100%; height: 180px;
+  background: linear-gradient(135deg, #0c1f3a, #0a2040);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 56px; position: relative; overflow: hidden; flex-shrink: 0;
+}
+.doc-img img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s; }
+.doctor-card:hover .doc-img img { transform: scale(1.06); }
+.doc-img::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(22,27,34,.5) 0%, transparent 50%);
+  opacity: 0; transition: opacity .2s; pointer-events: none;
+}
+.doctor-card:hover .doc-img::after { opacity: 1; }
+
+.doc-price-tag {
+  position: absolute; bottom: 10px; right: 10px;
+  background: var(--c-blue); color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; font-weight: 700;
+  padding: 4px 12px; border-radius: 20px; z-index: 2;
+  box-shadow: 0 3px 10px var(--c-blue-glow);
+}
+.doc-spec-tag {
+  position: absolute; bottom: 10px; left: 10px;
+  background: rgba(22,27,34,.8);
+  color: var(--c-text-2); font-size: 10px; font-weight: 700;
+  padding: 4px 10px; border-radius: 20px;
+  backdrop-filter: blur(6px); z-index: 2;
+}
+
+/* Card Body */
+.doc-body { padding: 16px 18px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.doc-name { font-size: 16px; font-weight: 900; color: var(--c-text); margin-bottom: 2px; }
+.doc-rating {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 12px; color: #d29922;
+}
+.doc-rating .cnt { color: var(--c-text-3); font-size: 11px; margin-right: 3px; }
+.doc-bio {
+  font-size: 12px; color: var(--c-text-2);
+  line-height: 1.6; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+
+/* Working Days mini */
+.doc-days { display: flex; gap: 4px; }
+.day-dot {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--c-surface-2); border: 1px solid var(--c-border);
+  font-size: 10px; font-weight: 800; color: var(--c-text-3);
+  display: flex; align-items: center; justify-content: center;
+}
+.day-dot.works {
+  background: var(--c-blue-dim); border-color: rgba(56,139,253,.3);
+  color: var(--c-blue);
+}
+
+/* Hours */
+.doc-hours {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--c-text-2);
+  display: flex; align-items: center; gap: 6px;
+}
+.doc-hours span { color: var(--c-green); font-weight: 700; }
+
+/* Card Footer */
+.doc-footer {
+  margin-top: auto; padding-top: 12px;
+  border-top: 1px solid var(--c-border-2);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.doc-slot-count {
+  font-size: 11px; color: var(--c-text-3);
+  display: flex; align-items: center; gap: 4px;
+}
+.btn-book-doc {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: var(--c-radius);
+  background: var(--c-blue); color: #fff;
+  font-family: 'Cairo', sans-serif;
+  font-size: 12px; font-weight: 800;
+  text-decoration: none; border: none; cursor: pointer;
+  transition: all .15s;
+}
+.btn-book-doc:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 0 16px var(--c-blue-glow);
+}
+
+/* ─── Empty ─── */
+.empty-doctors {
+  text-align: center; padding: 60px 20px;
+  background: var(--c-surface); border: 1px dashed var(--c-border);
+  border-radius: var(--c-radius-lg);
+}
+.empty-doctors .icon { font-size: 48px; margin-bottom: 14px; }
+.empty-doctors h3 { font-size: 18px; color: var(--c-text); margin-bottom: 6px; }
+.empty-doctors p { font-size: 13px; color: var(--c-text-2); }
+
+/* ─── Responsive ─── */
+@media (max-width: 640px) {
+  .clinic-hero-body { padding: 0 16px 20px; }
+  .clinic-name { font-size: 20px; }
+  .clinic-cover { height: 160px; }
+  .doctors-grid { grid-template-columns: 1fr; }
+  .clinic-info-grid { grid-template-columns: 1fr; }
+}
+</style>
+
+<div class="clinic-wrap">
+
+  <!-- Back -->
+  <a href="{% url 'home' %}" class="back-link">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l7 7-7 7"/></svg>
+    رجوع للرئيسية
+  </a>
+
+  <!-- ═══ Hero ═══ -->
+  <div class="clinic-hero">
+    <div class="clinic-cover">
+      {% if clinic.image %}
+        <img src="{{ clinic.image.url }}" alt="{{ clinic.name }}">
+      {% else %}
+        🏥
+      {% endif %}
+    </div>
+
+    <div class="clinic-hero-body">
+
+      <!-- اسم العيادة -->
+      <h1 class="clinic-name">{{ clinic.name }}</h1>
+
+      <!-- Tags -->
+      <div class="clinic-meta-row">
+        <span class="clinic-tag blue">📍 {{ clinic.get_location_display }}</span>
+        {% if clinic.is_multi_specialty %}
+          <span class="clinic-tag purple">🏥 مجمع طبي متعدد التخصصات</span>
+        {% else %}
+          {% with clinic.doctors.filter as doc_filter %}
+          {% for spec in clinic.get_specialties_display %}
+            <span class="clinic-tag amber">{{ spec }}</span>
+          {% endfor %}
+          {% endwith %}
+        {% endif %}
+        {% if clinic.is_new %}
+          <span class="clinic-tag green">✨ عيادة جديدة</span>
+        {% endif %}
+        <span class="clinic-tag">
+          👨‍⚕️ {{ doctors|length }} دكتور
+        </span>
+      </div>
+
+      <!-- الوصف -->
+      {% if clinic.description %}
+      <p class="clinic-desc">{{ clinic.description }}</p>
+      {% endif %}
+
+      <!-- بيانات التواصل والموقع -->
+      <div class="clinic-info-grid">
+        {% if clinic.address %}
+        <div class="info-item">
+          <div class="info-icon">📍</div>
+          <div>
+            <div class="info-label">العنوان</div>
+            <div class="info-value">{{ clinic.address }}</div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if clinic.phone_number %}
+        <div class="info-item">
+          <div class="info-icon">📞</div>
+          <div>
+            <div class="info-label">رقم العيادة</div>
+            <div class="info-value">
+              <a href="tel:{{ clinic.phone_number }}">{{ clinic.phone_number }}</a>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if clinic.whatsapp_number %}
+        <div class="info-item">
+          <div class="info-icon">💬</div>
+          <div>
+            <div class="info-label">واتساب</div>
+            <div class="info-value">
+              <a href="https://wa.me/{{ clinic.whatsapp_number }}" target="_blank">{{ clinic.whatsapp_number }}</a>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- أزرار التواصل -->
+      <div class="clinic-actions">
+        {% if clinic.whatsapp_number %}
+        <a href="https://wa.me/{{ clinic.whatsapp_number }}" target="_blank" rel="noopener" class="btn-action btn-wa">
+          <i class="fab fa-whatsapp"></i> تواصل واتساب
+        </a>
+        {% endif %}
+        {% if clinic.google_map_link %}
+        <a href="{{ clinic.google_map_link }}" target="_blank" rel="noopener" class="btn-action btn-map">
+          🗺️ اعرض على الخريطة
+        </a>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ Specialty Tabs (للمجمعات الطبية فقط) ═══ -->
+  {% if clinic.is_multi_specialty and specialties_list %}
+  <div class="spec-tabs">
+    <a href="{% url 'clinic_detail' clinic.id %}" class="spec-tab {% if not selected_specialty or selected_specialty == 'all' %}active{% endif %}">
+      🏥 كل التخصصات
+    </a>
+    {% for val, label in specialties_list %}
+    <a href="?specialty={{ val }}" class="spec-tab {% if selected_specialty == val %}active{% endif %}">
+      {{ label }}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ═══ Doctors ═══ -->
+  <div class="section-title">الدكاترة المتاحون</div>
+
+  {% if doctors %}
+  <div class="doctors-grid">
+    {% for doctor in doctors %}
+    <a href="{% url 'doctor_detail' doctor.id %}?date={{ today }}" class="doctor-card">
+
+      <!-- صورة الدكتور -->
+      <div class="doc-img">
+        {% if doctor.image %}
+          <img src="{{ doctor.image.url }}" alt="{{ doctor.full_name }}" loading="lazy">
+        {% else %}
+          👨‍⚕️
+        {% endif %}
+        <span class="doc-price-tag">{{ doctor.price|floatformat:0 }} ج.م</span>
+        <span class="doc-spec-tag">{{ doctor.get_specialty_display }}</span>
+      </div>
+
+      <!-- بيانات -->
+      <div class="doc-body">
+        <div class="doc-name">{{ doctor.full_name }}</div>
+
+        <!-- تقييم -->
+        {% if doctor.average_rating %}
+        <div class="doc-rating">
+          ★★★★★
+          <span class="cnt">({{ doctor.average_rating|floatformat:1 }})</span>
+        </div>
+        {% endif %}
+
+        <!-- نبذة -->
+        {% if doctor.bio %}
+        <div class="doc-bio">{{ doctor.bio }}</div>
+        {% endif %}
+
+        <!-- ساعات العمل -->
+        <div class="doc-hours">
+          ⏰ <span>{{ doctor.opening_hour }}:00</span> — <span>{{ doctor.closing_hour }}:00</span>
+          <span style="color:var(--c-text-3); font-size:10px;">كل {{ doctor.slot_duration }} د</span>
+        </div>
+
+        <!-- أيام العمل -->
+        <div class="doc-days">
+          <span class="day-dot {% if doctor.works_sat %}works{% endif %}" title="السبت">س</span>
+          <span class="day-dot {% if doctor.works_sun %}works{% endif %}" title="الأحد">ح</span>
+          <span class="day-dot {% if doctor.works_mon %}works{% endif %}" title="الاثنين">ن</span>
+          <span class="day-dot {% if doctor.works_tue %}works{% endif %}" title="الثلاثاء">ث</span>
+          <span class="day-dot {% if doctor.works_wed %}works{% endif %}" title="الأربعاء">ر</span>
+          <span class="day-dot {% if doctor.works_thu %}works{% endif %}" title="الخميس">خ</span>
+          <span class="day-dot {% if doctor.works_fri %}works{% endif %}" title="الجمعة">ج</span>
+        </div>
+
+        <!-- Footer -->
+        <div class="doc-footer">
+          <span class="doc-slot-count">
+            📅 احجز موعدك اليوم
+          </span>
+          <span class="btn-book-doc">
+            احجز الآن →
+          </span>
+        </div>
+      </div>
+
+    </a>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="empty-doctors">
+    <div class="icon">👨‍⚕️</div>
+    <h3>لا يوجد دكاترة متاحون حالياً</h3>
+    <p>
+      {% if selected_specialty %}
+        جرّب اختيار تخصص آخر أو عرض كل الدكاترة
+      {% else %}
+        سيتم إضافة الدكاترة قريباً
+      {% endif %}
+    </p>
+    {% if selected_specialty %}
+    <a href="{% url 'clinic_detail' clinic.id %}" style="color:var(--c-blue);font-weight:700;margin-top:12px;display:inline-block;">
+      عرض كل الدكاترة
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

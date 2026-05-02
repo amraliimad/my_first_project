@@ -2,28 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 import re # لإستخدام التعبيرات القياسية (Regex) في التحقق من رقم الهاتف
-from .models import Payment
 
-class PaymentForm(forms.ModelForm):
-    class Meta:
-        model = Payment
-        fields = ["transaction_id"]
-        labels = {
-            "transaction_id": "رقم العملية (اختياري في حالة الدفع اليدوي)",
-        }
-        widgets = {
-            "transaction_id": forms.TextInput(
-                attrs={
-                    "class": "form-control",
-                    "placeholder": "مثال: رقم تحويل فودافون كاش (اختياري)",
-                }
-            ),
-        }
-    
-    # 🆕 جعل الحقل اختياري لتفادي أخطاء الحفظ لو اختار "دفع في الملعب"
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['transaction_id'].required = False
 
 class ExtendedSignupForm(UserCreationForm):
     username = forms.EmailField(
